@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Huddle{% endblock %} | Household Management</title>
+    <meta name="description" content="{% block meta_description %}Huddle is a household management app for shared living. Chores, meals, calendar, bills, shopping, and more, all in one place.{% endblock %}">
+    <link rel="icon" type="image/svg+xml" href="/static/icon.svg">
+    <link rel="icon" type="image/png" sizes="192x192" href="/static/icon-192.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Fraunces:opsz,wght@9..144,700;9..144,800&display=swap" rel="stylesheet">
+    {% block head %}{% endblock %}
+    <style>
+        :root {
+            --teal: #4ecdc4;
+            --teal-dim: rgba(78, 205, 196, 0.15);
+            --teal-glow: rgba(78, 205, 196, 0.3);
+            --navy: #1a1d27;
+            --navy-light: #1a2332;
+            --navy-card: #1e2235;
+            --pink: #ff6b9d;
+            --pink-dim: rgba(255, 107, 157, 0.15);
+            --white: #e8e8e8;
+            --slate: #8a95a8;
+            --border: #2a2d3a;
+            --bg: #13151a;
+            --bg-card: #1a1d27;
+            --font-heading: 'Fraunces', Georgia, serif;
+            --font-body: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: var(--font-body);
+            background: var(--bg);
+            color: var(--white);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* ── Nav ────────────────────────────────── */
+        .site-nav {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(19, 21, 26, 0.92);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .nav-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+        }
+
+        .nav-brand img {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+        }
+
+        .nav-brand-text {
+            font-family: var(--font-heading);
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--white);
+        }
+
+        .nav-brand-text .h { color: var(--teal); }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nav-links a {
+            color: var(--slate);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            padding: 8px 14px;
+            border-radius: 8px;
+            transition: color 0.2s, background 0.2s;
+        }
+
+        .nav-links a:hover {
+            color: var(--white);
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .nav-links a.active {
+            color: var(--teal);
+        }
+
+        .nav-cta {
+            background: var(--teal) !important;
+            color: var(--navy) !important;
+            font-weight: 600 !important;
+            padding: 8px 20px !important;
+            border-radius: 10px !important;
+            transition: transform 0.2s, box-shadow 0.2s !important;
+        }
+
+        .nav-cta:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 20px var(--teal-glow) !important;
+            background: var(--teal) !important;
+        }
+
+        /* Mobile hamburger */
+        .nav-toggle {
+            display: none;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 8px;
+        }
+
+        .nav-toggle span {
+            display: block;
+            width: 24px;
+            height: 2px;
+            background: var(--white);
+            margin: 5px 0;
+            border-radius: 2px;
+            transition: transform 0.3s, opacity 0.3s;
+        }
+
+        .nav-toggle.open span:nth-child(1) { transform: rotate(45deg) translate(5px, 5px); }
+        .nav-toggle.open span:nth-child(2) { opacity: 0; }
+        .nav-toggle.open span:nth-child(3) { transform: rotate(-45deg) translate(5px, -5px); }
+
+        /* ── Footer ─────────────────────────────── */
+        .site-footer {
+            background: var(--navy);
+            border-top: 1px solid var(--border);
+            padding: 48px 24px 32px;
+            margin-top: 80px;
+        }
+
+        .footer-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+            gap: 40px;
+        }
+
+        .footer-brand {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .footer-brand-name {
+            font-family: var(--font-heading);
+            font-size: 1.3rem;
+            font-weight: 800;
+        }
+
+        .footer-brand-name .h { color: var(--teal); }
+
+        .footer-brand p {
+            color: var(--slate);
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+
+        .footer-col h4 {
+            font-family: var(--font-heading);
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--white);
+            margin-bottom: 14px;
+        }
+
+        .footer-col a {
+            display: block;
+            color: var(--slate);
+            text-decoration: none;
+            font-size: 0.85rem;
+            padding: 4px 0;
+            transition: color 0.2s;
+        }
+
+        .footer-col a:hover { color: var(--teal); }
+
+        .footer-bottom {
+            max-width: 1200px;
+            margin: 32px auto 0;
+            padding-top: 24px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8rem;
+            color: var(--slate);
+        }
+
+        .footer-bottom a {
+            color: var(--teal);
+            text-decoration: none;
+        }
+
+        /* ── Page content wrapper ──────────────── */
+        .page-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* ── Doc page wrapper ──────────────────── */
+        .doc-content {
+            max-width: 780px;
+            margin: 0 auto;
+            padding: 48px 24px 80px;
+        }
+
+        .doc-content h1 {
+            font-family: var(--font-heading);
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+
+        .doc-content .effective-date {
+            color: var(--slate);
+            font-size: 0.85rem;
+            margin-bottom: 32px;
+        }
+
+        .doc-content h2 {
+            font-family: var(--font-heading);
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--teal);
+            margin: 32px 0 12px;
+        }
+
+        .doc-content h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin: 24px 0 8px;
+        }
+
+        .doc-content p {
+            color: var(--slate);
+            margin-bottom: 12px;
+            font-size: 0.92rem;
+        }
+
+        .doc-content ul, .doc-content ol {
+            padding-left: 20px;
+            margin-bottom: 14px;
+        }
+
+        .doc-content li {
+            color: var(--slate);
+            font-size: 0.92rem;
+            margin-bottom: 6px;
+        }
+
+        .doc-content strong { color: var(--white); }
+        .doc-content a { color: var(--teal); text-decoration: none; }
+        .doc-content a:hover { text-decoration: underline; }
+
+        /* ── Responsive ─────────────────────────── */
+        @media (max-width: 768px) {
+            .nav-toggle { display: block; }
+
+            .nav-links {
+                display: none;
+                position: absolute;
+                top: 64px;
+                left: 0;
+                right: 0;
+                background: rgba(19, 21, 26, 0.98);
+                border-bottom: 1px solid var(--border);
+                flex-direction: column;
+                padding: 16px 24px;
+                gap: 4px;
+            }
+
+            .nav-links.open { display: flex; }
+
+            .nav-links a {
+                width: 100%;
+                padding: 12px 14px;
+            }
+
+            .footer-inner {
+                grid-template-columns: 1fr 1fr;
+                gap: 32px;
+            }
+
+            .footer-brand { grid-column: 1 / -1; }
+
+            .footer-bottom {
+                flex-direction: column;
+                gap: 8px;
+                text-align: center;
+            }
+
+            .doc-content {
+                padding: 32px 16px 60px;
+            }
+
+            .doc-content h1 { font-size: 1.6rem; }
+        }
+
+        @media (max-width: 480px) {
+            .footer-inner {
+                grid-template-columns: 1fr;
+                gap: 24px;
+            }
+        }
+
+        {% block extra_css %}{% endblock %}
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="site-nav">
+        <div class="nav-inner">
+            <a href="/" class="nav-brand">
+                <img src="/static/icon.svg" alt="Huddle" width="36" height="36">
+                <span class="nav-brand-text"><span class="h">H</span>uddle</span>
+            </a>
+            <button class="nav-toggle" onclick="this.classList.toggle('open'); document.getElementById('navLinks').classList.toggle('open')" aria-label="Toggle menu">
+                <span></span><span></span><span></span>
+            </button>
+            <div class="nav-links" id="navLinks">
+                {% block nav_links %}
+                <a href="/#features">Features</a>
+                <a href="/#how-it-works">How It Works</a>
+                <a href="/#pricing">Pricing</a>
+                <a href="/faq">FAQ</a>
+                <a href="/getting-started">Get Started</a>
+                <a href="/onboard" class="nav-cta">Sign Up Free</a>
+                {% endblock %}
+            </div>
+        </div>
+    </nav>
+
+    {% block content %}{% endblock %}
+
+    <!-- Footer -->
+    <footer class="site-footer">
+        <div class="footer-inner">
+            <div class="footer-brand">
+                <div class="footer-brand-name"><span class="h">H</span>uddle</div>
+                <p>Household management for shared living. Chores, meals, calendar, bills, shopping, and more, all in one place.</p>
+                <p><a href="mailto:huddle@rodgersgroup.au">huddle@rodgersgroup.au</a></p>
+            </div>
+            <div class="footer-col">
+                <h4>Product</h4>
+                <a href="/#features">Features</a>
+                <a href="/#pricing">Pricing</a>
+                <a href="/pds">Product Overview</a>
+                <a href="/getting-started">Getting Started</a>
+            </div>
+            <div class="footer-col">
+                <h4>Support</h4>
+                <a href="/faq">FAQ</a>
+                <a href="/beta">Beta Programme</a>
+                <a href="mailto:huddle@rodgersgroup.au">Contact Us</a>
+            </div>
+            <div class="footer-col">
+                <h4>Legal</h4>
+                <a href="/privacy">Privacy Policy</a>
+                <a href="/terms">Terms of Service</a>
+                <a href="/beta">Beta Agreement</a>
+                <a href="/pds">PDS</a>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <span>&copy; {{ year }} Rodgers Group Pty Ltd, Newcastle, Australia. All rights reserved.</span>
+            <a href="/privacy">Privacy</a>
+        </div>
+    </footer>
+</body>
+</html>

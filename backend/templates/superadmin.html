@@ -1,0 +1,1482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Huddle - Super Admin</title>
+    <link rel="icon" type="image/svg+xml" href="/static/icon.svg">
+    <link rel="apple-touch-icon" href="/static/icon-192.png">
+    {% if GA4_MEASUREMENT_ID %}
+    <script async src="https://www.googletagmanager.com/gtag/js?id={{ GA4_MEASUREMENT_ID }}"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','{{ GA4_MEASUREMENT_ID }}');</script>
+    {% endif %}
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #1a1a1a;
+            --card: #242424;
+            --card-hover: #2a2a2a;
+            --border: #333;
+            --text: #f5f5f5;
+            --muted: #888;
+            --accent: #4ecdc4;
+            --danger: #ff6b6b;
+            --warning: #ff9800;
+            --success: #4caf50;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            padding: 0;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Header */
+        .header {
+            position: sticky; top: 0; z-index: 100;
+            background: rgba(26, 26, 26, 0.95);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+        }
+        .header-row { display: flex; align-items: center; gap: 12px; }
+        .back-btn {
+            display: flex; align-items: center; gap: 4px;
+            color: var(--accent); text-decoration: none; font-size: 14px; font-weight: 500;
+            padding: 6px 0; white-space: nowrap;
+        }
+        .header-title { font-size: 18px; font-weight: 700; }
+
+        /* Search */
+        .search-bar {
+            margin: 12px 16px;
+            position: relative;
+        }
+        .search-bar input {
+            width: 100%;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 10px 14px 10px 36px;
+            color: var(--text);
+            font-size: 14px;
+            outline: none;
+        }
+        .search-bar input:focus { border-color: var(--accent); }
+        .search-bar svg {
+            position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+            width: 16px; height: 16px; color: var(--muted);
+        }
+
+        /* Main content */
+        .content { padding: 0 16px 100px; }
+
+        /* Stats grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 14px;
+            text-align: center;
+        }
+        .stat-value { font-size: 28px; font-weight: 800; color: var(--accent); }
+        .stat-label { font-size: 11px; color: var(--muted); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+        /* Section headers */
+        .section-head {
+            font-size: 13px; font-weight: 600; color: var(--muted);
+            text-transform: uppercase; letter-spacing: 0.5px;
+            margin: 20px 0 10px; padding: 0 4px;
+        }
+
+        /* Household cards */
+        .hh-card {
+            background: var(--card);
+            border-radius: 12px;
+            margin-bottom: 10px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            transition: border-color 0.2s;
+        }
+        .hh-card.expanded { border-color: var(--accent); }
+        .hh-header {
+            display: flex; align-items: center; gap: 12px;
+            padding: 14px 16px;
+            cursor: pointer;
+            min-height: 56px;
+        }
+        .hh-header:active { background: var(--card-hover); }
+        .hh-icon {
+            width: 36px; height: 36px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 16px; font-weight: 700; flex-shrink: 0;
+            background: rgba(78, 205, 196, 0.15); color: var(--accent);
+        }
+        .hh-info { flex: 1; min-width: 0; }
+        .hh-name { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .hh-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+        .hh-chevron {
+            width: 20px; height: 20px; color: var(--muted); flex-shrink: 0;
+            transition: transform 0.2s;
+        }
+        .hh-card.expanded .hh-chevron { transform: rotate(180deg); }
+        .hh-detail { display: none; border-top: 1px solid var(--border); }
+        .hh-card.expanded .hh-detail { display: block; }
+        .hh-loading { padding: 20px; text-align: center; color: var(--muted); font-size: 13px; }
+
+        /* Detail tabs within household */
+        .detail-tabs {
+            display: flex; border-bottom: 1px solid var(--border);
+            background: rgba(0,0,0,0.15);
+        }
+        .detail-tab {
+            flex: 1; padding: 10px 8px; text-align: center;
+            font-size: 12px; font-weight: 600; color: var(--muted);
+            cursor: pointer; border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+        .detail-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+        .detail-panel { display: none; padding: 14px 16px; }
+        .detail-panel.active { display: block; }
+
+        /* Member rows */
+        .member-row {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .member-row:last-child { border-bottom: none; }
+        .member-dot {
+            width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+        }
+        .member-info { flex: 1; min-width: 0; }
+        .member-name { font-size: 14px; font-weight: 500; }
+        .member-email { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        /* Role badges */
+        .role-badge {
+            display: inline-block; padding: 3px 8px; border-radius: 6px;
+            font-size: 11px; font-weight: 600; white-space: nowrap;
+        }
+        .role-manager { background: rgba(78, 205, 196, 0.2); color: var(--accent); }
+        .role-member { background: rgba(255, 255, 255, 0.1); color: var(--muted); }
+        .role-dependent { background: rgba(255, 152, 0, 0.2); color: var(--warning); }
+        .member-actions { display: flex; gap: 6px; }
+        .act-btn {
+            padding: 6px 10px; border-radius: 8px; border: none;
+            font-size: 11px; font-weight: 600; cursor: pointer;
+            color: var(--text);
+        }
+        .act-btn.role { background: rgba(78, 205, 196, 0.15); }
+        .act-btn.role:active { background: rgba(78, 205, 196, 0.3); }
+        .act-btn.remove { background: rgba(255, 107, 107, 0.15); color: var(--danger); }
+        .act-btn.remove:active { background: rgba(255, 107, 107, 0.3); }
+
+        /* Settings key-value */
+        .setting-row {
+            display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .setting-row:last-child { border-bottom: none; }
+        .setting-key {
+            font-size: 12px; font-weight: 600; color: var(--muted);
+            min-width: 120px; flex-shrink: 0;
+        }
+        .setting-val {
+            flex: 1; min-width: 150px;
+            background: rgba(0,0,0,0.2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 6px 10px;
+            color: var(--text);
+            font-size: 13px;
+            font-family: inherit;
+        }
+        .setting-val:focus { border-color: var(--accent); outline: none; }
+        .save-settings-btn {
+            width: 100%; margin-top: 12px; padding: 10px;
+            background: var(--accent); color: #1a1a1a;
+            border: none; border-radius: 10px;
+            font-size: 14px; font-weight: 700; cursor: pointer;
+        }
+        .save-settings-btn:active { opacity: 0.8; }
+
+        /* Module toggles */
+        .module-row {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .module-row:last-child { border-bottom: none; }
+        .module-name { flex: 1; font-size: 14px; }
+        .module-icon { font-size: 16px; width: 24px; text-align: center; }
+        .toggle {
+            position: relative; width: 44px; height: 24px; flex-shrink: 0;
+        }
+        .toggle input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: #555; border-radius: 12px; cursor: pointer;
+            transition: background 0.2s;
+        }
+        .toggle-slider::before {
+            content: ''; position: absolute; width: 18px; height: 18px;
+            left: 3px; bottom: 3px; background: white; border-radius: 50%;
+            transition: transform 0.2s;
+        }
+        .toggle input:checked + .toggle-slider { background: var(--accent); }
+        .toggle input:checked + .toggle-slider::before { transform: translateX(20px); }
+
+        /* HH Stats mini row */
+        .hh-stats {
+            display: flex; gap: 12px; padding: 10px 16px;
+            background: rgba(0,0,0,0.1); font-size: 12px; color: var(--muted);
+        }
+        .hh-stat-item span { color: var(--text); font-weight: 600; }
+
+        /* User cards (flat list) */
+        .user-card {
+            background: var(--card);
+            border-radius: 10px;
+            padding: 12px 14px;
+            margin-bottom: 8px;
+            display: flex; align-items: center; gap: 10px;
+            border: 1px solid var(--border);
+        }
+        .user-avatar {
+            width: 32px; height: 32px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 13px; font-weight: 700; flex-shrink: 0;
+            background: var(--accent); color: #1a1a1a;
+        }
+        .user-info { flex: 1; min-width: 0; }
+        .user-name { font-size: 14px; font-weight: 500; }
+        .user-email { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .user-hh { font-size: 11px; color: var(--muted); margin-top: 1px; }
+
+        /* Modal (bottom sheet) */
+        .modal-overlay {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.6); z-index: 200;
+            align-items: flex-end; justify-content: center;
+        }
+        .modal-overlay.show { display: flex; }
+        .modal-sheet {
+            background: var(--card);
+            border-radius: 16px 16px 0 0;
+            padding: 20px 16px 32px;
+            width: 100%; max-width: 480px;
+            max-height: 80vh; overflow-y: auto;
+        }
+        .modal-handle {
+            width: 36px; height: 4px;
+            background: #555; border-radius: 2px;
+            margin: 0 auto 16px;
+        }
+        .modal-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; }
+        .modal-option {
+            display: flex; align-items: center; gap: 12px;
+            padding: 14px;
+            border-radius: 10px; cursor: pointer;
+            margin-bottom: 6px;
+            background: rgba(0,0,0,0.15);
+            min-height: 48px;
+        }
+        .modal-option:active { background: rgba(0,0,0,0.3); }
+        .modal-option.selected { border: 1px solid var(--accent); background: rgba(78, 205, 196, 0.08); }
+        .modal-option.danger { color: var(--danger); }
+        .modal-label { font-size: 14px; font-weight: 500; }
+        .modal-desc { font-size: 12px; color: var(--muted); }
+        .modal-cancel {
+            width: 100%; padding: 14px;
+            background: rgba(255,255,255,0.08);
+            border: none; border-radius: 10px;
+            color: var(--text); font-size: 14px; font-weight: 600;
+            cursor: pointer; margin-top: 8px;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+            background: var(--success); color: #fff;
+            padding: 10px 20px; border-radius: 10px;
+            font-size: 13px; font-weight: 600;
+            z-index: 300; opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+        .toast.show { opacity: 1; }
+        .toast.error { background: var(--danger); }
+
+        /* Huddle logo */
+        .huddle-logo { font-weight: 800; color: #e8e8e8; }
+        .huddle-h { color: #4ecdc4; }
+
+        .empty-msg { padding: 16px; text-align: center; color: var(--muted); font-size: 13px; }
+
+        /* Impersonate banner */
+        .impersonate-banner {
+            display: none;
+            background: linear-gradient(135deg, #ff9800 0%, #ff5722 100%);
+            color: #fff;
+            padding: 10px 16px;
+            font-size: 13px;
+            font-weight: 600;
+            text-align: center;
+            cursor: pointer;
+            position: sticky;
+            top: 49px;
+            z-index: 99;
+        }
+        .impersonate-banner.show { display: block; }
+        .impersonate-banner:active { opacity: 0.8; }
+
+        /* Impersonate button on household card */
+        .impersonate-btn {
+            padding: 6px 12px;
+            border-radius: 8px;
+            border: none;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            background: rgba(255, 152, 0, 0.15);
+            color: var(--warning);
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .impersonate-btn:active { background: rgba(255, 152, 0, 0.3); }
+
+        /* Data browser items */
+        .data-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 13px;
+        }
+        .data-item:last-child { border-bottom: none; }
+        .data-item-info { flex: 1; min-width: 0; }
+        .data-item-name { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .data-item-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+        .data-item-delete {
+            padding: 4px 8px;
+            border-radius: 6px;
+            border: none;
+            font-size: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            background: rgba(255, 107, 107, 0.15);
+            color: var(--danger);
+            flex-shrink: 0;
+        }
+        .data-item-delete:active { background: rgba(255, 107, 107, 0.3); }
+
+        /* Data tab scrollable row */
+        .detail-tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; flex-wrap: nowrap; }
+        .detail-tab { flex: 0 0 auto; min-width: 60px; }
+        .data-loading { padding: 16px; text-align: center; color: var(--muted); font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-row">
+            <a href="/mobile" class="back-btn">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                <span class="huddle-logo"><span class="huddle-h">H</span>uddle</span>
+            </a>
+            <span class="header-title">Super Admin</span>
+        </div>
+    </div>
+
+    <div class="impersonate-banner" id="impersonateBanner" onclick="unimpersonate()">
+        Impersonating household — tap to stop
+    </div>
+
+    <div class="search-bar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="searchInput" placeholder="Search households or users..." autocomplete="off">
+    </div>
+
+    <div class="content" id="content">
+        <div style="text-align:center; padding:40px; color:var(--muted)">Loading...</div>
+    </div>
+
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal-sheet" id="modalSheet"></div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // CSRF protection: auto-inject X-Requested-With on state-changing requests
+        (function() {
+            const _origFetch = window.fetch;
+            const CSRF_METHODS = new Set(['POST', 'PUT', 'DELETE', 'PATCH']);
+            window.fetch = function(input, init) {
+                if (init && CSRF_METHODS.has((init.method || 'GET').toUpperCase())) {
+                    init.headers = init.headers || {};
+                    if (init.headers instanceof Headers) {
+                        if (!init.headers.has('X-Requested-With')) init.headers.set('X-Requested-With', 'XMLHttpRequest');
+                    } else {
+                        if (!init.headers['X-Requested-With']) init.headers['X-Requested-With'] = 'XMLHttpRequest';
+                    }
+                }
+                return _origFetch.call(this, input, init);
+            };
+        })();
+
+        // --- DOM helper ---
+        function el(tag, attrs, children) {
+            const e = document.createElement(tag);
+            if (attrs) for (const [k, v] of Object.entries(attrs)) {
+                if (k === 'style') e.style.cssText = v;
+                else if (k === 'className') e.className = v;
+                else if (k.startsWith('on') && typeof v === 'function') e.addEventListener(k.slice(2), v);
+                else e.setAttribute(k, v);
+            }
+            if (children !== undefined) {
+                if (typeof children === 'string') e.textContent = children;
+                else if (children instanceof HTMLElement) e.appendChild(children);
+                else if (Array.isArray(children)) children.forEach(c => { if (c) e.appendChild(c); });
+            }
+            return e;
+        }
+
+        // --- State ---
+        let overviewData = null;
+        const hhCache = {};
+
+        // --- Toast ---
+        function toast(msg, type) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.className = 'toast show' + (type === 'error' ? ' error' : '');
+            clearTimeout(t._timer);
+            t._timer = setTimeout(() => t.className = 'toast', 2500);
+        }
+
+        // --- Modal ---
+        function showModal(buildFn) {
+            const sheet = document.getElementById('modalSheet');
+            sheet.textContent = '';
+            sheet.appendChild(el('div', {className: 'modal-handle'}));
+            buildFn(sheet);
+            document.getElementById('modalOverlay').classList.add('show');
+        }
+        function hideModal() {
+            document.getElementById('modalOverlay').classList.remove('show');
+        }
+        document.getElementById('modalOverlay').addEventListener('click', function(e) {
+            if (e.target === this) hideModal();
+        });
+
+        // --- API helper ---
+        async function api(path, opts) {
+            const resp = await fetch(path, opts);
+            if (!resp.ok) {
+                let detail = 'Request failed';
+                try { const d = await resp.json(); detail = d.detail || detail; } catch(e) {}
+                throw new Error(detail);
+            }
+            return resp.json();
+        }
+
+        // --- Load overview ---
+        async function load() {
+            try {
+                overviewData = await api('/api/superadmin/overview');
+                render();
+            } catch (e) {
+                const c = document.getElementById('content');
+                c.textContent = '';
+                c.appendChild(el('div', {className: 'empty-msg'}, 'Access denied or failed to load'));
+            }
+        }
+
+        // --- Render overview ---
+        function render() {
+            const data = overviewData;
+            const c = document.getElementById('content');
+            c.textContent = '';
+
+            const s = data.stats;
+
+            // Stats
+            const grid = el('div', {className: 'stats-grid'}, [
+                statCard(s.total_households, 'Households'),
+                statCard(s.total_users, 'Users'),
+                statCard(s.active_users_7d || 0, 'Active (7d)'),
+                statCard(s.active_users_30d || 0, 'Active (30d)'),
+                statCard(s.total_chores, 'Chores'),
+                statCard(s.total_completions, 'Completions'),
+                statCard(s.completions_7d || 0, 'Done (7d)'),
+                statCard(s.total_calendar_events || 0, 'Events'),
+                statCard(s.total_meals || 0, 'Meals'),
+                statCard(s.total_bills || 0, 'Bills'),
+                statCard(s.total_shopping_items || 0, 'Shopping'),
+                statCard(s.total_recipes || 0, 'Recipes'),
+                statCard(s.total_adhoc_tasks || 0, 'Tasks'),
+                statCard(s.total_polls || 0, 'Polls'),
+                statCard(s.push_subscriptions || 0, 'Push Subs'),
+            ]);
+            c.appendChild(grid);
+
+            // Segment/Tier breakdown
+            const segData = s.households_by_segment || {};
+            const tierData = s.households_by_tier || {};
+            if (Object.keys(segData).length > 0) {
+                const segGrid = el('div', {className: 'stats-grid'});
+                Object.entries(segData).forEach(([k, v]) => segGrid.appendChild(statCard(v, k)));
+                c.appendChild(el('h3', {style: 'margin:18px 0 8px;'}, 'By Segment'));
+                c.appendChild(segGrid);
+            }
+            if (Object.keys(tierData).length > 0) {
+                const tierGrid = el('div', {className: 'stats-grid'});
+                Object.entries(tierData).forEach(([k, v]) => tierGrid.appendChild(statCard(v, k)));
+                c.appendChild(el('h3', {style: 'margin:18px 0 8px;'}, 'By Tier'));
+                c.appendChild(tierGrid);
+            }
+
+            // Page Views
+            const pv7 = s.page_views_7d || {};
+            const pv30 = s.page_views_30d || {};
+            if (Object.keys(pv7).length > 0 || Object.keys(pv30).length > 0) {
+                c.appendChild(el('div', {className: 'section-head'}, 'Page Views'));
+                const pvCard = el('div', {className: 'card', style: 'padding:16px;'});
+                const pvTable = el('table', {style: 'width:100%;font-size:13px;border-collapse:collapse;'});
+                pvTable.appendChild(el('tr', {}, [
+                    el('th', {style: 'text-align:left;padding:4px 8px;color:var(--muted);'}, 'Page'),
+                    el('th', {style: 'text-align:right;padding:4px 8px;color:var(--muted);'}, '7 days'),
+                    el('th', {style: 'text-align:right;padding:4px 8px;color:var(--muted);'}, '30 days'),
+                ]));
+                const allPages = [...new Set([...Object.keys(pv7), ...Object.keys(pv30)])];
+                allPages.sort((a, b) => (pv30[b] || 0) - (pv30[a] || 0));
+                allPages.forEach(page => {
+                    pvTable.appendChild(el('tr', {}, [
+                        el('td', {style: 'padding:4px 8px;'}, page),
+                        el('td', {style: 'text-align:right;padding:4px 8px;font-weight:600;'}, String(pv7[page] || 0)),
+                        el('td', {style: 'text-align:right;padding:4px 8px;font-weight:600;'}, String(pv30[page] || 0)),
+                    ]));
+                });
+                pvCard.appendChild(pvTable);
+                c.appendChild(pvCard);
+            }
+
+            // Sandbox Generator
+            c.appendChild(el('div', {className: 'section-head'}, 'Sandbox Generator'));
+            const sandboxCard = el('div', {className: 'card', style: 'padding:16px;'});
+            const sandboxDesc = el('div', {style: 'color:var(--muted);font-size:13px;margin-bottom:12px;'}, 'Create demo households with preset data for testing.');
+            sandboxCard.appendChild(sandboxDesc);
+
+            const sandboxBtns = el('div', {style: 'display:flex;gap:8px;flex-wrap:wrap;'});
+            ['family', 'sharehouse', 'couple'].forEach(preset => {
+                const btn = el('button', {
+                    className: 'impersonate-btn',
+                    style: 'padding:8px 16px;border-radius:8px;font-size:13px;cursor:pointer;',
+                    onclick: () => createSandbox(preset)
+                }, 'Create ' + preset.charAt(0).toUpperCase() + preset.slice(1));
+                sandboxBtns.appendChild(btn);
+            });
+            sandboxCard.appendChild(sandboxBtns);
+            c.appendChild(sandboxCard);
+
+            // Beta Modules
+            c.appendChild(el('div', {className: 'section-head'}, 'Beta Modules'));
+            const betaCard = el('div', {className: 'card', style: 'padding:16px;margin-bottom:16px;'});
+            const betaDesc = el('div', {style: 'color:var(--muted);font-size:13px;margin-bottom:12px;'}, 'Beta modules are only visible to your household. Release to make available to everyone.');
+            betaCard.appendChild(betaDesc);
+            const betaList = el('div', {id: 'betaModulesList'});
+            betaList.textContent = 'Loading...';
+            betaCard.appendChild(betaList);
+            c.appendChild(betaCard);
+            loadBetaModules();
+
+            // Households
+            c.appendChild(el('div', {className: 'section-head'}, 'Households'));
+            const hhContainer = el('div', {id: 'hhList'});
+            for (const h of data.households) {
+                hhContainer.appendChild(buildHHCard(h));
+            }
+            c.appendChild(hhContainer);
+
+            // Users
+            c.appendChild(el('div', {className: 'section-head'}, 'Users'));
+            const userContainer = el('div', {id: 'userList'});
+            for (const u of data.users) {
+                userContainer.appendChild(buildUserCard(u));
+            }
+            c.appendChild(userContainer);
+
+            // Feedback aggregation
+            if (data.feedback && !data.feedback.error) {
+                const fb = data.feedback;
+                c.appendChild(el('div', {className: 'section-head'}, 'Feedback (' + (fb.total || 0) + ' total)'));
+
+                // Type + Status summary
+                const fbGrid = el('div', {className: 'stats-grid'});
+                const typeLabels = {bug: 'Bugs', feature: 'Features', general: 'General', praise: 'Praise'};
+                const statusLabels = {new: 'New', acknowledged: 'Acknowledged', in_progress: 'In Progress', resolved: 'Resolved', wont_fix: "Won't Fix"};
+                for (const [k, label] of Object.entries(typeLabels)) {
+                    fbGrid.appendChild(statCard((fb.by_type || {})[k] || 0, label));
+                }
+                for (const [k, label] of Object.entries(statusLabels)) {
+                    fbGrid.appendChild(statCard((fb.by_status || {})[k] || 0, label));
+                }
+                c.appendChild(fbGrid);
+
+                // Most upvoted
+                if (fb.top_voted && fb.top_voted.length > 0) {
+                    c.appendChild(el('div', {className: 'section-head', style: 'font-size:0.9rem;margin-top:8px;'}, 'Most Upvoted'));
+                    const topContainer = el('div');
+                    fb.top_voted.forEach(function(item) {
+                        var typeIcons = {bug: '\uD83D\uDC1B', feature: '\uD83D\uDCA1', general: '\uD83D\uDCAC', praise: '\uD83C\uDF89'};
+                        var card = el('div', {className: 'hh-card', style: 'padding:12px;margin-bottom:8px;'}, [
+                            el('div', {style: 'display:flex;justify-content:space-between;align-items:center;'}, [
+                                el('div', {}, [
+                                    el('span', {style: 'margin-right:6px;'}, (typeIcons[item.feedback_type] || '') + ' '),
+                                    el('strong', {}, item.title),
+                                ]),
+                                el('span', {style: 'color:#7c3aed;font-weight:700;'}, '\u25B2 ' + item.vote_count),
+                            ]),
+                            el('div', {style: 'color:var(--muted);font-size:0.8rem;margin-top:4px;'}, item.submitted_by + ' \u00b7 ' + (item.household_name || '') + ' \u00b7 ' + item.status),
+                        ]);
+                        topContainer.appendChild(card);
+                    });
+                    c.appendChild(topContainer);
+                }
+
+                // Recent 20
+                if (fb.recent && fb.recent.length > 0) {
+                    c.appendChild(el('div', {className: 'section-head', style: 'font-size:0.9rem;margin-top:8px;'}, 'Recent Feedback'));
+                    const recentContainer = el('div');
+                    fb.recent.forEach(function(item) {
+                        var typeIcons = {bug: '\uD83D\uDC1B', feature: '\uD83D\uDCA1', general: '\uD83D\uDCAC', praise: '\uD83C\uDF89'};
+                        var card = el('div', {className: 'hh-card', style: 'padding:10px;margin-bottom:6px;'}, [
+                            el('div', {style: 'display:flex;justify-content:space-between;'}, [
+                                el('div', {}, [
+                                    el('span', {}, (typeIcons[item.feedback_type] || '') + ' '),
+                                    el('span', {style: 'font-weight:600;'}, item.title),
+                                ]),
+                                el('span', {style: 'font-size:0.75rem;color:var(--muted);'}, item.status),
+                            ]),
+                            el('div', {style: 'color:var(--muted);font-size:0.75rem;margin-top:2px;'}, item.submitted_by + ' \u00b7 ' + (item.household_name || '') + (item.vote_count > 0 ? ' \u00b7 \u25B2' + item.vote_count : '')),
+                        ]);
+                        recentContainer.appendChild(card);
+                    });
+                    c.appendChild(recentContainer);
+                }
+            }
+
+            // Bind search
+            document.getElementById('searchInput').oninput = filterAll;
+        }
+
+        function statCard(value, label) {
+            return el('div', {className: 'stat-card'}, [
+                el('div', {className: 'stat-value'}, String(value)),
+                el('div', {className: 'stat-label'}, label),
+            ]);
+        }
+
+        // --- Household card ---
+        function buildHHCard(h) {
+            const card = el('div', {className: 'hh-card', 'data-name': (h.name || '').toLowerCase(), 'data-id': String(h.id)});
+
+            const initial = (h.name || '?').charAt(0).toUpperCase();
+
+            const headerLeft = el('div', {
+                className: 'hh-header',
+                style: 'flex:1;',
+                onclick: () => toggleHH(card, h.id)
+            }, [
+                el('div', {className: 'hh-icon'}, initial),
+                el('div', {className: 'hh-info'}, [
+                    el('div', {className: 'hh-name'}, h.name || 'Unnamed'),
+                    el('div', {className: 'hh-meta'}, h.member_count + ' member' + (h.member_count !== 1 ? 's' : '') + ' · ' + (h.segment || 'household') + '/' + (h.tier || 'free') + (h.invite_code ? ' · Code: ' + h.invite_code : '')),
+                ]),
+                chevronSvg(),
+            ]);
+
+            const headerWrap = el('div', {style: 'display:flex;align-items:center;gap:6px;'});
+            headerWrap.appendChild(headerLeft);
+            const impBtn = el('button', {
+                className: 'impersonate-btn',
+                onclick: (e) => { e.stopPropagation(); impersonate(h.id, h.name); }
+            }, 'Impersonate');
+            headerWrap.appendChild(impBtn);
+            if ((h.name || '').startsWith('[Sandbox]')) {
+                const delBtn = el('button', {
+                    className: 'impersonate-btn',
+                    style: 'color:var(--danger);border-color:var(--danger);',
+                    onclick: (e) => { e.stopPropagation(); deleteSandbox(h.id, h.name); }
+                }, 'Delete');
+                headerWrap.appendChild(delBtn);
+            }
+            card.appendChild(headerWrap);
+
+            const detail = el('div', {className: 'hh-detail'});
+            detail.appendChild(el('div', {className: 'hh-loading'}, 'Loading...'));
+            card.appendChild(detail);
+
+            return card;
+        }
+
+        function chevronSvg() {
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.setAttribute('viewBox', '0 0 24 24');
+            svg.setAttribute('class', 'hh-chevron');
+            svg.setAttribute('fill', 'none');
+            svg.setAttribute('stroke', 'currentColor');
+            svg.setAttribute('stroke-width', '2');
+            svg.setAttribute('stroke-linecap', 'round');
+            svg.setAttribute('stroke-linejoin', 'round');
+            const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+            polyline.setAttribute('points', '6 9 12 15 18 9');
+            svg.appendChild(polyline);
+            return svg;
+        }
+
+        // --- Toggle household expand ---
+        async function toggleHH(card, hhId) {
+            const isExpanded = card.classList.contains('expanded');
+            // Collapse all
+            document.querySelectorAll('.hh-card.expanded').forEach(c => c.classList.remove('expanded'));
+            if (isExpanded) return;
+
+            card.classList.add('expanded');
+            const detail = card.querySelector('.hh-detail');
+
+            if (hhCache[hhId]) {
+                renderHHDetail(detail, hhId, hhCache[hhId]);
+                return;
+            }
+
+            detail.textContent = '';
+            detail.appendChild(el('div', {className: 'hh-loading'}, 'Loading...'));
+
+            try {
+                const data = await api('/api/superadmin/household/' + hhId);
+                hhCache[hhId] = data;
+                renderHHDetail(detail, hhId, data);
+            } catch (e) {
+                detail.textContent = '';
+                detail.appendChild(el('div', {className: 'hh-loading'}, 'Failed to load: ' + e.message));
+            }
+        }
+
+        // --- Render household detail ---
+        function renderHHDetail(container, hhId, data) {
+            container.textContent = '';
+
+            // Mini stats bar
+            const statsBar = el('div', {className: 'hh-stats'});
+            const st = data.stats;
+            const items = [
+                ['Chores', st.chores], ['Completions', st.completions],
+                ['Bills', st.bills], ['Tasks', st.tasks],
+            ];
+            for (const [label, val] of items) {
+                const item = el('span', {className: 'hh-stat-item'});
+                const valSpan = el('span', null, String(val));
+                item.appendChild(valSpan);
+                item.appendChild(document.createTextNode(' ' + label));
+                statsBar.appendChild(item);
+            }
+            container.appendChild(statsBar);
+
+            // Tabs
+            const tabs = el('div', {className: 'detail-tabs'});
+            const panels = [];
+            const tabDefs = [
+                {name: 'Members', key: 'members'},
+                {name: 'Settings', key: 'settings'},
+                {name: 'Modules', key: 'modules'},
+                {name: 'Chores', key: 'chores'},
+                {name: 'Tasks', key: 'tasks'},
+                {name: 'Calendar', key: 'calendar'},
+                {name: 'Bills', key: 'bills'},
+                {name: 'Shopping', key: 'shopping'},
+                {name: 'Inventory', key: 'inventory'},
+                {name: 'Polls', key: 'polls'},
+                {name: 'Recipes', key: 'recipes'},
+            ];
+            tabDefs.forEach((td, i) => {
+                const tab = el('div', {className: 'detail-tab' + (i === 0 ? ' active' : '')}, td.name);
+                tab.addEventListener('click', () => {
+                    tabs.querySelectorAll('.detail-tab').forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    panels.forEach((p, j) => p.className = 'detail-panel' + (j === i ? ' active' : ''));
+                    // Lazy-load data tabs
+                    if (i >= 3 && !panels[i].dataset.loaded) {
+                        panels[i].dataset.loaded = '1';
+                        loadDataTab(panels[i], hhId, td.key);
+                    }
+                });
+                tabs.appendChild(tab);
+            });
+            container.appendChild(tabs);
+
+            // Quick actions bar
+            const actionsBar = el('div', {style: 'display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;'});
+            const manageBtn = el('button', {
+                style: 'padding:8px 16px;border-radius:8px;background:var(--warning);color:#000;border:none;font-weight:600;font-size:0.85rem;cursor:pointer;display:flex;align-items:center;gap:6px;',
+                onclick: (e) => { e.stopPropagation(); impersonate(hhId, data.members.length ? data.members[0].display_name : 'Household'); }
+            }, '\uD83D\uDCF1 Manage in Mobile');
+            actionsBar.appendChild(manageBtn);
+
+            const inviteInfo = el('div', {
+                style: 'padding:8px 12px;border-radius:8px;background:var(--surface);font-size:0.8rem;color:var(--muted);display:flex;align-items:center;gap:6px;'
+            }, '\uD83D\uDD11 Invite: ' + ((data.household && data.household.invite_code) || 'None'));
+            actionsBar.appendChild(inviteInfo);
+            container.appendChild(actionsBar);
+
+            // Members panel
+            const membersPanel = el('div', {className: 'detail-panel active'});
+            renderMembers(membersPanel, hhId, data.members);
+            panels.push(membersPanel);
+            container.appendChild(membersPanel);
+
+            // Settings panel
+            const settingsPanel = el('div', {className: 'detail-panel'});
+            renderSettings(settingsPanel, hhId, data.settings);
+            panels.push(settingsPanel);
+            container.appendChild(settingsPanel);
+
+            // Modules panel
+            const modulesPanel = el('div', {className: 'detail-panel'});
+            renderModules(modulesPanel, hhId, data.modules);
+            panels.push(modulesPanel);
+            container.appendChild(modulesPanel);
+
+            // Data module panels (lazy loaded)
+            const dataModules = ['chores', 'tasks', 'calendar', 'bills', 'shopping', 'inventory', 'polls', 'recipes'];
+            dataModules.forEach(key => {
+                const panel = el('div', {className: 'detail-panel'});
+                panel.appendChild(el('div', {className: 'data-loading'}, 'Tap tab to load...'));
+                panels.push(panel);
+                container.appendChild(panel);
+            });
+        }
+
+        // --- Members panel ---
+        function renderMembers(panel, hhId, members) {
+            panel.textContent = '';
+
+            // Add member button
+            const addRow = el('div', {style: 'margin-bottom:12px;'});
+            const addBtn = el('button', {
+                style: 'padding:6px 14px;border-radius:6px;background:var(--accent,#4ecdc4);color:#fff;border:none;font-size:0.8rem;cursor:pointer;font-weight:500;',
+                onclick: () => showAddMemberModal(hhId, panel)
+            }, '+ Add Member');
+            addRow.appendChild(addBtn);
+            panel.appendChild(addRow);
+
+            if (!members.length) {
+                panel.appendChild(el('div', {className: 'empty-msg'}, 'No members'));
+                return;
+            }
+            for (const m of members) {
+                const row = el('div', {className: 'member-row'});
+
+                const dot = el('div', {className: 'member-dot'});
+                dot.style.backgroundColor = m.color || '#888';
+                row.appendChild(dot);
+
+                const info = el('div', {className: 'member-info'});
+                info.appendChild(el('div', {className: 'member-name'}, m.display_name || 'Unknown'));
+                const emailText = (m.email && m.email.includes('@placeholder')) ? 'placeholder account' : (m.email || '');
+                info.appendChild(el('div', {className: 'member-email'}, emailText));
+                row.appendChild(info);
+
+                row.appendChild(roleBadge(m.role));
+
+                const actions = el('div', {className: 'member-actions'});
+                const roleBtn = el('button', {className: 'act-btn role', onclick: () => showRoleModal(hhId, m)}, 'Role');
+                const removeBtn = el('button', {className: 'act-btn remove', onclick: () => showRemoveModal(hhId, m)}, 'Remove');
+                actions.appendChild(roleBtn);
+                actions.appendChild(removeBtn);
+                row.appendChild(actions);
+
+                panel.appendChild(row);
+            }
+        }
+
+        function roleBadge(role) {
+            const cls = 'role-badge role-' + (role || 'member');
+            return el('span', {className: cls}, role || 'member');
+        }
+
+        // --- Role change modal ---
+        function showAddMemberModal(hhId, panel) {
+            showModal(sheet => {
+                sheet.appendChild(el('div', {className: 'modal-title'}, 'Add Member'));
+                const nameInp = el('input', {
+                    type: 'text',
+                    placeholder: 'Display name',
+                    style: 'width:100%;padding:10px;border-radius:8px;border:1px solid var(--border,#333);background:var(--surface,#1a1a2e);color:var(--text,#e0e0e0);box-sizing:border-box;margin-bottom:10px;font-size:14px;'
+                });
+                sheet.appendChild(nameInp);
+
+                const roleSelect = el('select', {
+                    style: 'width:100%;padding:10px;border-radius:8px;border:1px solid var(--border,#333);background:var(--surface,#1a1a2e);color:var(--text,#e0e0e0);box-sizing:border-box;margin-bottom:12px;font-size:14px;'
+                });
+                ['manager', 'member', 'dependent'].forEach(r => {
+                    const opt = el('option', {value: r}, r.charAt(0).toUpperCase() + r.slice(1));
+                    if (r === 'member') opt.selected = true;
+                    roleSelect.appendChild(opt);
+                });
+                sheet.appendChild(roleSelect);
+
+                const saveOpt = el('div', {
+                    className: 'modal-option',
+                    onclick: async () => {
+                        const name = nameInp.value.trim();
+                        if (!name) { toast('Enter a name', 'error'); return; }
+                        try {
+                            await api('/api/superadmin/household/' + hhId + '/member', {
+                                method: 'POST',
+                                headers: {'Content-Type': 'application/json'},
+                                body: JSON.stringify({ name: name, role: roleSelect.value })
+                            });
+                            hideModal();
+                            toast('Added ' + name);
+                            delete hhCache[hhId];
+                            // Reload the household
+                            const card = document.querySelector('.hh-card[data-id="' + hhId + '"]');
+                            if (card) {
+                                card.classList.remove('expanded');
+                                toggleHH(card, hhId);
+                            }
+                        } catch (e) { toast(e.message, 'error'); }
+                    }
+                });
+                saveOpt.appendChild(el('div', {className: 'modal-label'}, 'Add Member'));
+                sheet.appendChild(saveOpt);
+                sheet.appendChild(el('button', {className: 'modal-cancel', onclick: hideModal}, 'Cancel'));
+                setTimeout(() => nameInp.focus(), 100);
+            });
+        }
+
+        function showRoleModal(hhId, member) {
+            showModal(sheet => {
+                sheet.appendChild(el('div', {className: 'modal-title'}, 'Change Role: ' + (member.display_name || '')));
+
+                const roles = ['manager', 'member', 'dependent'];
+                for (const r of roles) {
+                    const opt = el('div', {
+                        className: 'modal-option' + (r === member.role ? ' selected' : ''),
+                        onclick: async () => {
+                            if (r === member.role) return;
+                            try {
+                                await api('/api/superadmin/household/' + hhId + '/member/' + member.id + '/role', {
+                                    method: 'PUT',
+                                    headers: {'Content-Type': 'application/json'},
+                                    body: JSON.stringify({role: r})
+                                });
+                                delete hhCache[hhId];
+                                hideModal();
+                                toast('Role changed to ' + r);
+                                // Re-expand to refresh
+                                const card = document.querySelector('.hh-card[data-id="' + hhId + '"]');
+                                if (card) {
+                                    card.classList.remove('expanded');
+                                    toggleHH(card, hhId);
+                                }
+                            } catch (e) {
+                                toast(e.message, 'error');
+                            }
+                        }
+                    });
+                    opt.appendChild(el('div', null, [
+                        el('div', {className: 'modal-label'}, r.charAt(0).toUpperCase() + r.slice(1)),
+                        el('div', {className: 'modal-desc'}, roleDesc(r)),
+                    ]));
+                    sheet.appendChild(opt);
+                }
+
+                sheet.appendChild(el('button', {className: 'modal-cancel', onclick: hideModal}, 'Cancel'));
+            });
+        }
+
+        function roleDesc(role) {
+            if (role === 'manager') return 'Full access: settings, members, chores, admin';
+            if (role === 'member') return 'Standard access: complete chores, view everything';
+            if (role === 'dependent') return 'Limited: own chores only, no admin';
+            return '';
+        }
+
+        // --- Remove member modal ---
+        function showRemoveModal(hhId, member) {
+            showModal(sheet => {
+                sheet.appendChild(el('div', {className: 'modal-title'}, 'Remove Member'));
+                sheet.appendChild(el('div', {style: 'color: var(--muted); font-size: 13px; margin-bottom: 16px;'},
+                    'Remove ' + (member.display_name || '') + ' from this household? Their user account will remain.'));
+
+                const confirmBtn = el('div', {
+                    className: 'modal-option danger',
+                    onclick: async () => {
+                        try {
+                            await api('/api/superadmin/household/' + hhId + '/member/' + member.id, {method: 'DELETE'});
+                            delete hhCache[hhId];
+                            hideModal();
+                            toast('Removed ' + (member.display_name || ''));
+                            const card = document.querySelector('.hh-card[data-id="' + hhId + '"]');
+                            if (card) {
+                                card.classList.remove('expanded');
+                                toggleHH(card, hhId);
+                            }
+                        } catch (e) {
+                            toast(e.message, 'error');
+                        }
+                    }
+                });
+                confirmBtn.appendChild(el('div', {className: 'modal-label', style: 'color: var(--danger);'}, 'Yes, remove'));
+                sheet.appendChild(confirmBtn);
+
+                sheet.appendChild(el('button', {className: 'modal-cancel', onclick: hideModal}, 'Cancel'));
+            });
+        }
+
+        // --- Settings panel ---
+        function renderSettings(panel, hhId, settings) {
+            panel.textContent = '';
+            const keys = Object.keys(settings).sort();
+            if (!keys.length) {
+                panel.appendChild(el('div', {className: 'empty-msg'}, 'No custom settings (using defaults)'));
+                panel.appendChild(buildSaveBtn(hhId, panel));
+                return;
+            }
+
+            const inputs = {};
+            for (const key of keys) {
+                const row = el('div', {className: 'setting-row'});
+                row.appendChild(el('div', {className: 'setting-key'}, key));
+                const input = el('input', {className: 'setting-val', 'data-key': key});
+                input.value = settings[key];
+                inputs[key] = input;
+                row.appendChild(input);
+                panel.appendChild(row);
+            }
+
+            panel.appendChild(buildSaveBtn(hhId, panel, inputs));
+        }
+
+        function buildSaveBtn(hhId, panel, inputs) {
+            return el('button', {
+                className: 'save-settings-btn',
+                onclick: async () => {
+                    if (!inputs) return;
+                    const payload = {};
+                    for (const [key, inp] of Object.entries(inputs)) {
+                        if (inp.value !== hhCache[hhId]?.settings?.[key]) {
+                            payload[key] = inp.value;
+                        }
+                    }
+                    if (!Object.keys(payload).length) {
+                        toast('No changes');
+                        return;
+                    }
+                    try {
+                        await api('/api/superadmin/household/' + hhId + '/settings', {
+                            method: 'PUT',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify(payload)
+                        });
+                        // Update cache
+                        if (hhCache[hhId]) {
+                            Object.assign(hhCache[hhId].settings, payload);
+                        }
+                        toast('Settings saved');
+                    } catch (e) {
+                        toast(e.message, 'error');
+                    }
+                }
+            }, 'Save Settings');
+        }
+
+        // --- Modules panel ---
+        function renderModules(panel, hhId, modules) {
+            panel.textContent = '';
+            for (const mod of modules) {
+                const row = el('div', {className: 'module-row'});
+                row.appendChild(el('span', {className: 'module-icon'}, mod.icon || ''));
+                row.appendChild(el('span', {className: 'module-name'}, mod.name));
+
+                const toggle = el('label', {className: 'toggle'});
+                const cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.checked = mod.enabled;
+                cb.addEventListener('change', async () => {
+                    try {
+                        await api('/api/superadmin/household/' + hhId + '/modules/' + mod.key, {
+                            method: 'PUT',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({enabled: cb.checked})
+                        });
+                        mod.enabled = cb.checked;
+                        toast(mod.name + ' ' + (cb.checked ? 'enabled' : 'disabled'));
+                    } catch (e) {
+                        cb.checked = !cb.checked;
+                        toast(e.message, 'error');
+                    }
+                });
+                toggle.appendChild(cb);
+                toggle.appendChild(el('span', {className: 'toggle-slider'}));
+                row.appendChild(toggle);
+
+                panel.appendChild(row);
+            }
+        }
+
+        // --- User card ---
+        function buildUserCard(u) {
+            const card = el('div', {className: 'user-card', 'data-name': ((u.display_name || '') + ' ' + (u.email || '')).toLowerCase()});
+            const initial = (u.display_name || u.email || '?').charAt(0).toUpperCase();
+            card.appendChild(el('div', {className: 'user-avatar'}, initial));
+
+            const info = el('div', {className: 'user-info'});
+            info.appendChild(el('div', {className: 'user-name'}, u.display_name || 'No name'));
+            const isPlaceholder = u.email && u.email.includes('@placeholder');
+            info.appendChild(el('div', {className: 'user-email'}, isPlaceholder ? 'placeholder' : (u.email || '')));
+            if (u.household_name) {
+                info.appendChild(el('div', {className: 'user-hh'}, u.household_name));
+            }
+            card.appendChild(info);
+
+            card.appendChild(roleBadge(u.role));
+            return card;
+        }
+
+        // --- Search filter ---
+        function filterAll() {
+            const q = (document.getElementById('searchInput').value || '').toLowerCase().trim();
+            document.querySelectorAll('.hh-card').forEach(c => {
+                c.style.display = !q || c.dataset.name.includes(q) ? '' : 'none';
+            });
+            document.querySelectorAll('.user-card').forEach(c => {
+                c.style.display = !q || c.dataset.name.includes(q) ? '' : 'none';
+            });
+        }
+
+        // --- Format date ---
+        function formatDate(d) {
+            if (!d) return '';
+            try { return new Date(d).toLocaleDateString('en-AU', {day:'numeric', month:'short', year:'numeric'}); }
+            catch(e) { return d; }
+        }
+
+        // --- Data browser ---
+        const dataDisplayConfig = {
+            chores: {
+                name: item => item.name || 'Unnamed',
+                meta: item => {
+                    const parts = [];
+                    if (item.schedule_type) parts.push(item.schedule_type);
+                    if (item.people) {
+                        try { const p = JSON.parse(item.people); parts.push(p.join(', ')); } catch(e) {}
+                    }
+                    if (item.completion_count !== undefined) parts.push(item.completion_count + ' completions');
+                    return parts.join(' · ');
+                }
+            },
+            tasks: {
+                name: item => item.name || 'Unnamed',
+                meta: item => {
+                    const parts = [];
+                    if (item.task_type) parts.push(item.task_type);
+                    if (item.assigned_to) parts.push('for ' + item.assigned_to);
+                    if (item.completed) parts.push('done');
+                    else parts.push('pending');
+                    return parts.join(' · ');
+                }
+            },
+            calendar: {
+                name: item => item.title || 'Untitled',
+                meta: item => {
+                    const parts = [];
+                    if (item.event_type) parts.push(item.event_type);
+                    if (item.start_date) parts.push(item.start_date);
+                    if (item.participants) {
+                        try { const p = JSON.parse(item.participants); parts.push(p.join(', ')); } catch(e) {}
+                    }
+                    return parts.join(' · ');
+                }
+            },
+            bills: {
+                name: item => item.name || 'Unnamed',
+                meta: item => {
+                    const parts = [];
+                    if (item.amount) parts.push('$' + Number(item.amount).toFixed(2));
+                    if (item.due_date) parts.push('due ' + item.due_date);
+                    if (item.paid) parts.push('PAID');
+                    else parts.push('unpaid');
+                    if (item.recurrence) parts.push(item.recurrence);
+                    return parts.join(' · ');
+                }
+            },
+            shopping: {
+                name: item => item.name || 'Unnamed',
+                meta: item => {
+                    const parts = [];
+                    if (item.quantity) parts.push('qty: ' + item.quantity);
+                    if (item.category && item.category !== 'other') parts.push(item.category);
+                    if (item.purchased) parts.push('purchased');
+                    if (item.added_by) parts.push(item.added_by);
+                    return parts.join(' · ');
+                }
+            },
+            inventory: {
+                name: item => item.name || 'Unnamed',
+                meta: item => {
+                    const parts = [];
+                    parts.push('qty: ' + (item.quantity || 0) + (item.unit ? ' ' + item.unit : ''));
+                    if (item.category && item.category !== 'other') parts.push(item.category);
+                    if (item.quantity <= item.low_threshold) parts.push('LOW');
+                    return parts.join(' · ');
+                }
+            },
+            polls: {
+                name: item => item.question || 'Untitled',
+                meta: item => {
+                    const parts = [];
+                    if (item.status) parts.push(item.status);
+                    if (item.vote_count !== undefined) parts.push(item.vote_count + ' votes');
+                    if (item.created_by) parts.push(item.created_by);
+                    return parts.join(' · ');
+                }
+            },
+            recipes: {
+                name: item => item.name || 'Unnamed',
+                meta: item => {
+                    const parts = [];
+                    if (item.ingredient_count !== undefined) parts.push(item.ingredient_count + ' ingredients');
+                    if (item.servings) parts.push(item.servings + ' servings');
+                    if (item.source_url) parts.push('imported');
+                    if (item.created_by) parts.push(item.created_by);
+                    return parts.join(' · ');
+                }
+            },
+        };
+
+        async function loadDataTab(panel, hhId, moduleKey) {
+            panel.textContent = '';
+            panel.appendChild(el('div', {className: 'data-loading'}, 'Loading...'));
+            try {
+                const data = await api('/api/superadmin/household/' + hhId + '/' + moduleKey);
+                panel.textContent = '';
+                const items = data.items || [];
+                if (!items.length) {
+                    panel.appendChild(el('div', {className: 'empty-msg'}, 'No ' + moduleKey + ' data'));
+                    return;
+                }
+                const config = dataDisplayConfig[moduleKey] || {
+                    name: item => item.name || item.title || item.question || 'Item #' + item.id,
+                    meta: () => ''
+                };
+                for (const item of items) {
+                    const row = el('div', {className: 'data-item'});
+                    const info = el('div', {className: 'data-item-info'});
+                    info.appendChild(el('div', {className: 'data-item-name'}, config.name(item)));
+                    const metaText = config.meta(item);
+                    if (metaText) info.appendChild(el('div', {className: 'data-item-meta'}, metaText));
+                    row.appendChild(info);
+                    const delBtn = el('button', {
+                        className: 'data-item-delete',
+                        onclick: () => confirmDeleteItem(hhId, moduleKey, item.id, config.name(item), panel)
+                    }, 'Delete');
+                    row.appendChild(delBtn);
+                    panel.appendChild(row);
+                }
+            } catch (e) {
+                panel.textContent = '';
+                panel.appendChild(el('div', {className: 'empty-msg'}, 'Failed to load: ' + e.message));
+            }
+        }
+
+        function confirmDeleteItem(hhId, moduleKey, itemId, itemName, panel) {
+            showModal(sheet => {
+                sheet.appendChild(el('div', {className: 'modal-title'}, 'Delete Item'));
+                sheet.appendChild(el('div', {style: 'color:var(--muted);font-size:13px;margin-bottom:16px;'},
+                    'Delete "' + itemName + '" from ' + moduleKey + '?'));
+                const confirmBtn = el('div', {
+                    className: 'modal-option danger',
+                    onclick: async () => {
+                        try {
+                            await api('/api/superadmin/household/' + hhId + '/' + moduleKey + '/' + itemId, {method: 'DELETE'});
+                            hideModal();
+                            toast('Deleted ' + itemName);
+                            // Reload tab
+                            panel.dataset.loaded = '';
+                            loadDataTab(panel, hhId, moduleKey);
+                            panel.dataset.loaded = '1';
+                            // Refresh cache
+                            delete hhCache[hhId];
+                        } catch (e) {
+                            toast(e.message, 'error');
+                        }
+                    }
+                });
+                confirmBtn.appendChild(el('div', {className: 'modal-label', style: 'color:var(--danger);'}, 'Yes, delete'));
+                sheet.appendChild(confirmBtn);
+                sheet.appendChild(el('button', {className: 'modal-cancel', onclick: hideModal}, 'Cancel'));
+            });
+        }
+
+        // --- Impersonation ---
+        async function impersonate(hhId, hhName) {
+            showModal(sheet => {
+                sheet.appendChild(el('div', {className: 'modal-title'}, 'Impersonate Household'));
+                sheet.appendChild(el('div', {style: 'color:var(--muted);font-size:13px;margin-bottom:16px;'},
+                    'Switch your session to "' + (hhName || 'Household #' + hhId) + '"? You will be redirected to the mobile view as if you were a member of this household.'));
+                const confirmBtn = el('div', {
+                    className: 'modal-option',
+                    style: 'border:1px solid var(--warning);',
+                    onclick: async () => {
+                        try {
+                            await api('/api/superadmin/impersonate/' + hhId, {method: 'POST'});
+                            hideModal();
+                            toast('Impersonating ' + (hhName || 'household'));
+                            setTimeout(() => { window.location.href = '/mobile'; }, 500);
+                        } catch (e) {
+                            toast(e.message, 'error');
+                        }
+                    }
+                });
+                confirmBtn.appendChild(el('div', {className: 'modal-label', style: 'color:var(--warning);'}, 'Yes, impersonate'));
+                sheet.appendChild(confirmBtn);
+                sheet.appendChild(el('button', {className: 'modal-cancel', onclick: hideModal}, 'Cancel'));
+            });
+        }
+
+        async function unimpersonate() {
+            try {
+                await api('/api/superadmin/unimpersonate', {method: 'POST'});
+                toast('Stopped impersonating');
+                document.getElementById('impersonateBanner').classList.remove('show');
+                // Reload overview data
+                load();
+            } catch (e) {
+                toast(e.message, 'error');
+            }
+        }
+
+        async function checkImpersonation() {
+            try {
+                const me = await api('/api/auth/me');
+                if (me.original_household_id) {
+                    const banner = document.getElementById('impersonateBanner');
+                    banner.textContent = 'Impersonating household #' + me.household_id + ' (tap to stop)';
+                    banner.classList.add('show');
+                }
+            } catch(e) {
+                // Not critical, ignore
+            }
+        }
+
+        // --- Sandbox ---
+        async function createSandbox(preset) {
+            try {
+                const result = await api('/api/superadmin/sandbox', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({preset: preset})
+                });
+                toast('Sandbox created: ' + result.name + ' (' + result.member_count + ' members, code: ' + result.invite_code + ')');
+                load();
+            } catch (e) {
+                toast(e.message || 'Failed to create sandbox', 'error');
+            }
+        }
+
+        async function deleteSandbox(hhId, hhName) {
+            if (!confirm('Delete sandbox "' + hhName + '" and all its data?')) return;
+            try {
+                await api('/api/superadmin/sandbox/' + hhId, {method: 'DELETE'});
+                toast('Sandbox deleted');
+                load();
+            } catch (e) {
+                toast(e.message || 'Failed to delete sandbox', 'error');
+            }
+        }
+
+        // --- Beta Modules ---
+        async function loadBetaModules() {
+            const container = document.getElementById('betaModulesList');
+            if (!container) return;
+            try {
+                const data = await api('/api/superadmin/beta-modules');
+                container.textContent = '';
+                const betaMods = data.modules.filter(m => m.beta);
+                const releasedMods = data.modules.filter(m => !m.beta);
+
+                if (betaMods.length === 0) {
+                    container.appendChild(el('div', {style: 'color:var(--muted);font-size:13px;padding:8px 0;'}, 'No modules in beta — all released.'));
+                } else {
+                    betaMods.forEach(m => {
+                        const row = el('div', {style: 'display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);'}, [
+                            el('div', {}, [
+                                el('span', {style: 'font-weight:600;'}, m.name),
+                                el('span', {style: 'font-size:11px;font-weight:700;background:var(--warning);color:#1a1a1a;padding:1px 6px;border-radius:4px;margin-left:8px;'}, 'BETA'),
+                            ]),
+                            el('button', {
+                                className: 'impersonate-btn',
+                                style: 'padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer;background:var(--success);color:#fff;border:none;font-weight:600;',
+                                onclick: () => toggleBeta(m.key, false)
+                            }, 'Release to All')
+                        ]);
+                        container.appendChild(row);
+                    });
+                }
+
+                // Show released modules with option to re-beta
+                if (releasedMods.length > 0) {
+                    const released = el('details', {style: 'margin-top:12px;'});
+                    released.appendChild(el('summary', {style: 'color:var(--muted);font-size:13px;cursor:pointer;'}, 'Released modules (' + releasedMods.length + ')'));
+                    releasedMods.forEach(m => {
+                        const row = el('div', {style: 'display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);'}, [
+                            el('span', {style: 'font-size:13px;'}, m.name),
+                            el('button', {
+                                style: 'padding:4px 10px;border-radius:4px;font-size:11px;cursor:pointer;background:var(--card-hover);color:var(--muted);border:1px solid var(--border);',
+                                onclick: () => toggleBeta(m.key, true)
+                            }, 'Move to Beta')
+                        ]);
+                        released.appendChild(row);
+                    });
+                    container.appendChild(released);
+                }
+            } catch (e) {
+                container.textContent = 'Failed to load';
+            }
+        }
+
+        async function toggleBeta(moduleKey, beta) {
+            const action = beta ? 'move to beta' : 'release to everyone';
+            if (!confirm('Are you sure you want to ' + action + ' the module "' + moduleKey + '"?')) return;
+            try {
+                await api('/api/superadmin/beta-modules/' + moduleKey, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({beta: beta})
+                });
+                toast(beta ? 'Moved to beta' : 'Released to all households');
+                loadBetaModules();
+            } catch (e) {
+                toast(e.message || 'Failed to update', 'error');
+            }
+        }
+
+        // --- Init ---
+        load();
+        checkImpersonation();
+    </script>
+</body>
+</html>

@@ -1,0 +1,1480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Huddle - Admin</title>
+    <link rel="icon" type="image/svg+xml" href="/static/icon.svg">
+    <link rel="apple-touch-icon" href="/static/icon-192.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #1a1a1a;
+            --bg-card: #242424;
+            --bg-input: #2a2a2a;
+            --text-primary: #f5f5f5;
+            --text-secondary: #a0a0a0;
+            --text-muted: #666;
+            --accent: #4ecdc4;
+            --accent-hover: #3dbdb5;
+            --danger: #ff6b6b;
+            --danger-hover: #ff5252;
+            --accent-keiran: #4ecdc4;
+            --accent-ciara: #ff6b9d;
+            --accent-tahni: #4caf50;
+            --border-radius: 12px;
+            --border-radius-sm: 8px;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 24px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        h1 {
+            font-family: 'Fraunces', serif;
+            font-weight: 600;
+            font-size: 2rem;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 24px;
+            background: var(--bg-card);
+            padding: 4px;
+            border-radius: var(--border-radius);
+        }
+
+        .tab {
+            flex: 1;
+            padding: 12px 24px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            border-radius: var(--border-radius-sm);
+            transition: all 0.2s ease;
+        }
+
+        .tab:hover {
+            color: var(--text-primary);
+        }
+
+        .tab.active {
+            background: var(--accent);
+            color: #1a1a1a;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 20px;
+            border: none;
+            border-radius: var(--border-radius-sm);
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: #1a1a1a;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+        }
+
+        .btn-secondary {
+            background: var(--bg-card);
+            color: var(--text-primary);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-input);
+        }
+
+        .btn-danger {
+            background: rgba(255, 107, 107, 0.2);
+            color: var(--danger);
+        }
+
+        .btn-danger:hover {
+            background: rgba(255, 107, 107, 0.3);
+        }
+
+        .btn-sm {
+            padding: 8px 14px;
+            font-size: 0.85rem;
+        }
+
+        /* Chores list */
+        .chores-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .chore-item {
+            background: var(--bg-card);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .chore-info {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .chore-name {
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+        }
+
+        .chore-meta {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .chore-people {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .person-tag {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .person-tag.keiran {
+            background: rgba(78, 205, 196, 0.2);
+            color: var(--accent-keiran);
+        }
+
+        .person-tag.ciara {
+            background: rgba(255, 107, 157, 0.2);
+            color: var(--accent-ciara);
+        }
+
+        .person-tag.tahni {
+            background: rgba(255, 217, 61, 0.2);
+            color: var(--accent-tahni);
+        }
+
+        .chore-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            background: var(--bg-card);
+            border-radius: var(--border-radius);
+            padding: 32px;
+            width: 100%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            transform: translateY(20px);
+            transition: transform 0.3s ease;
+        }
+
+        .modal-overlay.active .modal {
+            transform: translateY(0);
+        }
+
+        .modal h2 {
+            font-family: 'Fraunces', serif;
+            font-size: 1.5rem;
+            margin-bottom: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+        }
+
+        .form-group input[type="text"],
+        .form-group input[type="number"],
+        .form-group select {
+            width: 100%;
+            padding: 12px 16px;
+            background: var(--bg-input);
+            border: 1px solid #333;
+            border-radius: var(--border-radius-sm);
+            color: var(--text-primary);
+            font-family: 'Outfit', sans-serif;
+            font-size: 1rem;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .checkbox-item {
+            position: relative;
+        }
+
+        .checkbox-item input {
+            position: absolute;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .checkbox-item label {
+            display: block;
+            padding: 10px 16px;
+            background: var(--bg-input);
+            border-radius: var(--border-radius-sm);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 2px solid transparent;
+        }
+
+        .checkbox-item input:checked + label {
+            border-color: var(--accent);
+            background: rgba(78, 205, 196, 0.1);
+        }
+
+        .checkbox-item.person-keiran input:checked + label {
+            border-color: var(--accent-keiran);
+            background: rgba(78, 205, 196, 0.1);
+        }
+
+        .checkbox-item.person-ciara input:checked + label {
+            border-color: var(--accent-ciara);
+            background: rgba(255, 107, 157, 0.1);
+        }
+
+        .checkbox-item.person-tahni input:checked + label {
+            border-color: var(--accent-tahni);
+            background: rgba(255, 217, 61, 0.1);
+        }
+
+        .schedule-options {
+            display: none;
+            margin-top: 12px;
+            padding: 16px;
+            background: var(--bg-input);
+            border-radius: var(--border-radius-sm);
+        }
+
+        .schedule-options.active {
+            display: block;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .modal-actions .btn {
+            flex: 1;
+        }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+        }
+
+        .empty-state p {
+            margin-bottom: 20px;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--bg-card);
+            padding: 16px 24px;
+            border-radius: var(--border-radius);
+            box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 1001;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        .toast.success {
+            border-left: 4px solid var(--accent);
+        }
+
+        .toast.error {
+            border-left: 4px solid var(--danger);
+        }
+
+        /* NFC URL display */
+        .nfc-url {
+            margin-top: 8px;
+            padding: 8px 12px;
+            background: var(--bg-input);
+            border-radius: var(--border-radius-sm);
+            font-family: monospace;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            word-break: break-all;
+        }
+
+        /* Quick Complete styles */
+        .quick-complete-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .quick-complete-item {
+            background: var(--bg-card);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .quick-complete-info {
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .quick-complete-name {
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-bottom: 4px;
+        }
+
+        .quick-complete-assigned {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .quick-complete-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .complete-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: var(--border-radius-sm);
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .complete-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .complete-btn.keiran {
+            background: rgba(78, 205, 196, 0.2);
+            color: var(--accent-keiran);
+        }
+
+        .complete-btn.keiran:hover:not(:disabled) {
+            background: rgba(78, 205, 196, 0.3);
+        }
+
+        .complete-btn.ciara {
+            background: rgba(255, 107, 157, 0.2);
+            color: var(--accent-ciara);
+        }
+
+        .complete-btn.ciara:hover:not(:disabled) {
+            background: rgba(255, 107, 157, 0.3);
+        }
+
+        .complete-btn.tahni {
+            background: rgba(255, 217, 61, 0.2);
+            color: var(--accent-tahni);
+        }
+
+        .complete-btn.tahni:hover:not(:disabled) {
+            background: rgba(255, 217, 61, 0.3);
+        }
+
+        .complete-btn.skip {
+            background: rgba(160, 160, 160, 0.2);
+            color: var(--text-secondary);
+        }
+
+        .complete-btn.skip:hover:not(:disabled) {
+            background: rgba(160, 160, 160, 0.3);
+        }
+
+        @media (max-width: 600px) {
+            .chore-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .chore-actions {
+                width: 100%;
+            }
+
+            .chore-actions .btn {
+                flex: 1;
+            }
+        }
+
+        /* Adhoc task styles */
+        .adhoc-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .adhoc-item {
+            background: var(--bg-card);
+            border-radius: var(--border-radius);
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+            border-left: 3px solid #9b59b6;
+        }
+
+        .adhoc-item.completed {
+            opacity: 0.6;
+            border-left-color: #666;
+        }
+
+        .adhoc-item.completed .adhoc-name {
+            text-decoration: line-through;
+            color: var(--text-muted);
+        }
+
+        .adhoc-info {
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .adhoc-name {
+            font-weight: 600;
+            font-size: 1.05rem;
+            margin-bottom: 4px;
+        }
+
+        .adhoc-meta {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .adhoc-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Chores Admin</h1>
+            <div class="header-actions">
+                <button class="btn btn-secondary" onclick="wakeScreen()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                    </svg>
+                    Wake Screen
+                </button>
+                <a href="/history" class="btn btn-secondary">History</a>
+                <a href="/" class="btn btn-secondary">View Kiosk</a>
+                <button class="btn btn-primary" onclick="openModal()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                    </svg>
+                    Add Chore
+                </button>
+            </div>
+        </header>
+
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('manage')">Manage Chores</button>
+            <button class="tab" onclick="switchTab('adhoc')">One-Off Tasks</button>
+            <button class="tab" onclick="switchTab('complete')">Quick Complete</button>
+            <button class="tab" onclick="switchTab('meals')">Meal Plan</button>
+        </div>
+
+        <div id="manageTab" class="tab-content active">
+            <div class="chores-list" id="choresList">
+                <!-- Populated by JS -->
+            </div>
+
+            <div class="empty-state" id="emptyState" style="display: none;">
+                <p>No chores yet. Add your first chore to get started!</p>
+                <button class="btn btn-primary" onclick="openModal()">Add Chore</button>
+            </div>
+        </div>
+
+        <div id="adhocTab" class="tab-content">
+            <div style="margin-bottom: 20px; display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 200px;">
+                    <label style="display: block; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 6px;">Quick Add Task</label>
+                    <input type="text" id="quickAdhocName" placeholder="What needs to be done?" style="width: 100%; padding: 12px 16px; background: var(--bg-input); border: 1px solid #333; border-radius: var(--border-radius-sm); color: var(--text-primary); font-family: 'Outfit', sans-serif; font-size: 1rem;" onkeypress="if(event.key==='Enter')quickAddAdhoc()">
+                </div>
+                <div>
+                    <select id="quickAdhocPerson" style="padding: 12px 16px; background: var(--bg-input); border: 1px solid #333; border-radius: var(--border-radius-sm); color: var(--text-primary); font-family: 'Outfit', sans-serif; font-size: 1rem;">
+                        <option value="">Anyone</option>
+                        <!-- Populated dynamically by loadPeople() -->
+                    </select>
+                </div>
+                <button class="btn btn-primary" onclick="quickAddAdhoc()" style="white-space: nowrap;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                    </svg>
+                    Add Task
+                </button>
+            </div>
+            <div class="adhoc-list" id="adhocList">
+                <!-- Populated by JS -->
+            </div>
+            <div style="margin-top: 16px;">
+                <button class="btn btn-danger btn-sm" onclick="clearCompletedAdhoc()">Clear Completed Tasks</button>
+            </div>
+        </div>
+
+        <div id="completeTab" class="tab-content">
+            <div class="quick-complete-list" id="quickCompleteList">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+
+        <div id="mealsTab" class="tab-content">
+            <div class="meals-editor" id="mealsEditor">
+                <!-- Populated by JS -->
+            </div>
+            <div style="margin-top: 16px; display: flex; gap: 12px;">
+                <button class="btn btn-primary" onclick="saveMeals()">Save Meal Plan</button>
+                <button class="btn btn-danger" onclick="clearMeals()">Clear All Meals</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Modal -->
+    <div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+        <div class="modal" onclick="event.stopPropagation()">
+            <h2 id="modalTitle">Add Chore</h2>
+            <form id="choreForm" onsubmit="saveChore(event)">
+                <input type="hidden" id="choreId">
+                
+                <div class="form-group">
+                    <label for="choreName">Chore Name</label>
+                    <input type="text" id="choreName" required placeholder="e.g., Take out bins">
+                </div>
+
+                <div class="form-group">
+                    <label for="choreDescription">Description (optional)</label>
+                    <input type="text" id="choreDescription" placeholder="Any extra details">
+                </div>
+
+                <div class="form-group">
+                    <label>Assigned People</label>
+                    <div class="checkbox-group" id="choreAssignedPeople">
+                        <!-- Populated dynamically by loadPeople() -->
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="scheduleType">Schedule</label>
+                    <select id="scheduleType" onchange="updateScheduleOptions()">
+                        <option value="daily">Daily</option>
+                        <option value="days">Specific Days</option>
+                        <option value="interval">Every X Days</option>
+                    </select>
+                </div>
+
+                <div class="schedule-options" id="daysOptions">
+                    <label>Which days?</label>
+                    <div class="checkbox-group" style="margin-top: 8px;">
+                        <div class="checkbox-item"><input type="checkbox" id="day-monday" value="monday"><label for="day-monday">Mon</label></div>
+                        <div class="checkbox-item"><input type="checkbox" id="day-tuesday" value="tuesday"><label for="day-tuesday">Tue</label></div>
+                        <div class="checkbox-item"><input type="checkbox" id="day-wednesday" value="wednesday"><label for="day-wednesday">Wed</label></div>
+                        <div class="checkbox-item"><input type="checkbox" id="day-thursday" value="thursday"><label for="day-thursday">Thu</label></div>
+                        <div class="checkbox-item"><input type="checkbox" id="day-friday" value="friday"><label for="day-friday">Fri</label></div>
+                        <div class="checkbox-item"><input type="checkbox" id="day-saturday" value="saturday"><label for="day-saturday">Sat</label></div>
+                        <div class="checkbox-item"><input type="checkbox" id="day-sunday" value="sunday"><label for="day-sunday">Sun</label></div>
+                    </div>
+                </div>
+
+                <div class="schedule-options" id="intervalOptions">
+                    <label for="intervalDays">Every how many days?</label>
+                    <input type="number" id="intervalDays" min="1" max="365" value="7" style="margin-top: 8px;">
+                </div>
+
+                <div class="form-group">
+                    <label for="startDate">Start Date (optional)</label>
+                    <input type="date" id="startDate" style="width: 100%; padding: 10px 12px; background: var(--bg-input); border: none; border-radius: 8px; color: var(--text-primary);">
+                    <small style="color: var(--text-muted); font-size: 0.8rem;">Leave blank to start today</small>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Chore</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal-overlay" id="deleteModalOverlay" onclick="closeDeleteModal(event)">
+        <div class="modal" onclick="event.stopPropagation()" style="max-width: 400px;">
+            <h2>Delete Chore?</h2>
+            <p style="color: var(--text-secondary); margin-bottom: 24px;">
+                This will permanently delete "<span id="deleteChoreTitle"></span>" and all its completion history.
+            </p>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeDeleteModal()">Cancel</button>
+                <button class="btn btn-danger" onclick="confirmDelete()">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // CSRF protection: auto-inject X-Requested-With on state-changing requests
+        (function() {
+            const _origFetch = window.fetch;
+            const CSRF_METHODS = new Set(['POST', 'PUT', 'DELETE', 'PATCH']);
+            window.fetch = function(input, init) {
+                if (init && CSRF_METHODS.has((init.method || 'GET').toUpperCase())) {
+                    init.headers = init.headers || {};
+                    if (init.headers instanceof Headers) {
+                        if (!init.headers.has('X-Requested-With')) init.headers.set('X-Requested-With', 'XMLHttpRequest');
+                    } else {
+                        if (!init.headers['X-Requested-With']) init.headers['X-Requested-With'] = 'XMLHttpRequest';
+                    }
+                }
+                return _origFetch.call(this, input, init);
+            };
+        })();
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        let chores = [];
+        let adhocTasks = [];
+        let deleteChoreId = null;
+        const baseUrl = window.location.origin;
+
+        // Dynamic people
+        let householdPeople = [];
+        let householdCombos = [];
+        let everyoneColor = '#7e57c2';
+
+        async function loadPeople() {
+            try {
+                const resp = await fetch('/api/people');
+                const data = await resp.json();
+                householdPeople = data.people;
+                householdCombos = data.combos || [];
+                everyoneColor = data.everyone_color || '#7e57c2';
+                buildDynamicElements();
+            } catch(e) {
+                householdPeople = [{name:'Member 1', color:'#4ecdc4', key:'member_1'}];
+                householdCombos = [];
+                buildDynamicElements();
+            }
+        }
+
+        function getPeopleNames() { return householdPeople.map(p => p.name); }
+        function getPersonColor(name) { return (householdPeople.find(p => p.name === name) || {}).color || '#4ecdc4'; }
+        function getPersonKey(name) { return (householdPeople.find(p => p.name === name) || {}).key || name.toLowerCase(); }
+
+        function buildDynamicElements() {
+            // Build quick adhoc person dropdown options
+            const quickAdhocSelect = document.getElementById('quickAdhocPerson');
+            if (quickAdhocSelect) {
+                quickAdhocSelect.innerHTML = '<option value="">Anyone</option>' +
+                    householdPeople.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
+            }
+
+            // Build assigned people checkboxes in chore form
+            const choreAssignedPeople = document.getElementById('choreAssignedPeople');
+            if (choreAssignedPeople) {
+                choreAssignedPeople.innerHTML = householdPeople.map(p => `
+                    <div class="checkbox-item person-${p.key}">
+                        <input type="checkbox" id="person-${p.key}" value="${p.name}">
+                        <label for="person-${p.key}">${p.name}</label>
+                    </div>
+                `).join('');
+            }
+
+            // Re-render any active views that depend on people data
+            renderChores();
+            renderQuickComplete();
+            if (document.getElementById('adhocTab').classList.contains('active')) {
+                renderAdhoc();
+            }
+            if (document.getElementById('mealsTab').classList.contains('active')) {
+                renderMealsEditor();
+            }
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+            if (tab === 'manage') {
+                document.querySelectorAll('.tab')[0].classList.add('active');
+                document.getElementById('manageTab').classList.add('active');
+            } else if (tab === 'adhoc') {
+                document.querySelectorAll('.tab')[1].classList.add('active');
+                document.getElementById('adhocTab').classList.add('active');
+                fetchAdhoc();
+            } else if (tab === 'complete') {
+                document.querySelectorAll('.tab')[2].classList.add('active');
+                document.getElementById('completeTab').classList.add('active');
+                renderQuickComplete();
+            } else if (tab === 'meals') {
+                document.querySelectorAll('.tab')[3].classList.add('active');
+                document.getElementById('mealsTab').classList.add('active');
+                renderMealsEditor();
+            }
+        }
+
+        function renderQuickComplete() {
+            const list = document.getElementById('quickCompleteList');
+            
+            if (chores.length === 0) {
+                list.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 40px;">No chores yet.</p>';
+                return;
+            }
+
+            list.innerHTML = chores.map(chore => {
+                const people = Array.isArray(chore.people) ? chore.people : JSON.parse(chore.people || '[]');
+                return `
+                    <div class="quick-complete-item">
+                        <div class="quick-complete-info">
+                            <div class="quick-complete-name">${escapeHtml(chore.name)}</div>
+                            <div class="quick-complete-assigned">Assigned to: ${escapeHtml(chore.current_person) || 'Nobody'}</div>
+                        </div>
+                        <div class="quick-complete-buttons">
+                            ${people.map(p => `
+                                <button class="complete-btn ${p.toLowerCase()}" onclick="quickComplete(${chore.id}, '${p}')">${p}</button>
+                            `).join('')}
+                            <button class="complete-btn skip" onclick="skipChore(${chore.id})">Skip</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function quickComplete(choreId, person) {
+            try {
+                const response = await fetch(`/api/chores/${choreId}/complete`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ completed_by: person })
+                });
+
+                if (!response.ok) throw new Error('Failed to complete');
+
+                showToast(`${person} completed the chore!`, 'success');
+                fetchChores();
+            } catch (error) {
+                showToast('Failed to complete chore', 'error');
+            }
+        }
+
+        async function skipChore(choreId) {
+            try {
+                const response = await fetch(`/api/chores/${choreId}/skip`, {
+                    method: 'POST'
+                });
+
+                if (!response.ok) throw new Error('Failed to skip');
+
+                showToast('Chore skipped', 'success');
+                fetchChores();
+            } catch (error) {
+                showToast('Failed to skip chore', 'error');
+            }
+        }
+
+        function formatSchedule(chore) {
+            if (chore.schedule_type === 'daily') return 'Daily';
+            if (chore.schedule_type === 'interval') return `Every ${chore.schedule_interval} days`;
+            if (chore.schedule_type === 'days') {
+                const days = JSON.parse(chore.schedule_days || '[]');
+                const shortDays = days.map(d => d.charAt(0).toUpperCase() + d.slice(1, 3));
+                return shortDays.join(', ');
+            }
+            return '';
+        }
+
+        function renderChores() {
+            const list = document.getElementById('choresList');
+            const empty = document.getElementById('emptyState');
+
+            if (chores.length === 0) {
+                list.style.display = 'none';
+                empty.style.display = 'block';
+                return;
+            }
+
+            list.style.display = 'flex';
+            empty.style.display = 'none';
+
+            list.innerHTML = chores.map(chore => {
+                const people = Array.isArray(chore.people) ? chore.people : JSON.parse(chore.people || '[]');
+                const slug = chore.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+                const nfcUrl = `${baseUrl}/complete/${chore.id}/${slug}`;
+                
+                return `
+                    <div class="chore-item">
+                        <div class="chore-info">
+                            <div class="chore-name">${escapeHtml(chore.name)}</div>
+                            <div class="chore-meta">
+                                <span>${formatSchedule(chore)}</span>
+                            </div>
+                            <div class="chore-people" style="margin-top: 8px;">
+                                ${people.map(p => `<span class="person-tag ${p.toLowerCase()}">${escapeHtml(p)}</span>`).join('')}
+                            </div>
+                            <div class="nfc-url">NFC: ${nfcUrl}</div>
+                        </div>
+                        <div class="chore-actions">
+                            <button class="btn btn-secondary btn-sm" onclick="editChore(${chore.id})">Edit</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteChore(${chore.id}, '${chore.name.replace(/'/g, "\\'")}')">Delete</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function fetchChores() {
+            try {
+                const response = await fetch('/api/chores');
+                const data = await response.json();
+                chores = data.chores;
+                renderChores();
+            } catch (error) {
+                showToast('Failed to load chores', 'error');
+            }
+        }
+
+        function openModal(chore = null) {
+            const overlay = document.getElementById('modalOverlay');
+            const title = document.getElementById('modalTitle');
+            
+            // Reset form
+            document.getElementById('choreForm').reset();
+            document.getElementById('choreId').value = '';
+            
+            if (chore) {
+                title.textContent = 'Edit Chore';
+                document.getElementById('choreId').value = chore.id;
+                document.getElementById('choreName').value = chore.name;
+                document.getElementById('choreDescription').value = chore.description || '';
+                document.getElementById('scheduleType').value = chore.schedule_type;
+                
+                // Set people checkboxes
+                const people = typeof chore.people === 'string' ? JSON.parse(chore.people) : chore.people;
+                people.forEach(p => {
+                    const cb = document.getElementById(`person-${p.toLowerCase()}`);
+                    if (cb) cb.checked = true;
+                });
+                
+                // Set schedule options
+                if (chore.schedule_type === 'days') {
+                    const days = JSON.parse(chore.schedule_days || '[]');
+                    days.forEach(d => {
+                        const cb = document.getElementById(`day-${d.toLowerCase()}`);
+                        if (cb) cb.checked = true;
+                    });
+                } else if (chore.schedule_type === 'interval') {
+                    document.getElementById('intervalDays').value = chore.schedule_interval || 7;
+                }
+            } else {
+                title.textContent = 'Add Chore';
+            }
+            
+            updateScheduleOptions();
+            overlay.classList.add('active');
+        }
+
+        function closeModal(event) {
+            if (event && event.target !== event.currentTarget) return;
+            document.getElementById('modalOverlay').classList.remove('active');
+        }
+
+        function updateScheduleOptions() {
+            const type = document.getElementById('scheduleType').value;
+            document.getElementById('daysOptions').classList.toggle('active', type === 'days');
+            document.getElementById('intervalOptions').classList.toggle('active', type === 'interval');
+        }
+
+        async function saveChore(event) {
+            event.preventDefault();
+            
+            const id = document.getElementById('choreId').value;
+            const name = document.getElementById('choreName').value;
+            const description = document.getElementById('choreDescription').value;
+            const scheduleType = document.getElementById('scheduleType').value;
+            const startDate = document.getElementById('startDate').value;
+            
+            // Get selected people
+            const people = [];
+            householdPeople.forEach(p => {
+                const cb = document.getElementById(`person-${p.key}`);
+                if (cb && cb.checked) {
+                    people.push(p.name);
+                }
+            });
+            
+            if (people.length === 0) {
+                showToast('Please select at least one person', 'error');
+                return;
+            }
+            
+            // Get schedule details
+            let scheduleDays = [];
+            let scheduleInterval = null;
+            
+            if (scheduleType === 'days') {
+                ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].forEach(d => {
+                    if (document.getElementById(`day-${d}`).checked) {
+                        scheduleDays.push(d);
+                    }
+                });
+                if (scheduleDays.length === 0) {
+                    showToast('Please select at least one day', 'error');
+                    return;
+                }
+            } else if (scheduleType === 'interval') {
+                scheduleInterval = parseInt(document.getElementById('intervalDays').value) || 7;
+            }
+            
+            const data = {
+                name,
+                description,
+                schedule_type: scheduleType,
+                schedule_days: scheduleDays,
+                schedule_interval: scheduleInterval,
+                people,
+                start_date: startDate || null
+            };
+            
+            try {
+                const url = id ? `/api/chores/${id}` : '/api/chores';
+                const method = id ? 'PUT' : 'POST';
+                
+                const response = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                if (!response.ok) throw new Error('Failed to save');
+                
+                closeModal();
+                fetchChores();
+                showToast(id ? 'Chore updated!' : 'Chore created!', 'success');
+            } catch (error) {
+                showToast('Failed to save chore', 'error');
+            }
+        }
+
+        async function editChore(id) {
+            const chore = chores.find(c => c.id === id);
+            if (chore) {
+                openModal(chore);
+            }
+        }
+
+        function deleteChore(id, name) {
+            deleteChoreId = id;
+            document.getElementById('deleteChoreTitle').textContent = name;
+            document.getElementById('deleteModalOverlay').classList.add('active');
+        }
+
+        function closeDeleteModal(event) {
+            if (event && event.target !== event.currentTarget) return;
+            document.getElementById('deleteModalOverlay').classList.remove('active');
+            deleteChoreId = null;
+        }
+
+        async function confirmDelete() {
+            if (!deleteChoreId) return;
+            
+            try {
+                const response = await fetch(`/api/chores/${deleteChoreId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (!response.ok) throw new Error('Failed to delete');
+                
+                closeDeleteModal();
+                fetchChores();
+                showToast('Chore deleted', 'success');
+            } catch (error) {
+                showToast('Failed to delete chore', 'error');
+            }
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type} show`;
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        async function wakeScreen() {
+            try {
+                await fetch('/api/screen/wake', { method: 'POST' });
+                showToast('Screen wake triggered', 'success');
+            } catch (error) {
+                showToast('Failed to wake screen', 'error');
+            }
+        }
+
+        // Meals
+        let mealsData = {};
+        const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+        async function fetchMeals() {
+            try {
+                const response = await fetch('/api/meals');
+                const data = await response.json();
+                mealsData = data.meals || {};
+                renderMealsEditor();
+            } catch (error) {
+                console.error('Error fetching meals:', error);
+            }
+        }
+
+        function renderMealsEditor() {
+            const container = document.getElementById('mealsEditor');
+
+            // Build combo options dynamically
+            // Each combo becomes a dinner split mode: the combo eats together, the remaining person eats separately
+            const comboModes = householdCombos.map(combo => {
+                // Find person not in this combo
+                const others = householdPeople.filter(p => !combo.names.includes(p.name));
+                const othersLabel = others.map(p => p.name).join(' & ');
+                return {
+                    key: combo.key,
+                    label: combo.label,
+                    color: combo.color,
+                    otherNames: others.map(p => p.name),
+                    otherLabel: othersLabel,
+                    otherColor: others.length === 1 ? others[0].color : everyoneColor
+                };
+            });
+
+            let html = '<div style="display: grid; gap: 16px;">';
+
+            for (let i = 0; i < 7; i++) {
+                const dayMeals = mealsData[i] || { lunch: [], dinner: [] };
+                const lunch = dayMeals.lunch[0]?.meal_name || '';
+                const dinnerAll = dayMeals.dinner.find(d => d.meal_variant === 'all');
+
+                const isDateNight = (i === 2 || i === 6); // Wed or Sun
+
+                // Determine current mode by checking which combo variants exist
+                let mode = 'all';
+                for (const combo of comboModes) {
+                    // Check if any dinner variant matches this combo or the "other" person(s)
+                    const hasComboVariant = dayMeals.dinner.find(d => d.meal_variant === combo.key);
+                    const hasOtherVariant = dayMeals.dinner.find(d => {
+                        // Check for individual person variants
+                        return combo.otherNames.some(n => {
+                            const personKey = getPersonKey(n);
+                            return d.meal_variant === personKey;
+                        });
+                    });
+                    if (hasComboVariant || hasOtherVariant) {
+                        mode = combo.key;
+                        break;
+                    }
+                }
+
+                // Build mode select options
+                let modeOptions = `<option value="all" ${mode === 'all' ? 'selected' : ''}>All the same</option>`;
+                comboModes.forEach(combo => {
+                    modeOptions += `<option value="${combo.key}" ${mode === combo.key ? 'selected' : ''}>${combo.label} same + ${combo.otherLabel} different</option>`;
+                });
+
+                // Build combo dinner sections
+                let comboSections = '';
+                comboModes.forEach(combo => {
+                    const comboVariant = dayMeals.dinner.find(d => d.meal_variant === combo.key);
+                    // For "other" people, look for their individual variant
+                    let otherVariant = null;
+                    for (const otherName of combo.otherNames) {
+                        const pk = getPersonKey(otherName);
+                        otherVariant = dayMeals.dinner.find(d => d.meal_variant === pk);
+                        if (otherVariant) break;
+                    }
+
+                    comboSections += `
+                            <div id="dinner-combo-${combo.key}-${i}" style="${mode === combo.key ? '' : 'display: none;'}">
+                                <div style="margin-bottom: 8px;">
+                                    <label style="font-size: 0.8rem; color: ${combo.color};">Dinner (${combo.label})</label>
+                                    <input type="text" id="dinner-combo-${combo.key}-input-${i}" value="${comboVariant?.meal_name || ''}" placeholder="${combo.label} dinner" style="width: 100%; padding: 8px 12px; background: var(--bg-input); border: none; border-radius: 8px; color: var(--text-primary);">
+                                </div>
+                                <div>
+                                    <label style="font-size: 0.8rem; color: ${combo.otherColor};">Dinner (${combo.otherLabel})</label>
+                                    <input type="text" id="dinner-other-${combo.key}-input-${i}" value="${otherVariant?.meal_name || ''}" placeholder="${combo.otherLabel}'s dinner" style="width: 100%; padding: 8px 12px; background: var(--bg-input); border: none; border-radius: 8px; color: var(--text-primary);">
+                                </div>
+                            </div>`;
+                });
+
+                html += `
+                    <div class="meal-day-editor" style="background: var(--bg-card); padding: 16px; border-radius: 12px;">
+                        <h3 style="margin-bottom: 12px; font-size: 1.1rem;">${dayNames[i]}${isDateNight ? ' <span style="font-size: 0.8rem; color: ' + everyoneColor + ';">(Date Night)</span>' : ''}</h3>
+
+                        <div style="display: grid; gap: 12px;">
+                            <div>
+                                <label style="font-size: 0.8rem; color: var(--text-muted);">Lunch</label>
+                                <input type="text" id="lunch-${i}" value="${lunch}" placeholder="Lunch meal" style="width: 100%; padding: 8px 12px; background: var(--bg-input); border: none; border-radius: 8px; color: var(--text-primary);">
+                            </div>
+
+                            <div>
+                                <label style="font-size: 0.8rem; color: var(--text-muted);">Dinner arrangement</label>
+                                <select id="dinner-mode-${i}" onchange="toggleDinnerMode(${i})" style="width: 100%; padding: 8px 12px; background: var(--bg-input); border: none; border-radius: 8px; color: var(--text-primary); margin-top: 4px;">
+                                    ${modeOptions}
+                                </select>
+                            </div>
+
+                            <div id="dinner-all-${i}" style="${mode === 'all' ? '' : 'display: none;'}">
+                                <label style="font-size: 0.8rem; color: var(--text-muted);">Dinner (Everyone)</label>
+                                <input type="text" id="dinner-all-input-${i}" value="${dinnerAll?.meal_name || ''}" placeholder="Dinner for everyone" style="width: 100%; padding: 8px 12px; background: var(--bg-input); border: none; border-radius: 8px; color: var(--text-primary);">
+                            </div>
+                            ${comboSections}
+                        </div>
+                    </div>
+                `;
+            }
+
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        function toggleDinnerMode(day) {
+            const mode = document.getElementById(`dinner-mode-${day}`).value;
+            document.getElementById(`dinner-all-${day}`).style.display = mode === 'all' ? '' : 'none';
+            // Toggle combo sections dynamically
+            householdCombos.forEach(combo => {
+                const el = document.getElementById(`dinner-combo-${combo.key}-${day}`);
+                if (el) el.style.display = mode === combo.key ? '' : 'none';
+            });
+        }
+
+        async function saveMeals() {
+            const meals = {};
+
+            for (let i = 0; i < 7; i++) {
+                const lunch = document.getElementById(`lunch-${i}`).value.trim();
+                const mode = document.getElementById(`dinner-mode-${i}`).value;
+
+                meals[i] = { lunch, mode };
+
+                if (mode === 'all') {
+                    meals[i].dinner_all = document.getElementById(`dinner-all-input-${i}`).value.trim();
+                } else {
+                    // Dynamic combo mode - find the matching combo
+                    const combo = householdCombos.find(c => c.key === mode);
+                    if (combo) {
+                        const comboInput = document.getElementById(`dinner-combo-${combo.key}-input-${i}`);
+                        const otherInput = document.getElementById(`dinner-other-${combo.key}-input-${i}`);
+                        if (comboInput) meals[i][`dinner_${combo.key}`] = comboInput.value.trim();
+                        if (otherInput) {
+                            // Find the "other" person(s) key
+                            const others = householdPeople.filter(p => !combo.names.includes(p.name));
+                            if (others.length === 1) {
+                                meals[i][`dinner_${others[0].key}`] = otherInput.value.trim();
+                            } else {
+                                // Multiple others - store with a combined key
+                                const otherKey = others.map(p => p.key).join('_');
+                                meals[i][`dinner_${otherKey}`] = otherInput.value.trim();
+                            }
+                        }
+                    }
+                }
+            }
+            
+            try {
+                const response = await fetch('/api/meals', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(meals)
+                });
+                
+                if (response.ok) {
+                    showToast('Meal plan saved!', 'success');
+                    fetchMeals();
+                } else {
+                    throw new Error('Save failed');
+                }
+            } catch (error) {
+                showToast('Failed to save meals', 'error');
+            }
+        }
+
+        async function clearMeals() {
+            if (!confirm('Clear all meals for the week?')) return;
+            
+            try {
+                const response = await fetch('/api/meals', { method: 'DELETE' });
+                
+                if (response.ok) {
+                    showToast('Meals cleared!', 'success');
+                    fetchMeals();
+                } else {
+                    throw new Error('Clear failed');
+                }
+            } catch (error) {
+                showToast('Failed to clear meals', 'error');
+            }
+        }
+
+        // Adhoc tasks
+        async function fetchAdhoc() {
+            try {
+                const response = await fetch('/api/adhoc');
+                const data = await response.json();
+                adhocTasks = data.tasks || [];
+                renderAdhoc();
+            } catch (error) {
+                console.error('Error fetching adhoc tasks:', error);
+            }
+        }
+
+        function renderAdhoc() {
+            const list = document.getElementById('adhocList');
+
+            if (adhocTasks.length === 0) {
+                list.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 40px;">No one-off tasks yet. Add one above!</p>';
+                return;
+            }
+
+            list.innerHTML = adhocTasks.map(task => {
+                const isCompleted = task.completed === 1;
+                const assignedTo = task.assigned_to ? `Assigned to ${escapeHtml(task.assigned_to)}` : 'Anyone can do this';
+                const completedInfo = isCompleted ? ` - Completed by ${escapeHtml(task.completed_by)}` : '';
+
+                return `
+                    <div class="adhoc-item ${isCompleted ? 'completed' : ''}">
+                        <div class="adhoc-info">
+                            <div class="adhoc-name">${escapeHtml(task.name)}</div>
+                            <div class="adhoc-meta">${assignedTo}${completedInfo}</div>
+                        </div>
+                        <div class="adhoc-actions">
+                            ${!isCompleted ? getPeopleNames().map(name => `
+                                <button class="complete-btn ${getPersonKey(name)}" onclick="completeAdhoc(${task.id}, '${name}')">${name}</button>
+                            `).join('') : ''}
+                            <button class="btn btn-danger btn-sm" onclick="deleteAdhoc(${task.id})">Delete</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function quickAddAdhoc() {
+            const nameInput = document.getElementById('quickAdhocName');
+            const personSelect = document.getElementById('quickAdhocPerson');
+            const name = nameInput.value.trim();
+
+            if (!name) {
+                showToast('Please enter a task name', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/adhoc', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: name,
+                        assigned_to: personSelect.value || null
+                    })
+                });
+
+                if (!response.ok) throw new Error('Failed to create task');
+
+                nameInput.value = '';
+                personSelect.value = '';
+                showToast('Task added!', 'success');
+                fetchAdhoc();
+            } catch (error) {
+                showToast('Failed to add task', 'error');
+            }
+        }
+
+        async function completeAdhoc(taskId, person) {
+            try {
+                const response = await fetch(`/api/adhoc/${taskId}/complete`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ completed_by: person })
+                });
+
+                if (!response.ok) throw new Error('Failed to complete');
+
+                showToast(`${person} completed the task!`, 'success');
+                fetchAdhoc();
+            } catch (error) {
+                showToast('Failed to complete task', 'error');
+            }
+        }
+
+        async function deleteAdhoc(taskId) {
+            if (!confirm('Delete this task?')) return;
+
+            try {
+                const response = await fetch(`/api/adhoc/${taskId}`, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) throw new Error('Failed to delete');
+
+                showToast('Task deleted', 'success');
+                fetchAdhoc();
+            } catch (error) {
+                showToast('Failed to delete task', 'error');
+            }
+        }
+
+        async function clearCompletedAdhoc() {
+            if (!confirm('Clear all completed one-off tasks?')) return;
+
+            try {
+                const response = await fetch('/api/adhoc/completed', {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) throw new Error('Failed to clear');
+
+                const data = await response.json();
+                showToast(`Cleared ${data.count} completed tasks`, 'success');
+                fetchAdhoc();
+            } catch (error) {
+                showToast('Failed to clear tasks', 'error');
+            }
+        }
+
+        // Initial load - load people first, then chores and meals
+        loadPeople().then(() => {
+            fetchChores();
+            fetchMeals();
+        });
+    </script>
+</body>
+</html>

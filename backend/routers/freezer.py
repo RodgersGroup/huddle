@@ -1,0 +1,127 @@
+"""Freezer inventory — track freezer meals, leftovers, and frozen items."""
+
+import logging
+import sqlite3
+from fastapi import APIRouter, Depends, HTTPException, Request
+from auth import get_current_user, TenantContext
+from db import get_db
+from websocket import manager
+
+logger = logging.getLogger("huddle")
+
+router = APIRouter()
+
+
+@router.get("/api/freezer")
+def list_freezer_items(tenant: TenantContext = Depends(get_current_user)):
+    """List all freezer items for the household."""
+    try:
+        with get_db() as conn:
+            rows = conn.execute(
+                "SELECT * FROM freezer_items WHERE household_id = ? ORDER BY date_frozen DESC, created_at DESC",
+                (tenant.household_id,),
+            ).fetchall()
+        return {"items": [dict(r) for r in rows]}
+    except sqlite3.Error as e:
+        logger.error("Database error in list_freezer_items: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Database error")
+
+
+@router.post("/api/freezer")
+async def create_freezer_item(request: Request, tenant: TenantContext = Depends(get_current_user)):
+    """Add an item to the freezer."""
+    try:
+        data = await request.json()
+        name = (data.get("name") or "").strip()
+        if not name:
+            raise HTTPException(status_code=400, detail="Name is required")
+
+        with get_db() as conn:
+            cursor = conn.execute(
+                """INSERT INTO freezer_items (name, category, quantity, date_frozen, expiry_date, notes, added_by, household_id)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    name,
+                    data.get("category", "meal"),
+                    data.get("quantity", 1),
+                    data.get("date_frozen", ""),
+                    data.get("expiry_date", ""),
+                    data.get("notes", ""),
+                    tenant.display_name,
+                    tenant.household_id,
+                ),
+            )
+            conn.commit()
+
+        await manager.broadcast({"type": "inventory_updated"}, household_id=tenant.household_id)
+        return {"id": cursor.lastrowid, "message": "Item added to freezer"}
+    except HTTPException:
+        raise
+    except sqlite3.Error as e:
+        logger.error("Database error in create_freezer_item: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Database error")
+    except Exception as e:
+        logger.critical("Unexpected error in create_freezer_item: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.put("/api/freezer/{item_id}")
+async def update_freezer_item(item_id: int, request: Request, tenant: TenantContext = Depends(get_current_user)):
+    """Update a freezer item."""
+    try:
+        data = await request.json()
+        with get_db() as conn:
+            existing = conn.execute(
+                "SELECT id FROM freezer_items WHERE id = ? AND household_id = ?",
+                (item_id, tenant.household_id),
+            ).fetchone()
+            if not existing:
+                raise HTTPException(status_code=404, detail="Item not found")
+
+            conn.execute(
+                """UPDATE freezer_items SET name=?, category=?, quantity=?, date_frozen=?, expiry_date=?, notes=?
+                   WHERE id=? AND household_id=?""",
+                (
+                    data.get("name", ""),
+                    data.get("category", "meal"),
+                    data.get("quantity", 1),
+                    data.get("date_frozen", ""),
+                    data.get("expiry_date", ""),
+                    data.get("notes", ""),
+                    item_id,
+                    tenant.household_id,
+                ),
+            )
+            conn.commit()
+
+        await manager.broadcast({"type": "inventory_updated"}, household_id=tenant.household_id)
+        return {"message": "Item updated"}
+    except HTTPException:
+        raise
+    except sqlite3.Error as e:
+        logger.error("Database error in update_freezer_item: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Database error")
+    except Exception as e:
+        logger.critical("Unexpected error in update_freezer_item: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.delete("/api/freezer/{item_id}")
+async def delete_freezer_item(item_id: int, tenant: TenantContext = Depends(get_current_user)):
+    """Delete a freezer item."""
+    try:
+        with get_db() as conn:
+            conn.execute(
+                "DELETE FROM freezer_items WHERE id = ? AND household_id = ?",
+                (item_id, tenant.household_id),
+            )
+            conn.commit()
+
+        await manager.broadcast({"type": "inventory_updated"}, household_id=tenant.household_id)
+        return {"message": "Item removed from freezer"}
+    except sqlite3.Error as e:
+        logger.error("Database error in delete_freezer_item: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Database error")
+    except Exception as e:
+        logger.critical("Unexpected error in delete_freezer_item: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")

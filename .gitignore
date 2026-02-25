@@ -1,0 +1,17 @@
+node_modules/
+dist/
+backend/venv/
+backend/chores.db
+backend/chores.db-shm
+backend/chores.db-wal
+backend/.env
+backend/vapid_keys.json
+backend/logs/
+backend/backups/
+backend/static/avatars/
+backend/static/feedback_screenshots/
+backend/static/task_photos/
+backend/__pycache__/
+**/__pycache__/
+*.pyc
+.DS_Store

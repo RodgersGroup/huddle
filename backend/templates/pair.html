@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Huddle - Pair Display</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1d27;
+            color: #e0e0e0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .pair-container {
+            text-align: center;
+            max-width: 400px;
+            padding: 32px 24px;
+            width: 100%;
+        }
+        .logo { font-size: 36px; font-weight: 700; color: #4ecdc4; margin-bottom: 4px; }
+        .subtitle { color: #888; font-size: 14px; margin-bottom: 32px; }
+        h2 { font-size: 20px; color: #fff; margin-bottom: 8px; }
+        .desc { color: #999; font-size: 14px; line-height: 1.5; margin-bottom: 24px; }
+
+        .form-group { margin-bottom: 16px; text-align: left; }
+        .form-label { font-size: 13px; color: #999; margin-bottom: 6px; display: block; }
+        .form-input {
+            width: 100%; padding: 14px 16px; background: #2a2d3a;
+            border: 1px solid #3a3d4a; border-radius: 10px;
+            color: #fff; font-size: 16px;
+        }
+        .form-input:focus { outline: none; border-color: #4ecdc4; }
+        .code-input {
+            font-family: 'SF Mono', 'Fira Code', 'Courier New', monospace;
+            font-size: 24px; letter-spacing: 6px; text-align: center;
+            text-transform: uppercase; font-weight: 600;
+        }
+
+        .btn-primary {
+            width: 100%; padding: 14px; background: #4ecdc4; color: #1a1d27;
+            border: none; border-radius: 10px; font-weight: 700;
+            font-size: 16px; cursor: pointer; margin-top: 8px;
+        }
+        .btn-primary:hover { background: #45b8b0; }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .msg-error {
+            background: rgba(255, 107, 107, 0.15); border: 1px solid #ff6b6b;
+            border-radius: 8px; padding: 12px 16px; color: #ff6b6b;
+            font-size: 14px; margin-top: 16px;
+        }
+        .msg-success {
+            background: rgba(78, 205, 196, 0.15); border: 1px solid #4ecdc4;
+            border-radius: 8px; padding: 20px 16px; color: #4ecdc4;
+            font-size: 16px; margin-top: 16px;
+        }
+        .msg-info {
+            background: rgba(78, 205, 196, 0.08); border: 1px solid rgba(78, 205, 196, 0.3);
+            border-radius: 8px; padding: 16px; color: #ccc;
+            font-size: 14px; margin-top: 16px; line-height: 1.5;
+        }
+        .success-check { font-size: 48px; margin-bottom: 8px; }
+
+        .spinner-sm {
+            width: 20px; height: 20px; border: 3px solid #1a1d27;
+            border-top-color: transparent; border-radius: 50%;
+            animation: spin 0.6s linear infinite; display: inline-block;
+            vertical-align: middle;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .hidden { display: none !important; }
+
+        .back-link {
+            color: #666; font-size: 13px; margin-top: 24px;
+            display: inline-block; text-decoration: none;
+        }
+        .back-link:hover { color: #999; }
+
+        .step-indicator {
+            display: flex; align-items: center; justify-content: center;
+            gap: 8px; margin-bottom: 24px;
+        }
+        .step-dot {
+            width: 8px; height: 8px; border-radius: 50%; background: #3a3d4a;
+        }
+        .step-dot.active { background: #4ecdc4; width: 24px; border-radius: 4px; }
+        .step-dot.done { background: #4ecdc4; }
+    </style>
+</head>
+<body>
+    <div class="pair-container">
+        <div class="logo">Huddle</div>
+        <div class="subtitle">Pair a display</div>
+
+        <!-- Loading -->
+        <div id="stateLoading">
+            <div class="spinner-sm" style="width:32px;height:32px;border-width:4px;margin:40px auto;border-color:#4ecdc4;border-top-color:transparent;"></div>
+            <p style="color:#888;">Checking your account...</p>
+        </div>
+
+        <!-- Step 1: Email login (shown if not logged in) -->
+        <div id="stateEmail" class="hidden">
+            <div class="step-indicator">
+                <div class="step-dot active"></div>
+                <div class="step-dot"></div>
+            </div>
+            <h2>Enter your email</h2>
+            <p class="desc">We'll send you a quick login link to pair this display.</p>
+
+            <div class="form-group">
+                <input type="email" id="emailInput" class="form-input" placeholder="you@example.com" autocomplete="email"
+                    onkeydown="if(event.key==='Enter')sendLoginLink();">
+            </div>
+
+            <button class="btn-primary" id="emailBtn" onclick="sendLoginLink()">Send Login Link</button>
+            <div id="emailMsg"></div>
+        </div>
+
+        <!-- Step 1b: Check your email -->
+        <div id="stateCheckEmail" class="hidden">
+            <div class="step-indicator">
+                <div class="step-dot active"></div>
+                <div class="step-dot"></div>
+            </div>
+            <h2>Check your email</h2>
+            <p class="desc">We sent a login link to <strong id="sentToEmail"></strong></p>
+            <div class="msg-info">
+                Tap the link in the email, then <strong>come back to this page</strong>. It will update automatically.
+            </div>
+            <div id="checkEmailMsg"></div>
+            <button class="btn-primary" style="background:#2a2d3a;color:#ccc;margin-top:16px;" onclick="showState('email')">Try a different email</button>
+        </div>
+
+        <!-- Not a manager -->
+        <div id="stateNoAccess" class="hidden">
+            <h2>Manager access required</h2>
+            <p class="desc">Only household managers can pair displays. Ask a manager to scan the QR code on the display instead.</p>
+            <a href="/mobile" class="back-link">Back to Huddle</a>
+        </div>
+
+        <!-- Step 2: Claim form -->
+        <div id="stateClaim" class="hidden">
+            <div class="step-indicator">
+                <div class="step-dot done"></div>
+                <div class="step-dot active"></div>
+            </div>
+            <h2>Pair your display</h2>
+            <p class="desc">Enter the code shown on the display you want to connect.</p>
+
+            <div class="form-group">
+                <label class="form-label">Pairing Code</label>
+                <input type="text" id="codeInput" class="form-input code-input" maxlength="6" placeholder="------" autocomplete="off" spellcheck="false"
+                    oninput="this.value = this.value.toUpperCase().replace(/[^ABCDEFGHJKMNPQRSTUVWXYZ23456789]/g, '');"
+                    onkeydown="if(event.key==='Enter')claimCode();">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Display Name (optional)</label>
+                <input type="text" id="labelInput" class="form-input" placeholder="e.g. Kitchen Display" maxlength="100" value="Kiosk Display">
+            </div>
+
+            <button class="btn-primary" id="pairBtn" onclick="claimCode()">Pair Display</button>
+            <div id="claimMsg"></div>
+
+            <a href="/mobile" class="back-link">Back to Huddle</a>
+        </div>
+
+        <!-- Success -->
+        <div id="stateSuccess" class="hidden">
+            <div class="msg-success">
+                <div class="success-check">&#10003;</div>
+                <strong>Display paired!</strong><br>
+                <span style="font-size:14px;">The display will connect automatically. You can close this page.</span>
+            </div>
+            <a href="/mobile" class="back-link" style="margin-top:32px;">Back to Huddle</a>
+        </div>
+    </div>
+
+    <script>
+        // CSRF protection: auto-inject X-Requested-With on state-changing requests
+        (function() {
+            const _origFetch = window.fetch;
+            const CSRF_METHODS = new Set(['POST', 'PUT', 'DELETE', 'PATCH']);
+            window.fetch = function(input, init) {
+                if (init && CSRF_METHODS.has((init.method || 'GET').toUpperCase())) {
+                    init.headers = init.headers || {};
+                    if (init.headers instanceof Headers) {
+                        if (!init.headers.has('X-Requested-With')) init.headers.set('X-Requested-With', 'XMLHttpRequest');
+                    } else {
+                        if (!init.headers['X-Requested-With']) init.headers['X-Requested-With'] = 'XMLHttpRequest';
+                    }
+                }
+                return _origFetch.call(this, input, init);
+            };
+        })();
+
+        var returnCode = new URLSearchParams(window.location.search).get('code') || '';
+        var pollTimer = null;
+
+        async function init() {
+            try {
+                var resp = await fetch('/api/auth/me');
+                if (!resp.ok) {
+                    // Not logged in — show inline email login
+                    showState('email');
+                    return;
+                }
+                var data = await resp.json();
+                var role = data.role || (data.member && data.member.role) || '';
+                if (role !== 'manager') {
+                    showState('noaccess');
+                    return;
+                }
+                // Manager — show claim form
+                showState('claim');
+                if (returnCode) {
+                    document.getElementById('codeInput').value = returnCode.toUpperCase();
+                }
+            } catch (e) {
+                showState('email');
+            }
+        }
+
+        async function sendLoginLink() {
+            var email = document.getElementById('emailInput').value.trim();
+            var msgEl = document.getElementById('emailMsg');
+            msgEl.textContent = '';
+            if (!email || !email.includes('@')) {
+                showMsg(msgEl, 'error', 'Please enter a valid email address.');
+                return;
+            }
+            var btn = document.getElementById('emailBtn');
+            btn.disabled = true;
+            btn.textContent = 'Sending...';
+            try {
+                var resp = await fetch('/api/auth/magic-link', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ email: email })
+                });
+                if (!resp.ok) {
+                    var err = await resp.json().catch(function() { return {}; });
+                    throw new Error(err.detail || 'Failed to send login link');
+                }
+                document.getElementById('sentToEmail').textContent = email;
+                showState('checkEmail');
+                // Start polling for auth status
+                startAuthPolling();
+            } catch (e) {
+                btn.disabled = false;
+                btn.textContent = 'Send Login Link';
+                showMsg(msgEl, 'error', e.message);
+            }
+        }
+
+        function startAuthPolling() {
+            if (pollTimer) clearInterval(pollTimer);
+            pollTimer = setInterval(async function() {
+                try {
+                    var resp = await fetch('/api/auth/me');
+                    if (resp.ok) {
+                        clearInterval(pollTimer);
+                        pollTimer = null;
+                        var data = await resp.json();
+                        var role = data.role || (data.member && data.member.role) || '';
+                        if (role !== 'manager') {
+                            showState('noaccess');
+                            return;
+                        }
+                        showState('claim');
+                        if (returnCode) {
+                            document.getElementById('codeInput').value = returnCode.toUpperCase();
+                        }
+                    }
+                } catch (e) { /* keep polling */ }
+            }, 3000);
+        }
+
+        async function claimCode() {
+            var code = document.getElementById('codeInput').value.trim().toUpperCase();
+            var label = document.getElementById('labelInput').value.trim() || 'Kiosk Display';
+            var msgEl = document.getElementById('claimMsg');
+
+            if (!code || code.length !== 6) {
+                showMsg(msgEl, 'error', 'Please enter a 6-character pairing code.');
+                return;
+            }
+
+            var btn = document.getElementById('pairBtn');
+            btn.disabled = true;
+            btn.textContent = 'Pairing...';
+            msgEl.textContent = '';
+
+            try {
+                var resp = await fetch('/api/kiosk/claim-code', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({code: code, label: label})
+                });
+                var data = await resp.json();
+
+                if (!resp.ok) {
+                    var errorText = data.detail || 'Failed to pair display';
+                    if (resp.status === 410) errorText = 'This pairing code has expired. Check the display for a new code.';
+                    if (resp.status === 409) errorText = 'This code has already been used. Check the display for a new code.';
+                    if (resp.status === 403) errorText = 'Only managers can pair displays.';
+                    throw new Error(errorText);
+                }
+
+                showState('success');
+            } catch (e) {
+                btn.disabled = false;
+                btn.textContent = 'Pair Display';
+                showMsg(msgEl, 'error', e.message);
+            }
+        }
+
+        function showMsg(el, type, text) {
+            el.textContent = '';
+            var div = document.createElement('div');
+            div.className = type === 'error' ? 'msg-error' : 'msg-info';
+            div.textContent = text;
+            el.appendChild(div);
+        }
+
+        function showState(state) {
+            ['stateLoading','stateEmail','stateCheckEmail','stateNoAccess','stateClaim','stateSuccess'].forEach(function(id) {
+                document.getElementById(id).classList.toggle('hidden', id !== 'state' + state.charAt(0).toUpperCase() + state.slice(1));
+            });
+            // Map state names to element IDs
+            var map = {loading:'stateLoading',email:'stateEmail',checkEmail:'stateCheckEmail',noaccess:'stateNoAccess',claim:'stateClaim',success:'stateSuccess'};
+            Object.keys(map).forEach(function(k) {
+                document.getElementById(map[k]).classList.toggle('hidden', k !== state);
+            });
+        }
+
+        init();
+    </script>
+</body>
+</html>

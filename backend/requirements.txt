@@ -1,0 +1,11 @@
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+jinja2==3.1.3
+python-multipart==0.0.6
+websockets==12.0
+icalendar
+recurring-ical-events
+pywebpush
+sentry-sdk[fastapi]
+pytest
+httpx<0.28

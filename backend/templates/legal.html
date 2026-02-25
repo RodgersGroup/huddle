@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Huddle — Legal & Info</title>
+    <style>
+        :root {
+            --bg: #13151a;
+            --bg-card: #1a1d27;
+            --text: #e8e8e8;
+            --text-secondary: #999;
+            --accent: #4ecdc4;
+            --border: #2a2d37;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+        .header {
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 20px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .header a {
+            color: var(--accent);
+            text-decoration: none;
+            font-size: 1.5rem;
+        }
+        .header-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+        .brand {
+            font-size: 1.3rem;
+            font-weight: 800;
+        }
+        .brand .h { color: var(--accent); }
+        .container {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 20px 16px 60px;
+        }
+        .nav-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+        .nav-pill {
+            padding: 8px 16px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+        .nav-pill:hover, .nav-pill.active {
+            background: var(--accent);
+            color: var(--bg);
+            border-color: var(--accent);
+            font-weight: 600;
+        }
+        .section {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 24px 20px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border);
+            display: none;
+        }
+        .section.active { display: block; }
+        .section h2 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: var(--accent);
+        }
+        .section h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin: 20px 0 8px;
+            color: var(--text);
+        }
+        .section p, .section li {
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+            font-size: 0.92rem;
+        }
+        .section ul, .section ol {
+            padding-left: 20px;
+            margin-bottom: 12px;
+        }
+        .section li { margin-bottom: 6px; }
+        .section strong { color: var(--text); }
+        .section a { color: var(--accent); }
+        .effective-date {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+            font-style: italic;
+        }
+        .faq-item {
+            margin-bottom: 16px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+        .faq-item:last-child { border-bottom: none; padding-bottom: 0; }
+        .faq-q {
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 6px;
+            font-size: 0.95rem;
+        }
+        .faq-a {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        .step-card {
+            background: var(--bg);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            border: 1px solid var(--border);
+        }
+        .step-number {
+            display: inline-block;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--accent);
+            color: var(--bg);
+            text-align: center;
+            line-height: 28px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            margin-right: 10px;
+        }
+        .step-title {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+        .step-desc {
+            margin-top: 8px;
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+        }
+        @media (max-width: 480px) {
+            .nav-pills { gap: 6px; }
+            .nav-pill { font-size: 0.8rem; padding: 6px 12px; }
+            .section { padding: 20px 16px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="/mobile">&#8592;</a>
+        <div>
+            <span class="brand"><span class="h">H</span>uddle</span>
+            <span class="header-title"> &mdash; Legal & Info</span>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="nav-pills" id="navPills">
+            <button class="nav-pill active" data-section="getting-started" onclick="showSection('getting-started')">Getting Started</button>
+            <button class="nav-pill" data-section="faq" onclick="showSection('faq')">FAQ</button>
+            <button class="nav-pill" data-section="privacy" onclick="showSection('privacy')">Privacy Policy</button>
+            <button class="nav-pill" data-section="terms" onclick="showSection('terms')">Terms of Service</button>
+            <button class="nav-pill" data-section="beta" onclick="showSection('beta')">Beta Agreement</button>
+        </div>
+
+        <!-- Getting Started -->
+        <div class="section active" id="section-getting-started">
+            <h2>Getting Started with Huddle</h2>
+            <p>Huddle is your household management app — chores, meals, calendar, bills, shopping, and more, all in one place. Here's how to get going:</p>
+
+            <div class="step-card">
+                <span class="step-number">1</span><span class="step-title">Create your account</span>
+                <div class="step-desc">Enter your email at the login screen. We'll send you a magic link — no password needed! Tap the link in your email to log in securely.</div>
+            </div>
+
+            <div class="step-card">
+                <span class="step-number">2</span><span class="step-title">Set up your household</span>
+                <div class="step-desc">Choose a name for your household, add your display name, and pick a colour. Then add your household members — they'll each get their own profile.</div>
+            </div>
+
+            <div class="step-card">
+                <span class="step-number">3</span><span class="step-title">Choose your modules</span>
+                <div class="step-desc">Toggle on the features you need: chores, meal planning, calendar, bills, shopping, pantry, polls, and more. You can always change these later in settings.</div>
+            </div>
+
+            <div class="step-card">
+                <span class="step-number">4</span><span class="step-title">Invite your household</span>
+                <div class="step-desc">Share your invite code or link with your household members. They'll be able to join your household and start collaborating straight away.</div>
+            </div>
+
+            <div class="step-card">
+                <span class="step-number">5</span><span class="step-title">Install the app</span>
+                <div class="step-desc">Huddle works as a progressive web app (PWA). On your phone, tap "Add to Home Screen" in your browser menu to install it like a native app. You'll get push notifications and offline access.</div>
+            </div>
+
+            <h3>Optional: Kiosk Display</h3>
+            <p>Got a Raspberry Pi or spare screen? Set up a kiosk display that shows an always-on household dashboard. Pair it using a QR code from the settings menu — no login needed on the kiosk itself.</p>
+
+            <h3>Key Features</h3>
+            <ul>
+                <li><strong>Chores</strong> — Rotating schedules, streaks, load balancing, and completion tracking</li>
+                <li><strong>Meals</strong> — Weekly meal planning with variant support for split dinners</li>
+                <li><strong>Calendar</strong> — Shared family calendar with recurring events</li>
+                <li><strong>Bills</strong> — Track bills with due dates and recurring auto-generation</li>
+                <li><strong>Shopping</strong> — Collaborative shopping list with purchase tracking</li>
+                <li><strong>Pantry</strong> — Inventory tracking with low-stock alerts</li>
+                <li><strong>Recipes</strong> — Save, import from URL, and add ingredients to shopping</li>
+                <li><strong>Polls</strong> — Quick household votes for group decisions</li>
+                <li><strong>Tasks</strong> — Ad-hoc personal or request tasks</li>
+            </ul>
+        </div>
+
+        <!-- FAQ -->
+        <div class="section" id="section-faq">
+            <h2>Frequently Asked Questions</h2>
+
+            <div class="faq-item">
+                <div class="faq-q">How do I log in?</div>
+                <div class="faq-a">We use magic links — enter your email and we'll send you a login link. No passwords to remember! The link expires after 10 minutes for security.</div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-q">Can I belong to multiple households?</div>
+                <div class="faq-a">Yes! You can create or join multiple households. Use the household switcher in settings to swap between them.</div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-q">What are the different roles?</div>
+                <div class="faq-a"><strong>Managers</strong> have full access including settings, member management, and admin features. <strong>Members</strong> can use all modules and complete tasks. <strong>Dependants</strong> have restricted access suited for younger household members.</div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-q">How do chore rotations work?</div>
+                <div class="faq-a">When you assign multiple people to a chore, it automatically rotates to the next person after each completion. The system also load-balances to avoid giving one person too many chores in a day.</div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-q">Can I get push notifications?</div>
+                <div class="faq-a">Yes! After installing the app, you'll be prompted to enable notifications. You'll get reminders for overdue chores, meal plans, upcoming events, and more. Notification times are configurable in settings.</div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-q">Is my data backed up?</div>
+                <div class="faq-a">Yes, the database is automatically backed up every 6 hours with 30-day retention. Backups are compressed and stored securely on the server.</div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-q">How do I import recipes?</div>
+                <div class="faq-a">In the Recipes module, tap "Import from URL" and paste any recipe URL. Huddle extracts the recipe data automatically from sites that use structured data (most major recipe sites). You can then add ingredients directly to your shopping list.</div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-q">What is the kiosk display?</div>
+                <div class="faq-a">The kiosk is an always-on display (typically a Raspberry Pi with a screen) that shows your household dashboard — today's chores, upcoming events, meal plan, and weather. It updates in real-time and is great for a kitchen or hallway display.</div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-q">How do I report a bug or suggest a feature?</div>
+                <div class="faq-a">Use the Feedback module in the app! You can submit bug reports, feature requests, general feedback, or praise. Your submissions are reviewed by the development team.</div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-q">Can I delete my account?</div>
+                <div class="faq-a">Please contact us at keiran@rodgersgroup.au to request account deletion. We'll remove your user data, household memberships, and any associated personal information.</div>
+            </div>
+        </div>
+
+        <!-- Privacy Policy -->
+        <div class="section" id="section-privacy">
+            <h2>Privacy Policy</h2>
+            <div class="effective-date">Effective: February 2025</div>
+
+            <h3>What We Collect</h3>
+            <p>Huddle collects the minimum data necessary to provide the service:</p>
+            <ul>
+                <li><strong>Email address</strong> — Used for authentication (magic link login) and account identification</li>
+                <li><strong>Display name</strong> — Chosen by you, shown to other household members</li>
+                <li><strong>Profile photo</strong> — Optional, uploaded by you</li>
+                <li><strong>Household data</strong> — Chores, meals, events, bills, shopping lists, and other module data you create</li>
+                <li><strong>Device information</strong> — User agent string, stored with feedback submissions for debugging</li>
+                <li><strong>Location</strong> — Optional, used for weather forecasts and fuel prices if you choose to share it</li>
+                <li><strong>Push subscription</strong> — Browser push notification endpoint, if you enable notifications</li>
+            </ul>
+
+            <h3>How We Use Your Data</h3>
+            <ul>
+                <li>To provide and operate the Huddle household management service</li>
+                <li>To authenticate your identity via magic link emails</li>
+                <li>To send push notifications you've opted into (chore reminders, event alerts)</li>
+                <li>To display weather and fuel prices based on your chosen location</li>
+                <li>To improve the service based on feedback and usage patterns</li>
+            </ul>
+
+            <h3>Data Storage & Security</h3>
+            <ul>
+                <li>All data is stored in an SQLite database on a server located in Australia</li>
+                <li>External access is secured via HTTPS through Cloudflare Tunnel</li>
+                <li>Session cookies are signed and HTTP-only</li>
+                <li>The database is backed up every 6 hours with 30-day retention</li>
+                <li>Profile images are stored locally on the server, not on third-party services</li>
+            </ul>
+
+            <h3>Third-Party Services</h3>
+            <ul>
+                <li><strong>Resend</strong> — Email delivery for magic links and notifications</li>
+                <li><strong>Cloudflare</strong> — Tunnel and DNS for secure external access</li>
+                <li><strong>Open-Meteo</strong> — Weather data (no personal data sent, only coordinates)</li>
+                <li><strong>NSW OneGov</strong> — Fuel prices (no personal data sent, only coordinates)</li>
+                <li><strong>OpenStreetMap Nominatim</strong> — Reverse geocoding during onboarding</li>
+            </ul>
+
+            <h3>Data Sharing</h3>
+            <p>We do not sell, trade, or share your personal data with third parties for marketing purposes. Your household data is only visible to members of your household.</p>
+
+            <h3>Data Retention</h3>
+            <p>Your data is retained as long as your account is active. You may request deletion of your account and all associated data by contacting keiran@rodgersgroup.au.</p>
+
+            <h3>Contact</h3>
+            <p>For privacy questions or data requests, contact: <a href="mailto:keiran@rodgersgroup.au">keiran@rodgersgroup.au</a></p>
+        </div>
+
+        <!-- Terms of Service -->
+        <div class="section" id="section-terms">
+            <h2>Terms of Service</h2>
+            <div class="effective-date">Effective: February 2025</div>
+
+            <h3>Acceptance</h3>
+            <p>By using Huddle, you agree to these terms. If you don't agree, please don't use the service.</p>
+
+            <h3>The Service</h3>
+            <p>Huddle is a household management application provided as-is. It is currently in <strong>beta</strong> and features may change, be added, or be removed. We aim for reliability but cannot guarantee 100% uptime.</p>
+
+            <h3>Your Account</h3>
+            <ul>
+                <li>You must provide a valid email address to create an account</li>
+                <li>You are responsible for the activity on your account</li>
+                <li>You must not share your login links with others</li>
+                <li>Manager accounts have elevated privileges — use them responsibly</li>
+            </ul>
+
+            <h3>Acceptable Use</h3>
+            <p>You agree not to:</p>
+            <ul>
+                <li>Use the service for anything illegal or harmful</li>
+                <li>Attempt to access other households' data</li>
+                <li>Interfere with the service's operation or security</li>
+                <li>Create automated or bot accounts</li>
+                <li>Upload harmful or inappropriate content</li>
+            </ul>
+
+            <h3>Your Data</h3>
+            <p>You retain ownership of the content you create in Huddle. We claim no rights to your household data. You can request export or deletion of your data at any time.</p>
+
+            <h3>Limitation of Liability</h3>
+            <p>Huddle is provided "as is" without warranties of any kind. We are not liable for data loss, service interruptions, or any damages arising from use of the service. The service is a household management tool and should not be relied upon as the sole record of important information.</p>
+
+            <h3>Changes</h3>
+            <p>We may update these terms at any time. Continued use of the service after changes constitutes acceptance of the updated terms.</p>
+        </div>
+
+        <!-- Beta Agreement -->
+        <div class="section" id="section-beta">
+            <h2>Beta Tester Agreement</h2>
+            <div class="effective-date">Effective: February 2025</div>
+
+            <p>Thank you for being a Huddle beta tester! By participating, you acknowledge the following:</p>
+
+            <h3>What Beta Means</h3>
+            <ul>
+                <li>Huddle is in active development and may contain bugs</li>
+                <li>Features may change, be redesigned, or be removed without notice</li>
+                <li>Data may occasionally need to be reset during major updates (we'll warn you first)</li>
+                <li>Performance and reliability may vary</li>
+            </ul>
+
+            <h3>Your Role</h3>
+            <ul>
+                <li>Use the app naturally with your household</li>
+                <li>Report bugs, issues, and feedback using the Feedback module</li>
+                <li>Be patient with rough edges — your reports help us improve</li>
+                <li>Let us know what features you'd love to see</li>
+            </ul>
+
+            <h3>What We Promise</h3>
+            <ul>
+                <li>We'll take your feedback seriously and prioritise fixes</li>
+                <li>We'll keep your data safe and backed up</li>
+                <li>We'll notify you before any major changes that affect your data</li>
+                <li>We'll acknowledge your contributions as we grow</li>
+            </ul>
+
+            <h3>Confidentiality</h3>
+            <p>During beta, we ask that you don't publicly share screenshots, performance data, or technical details of the service without permission. You're welcome to tell others about Huddle and invite them to join!</p>
+        </div>
+    </div>
+
+    <script>
+        function showSection(id) {
+            document.querySelectorAll('.section').forEach(function(s) { s.classList.remove('active'); });
+            document.querySelectorAll('.nav-pill').forEach(function(p) { p.classList.remove('active'); });
+            var el = document.getElementById('section-' + id);
+            if (el) el.classList.add('active');
+            var pill = document.querySelector('.nav-pill[data-section="' + id + '"]');
+            if (pill) pill.classList.add('active');
+            window.scrollTo(0, 0);
+        }
+
+        // Check URL param for deep linking
+        var urlSection = '{{ section }}';
+        if (urlSection) showSection(urlSection);
+    </script>
+</body>
+</html>

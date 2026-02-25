@@ -1,0 +1,3546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Huddle</title>
+    <link rel="icon" type="image/svg+xml" href="/static/icon.svg">
+    <link rel="apple-touch-icon" href="/static/icon-192.png">
+    {% if GA4_MEASUREMENT_ID %}
+    <script async src="https://www.googletagmanager.com/gtag/js?id={{ GA4_MEASUREMENT_ID }}"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','{{ GA4_MEASUREMENT_ID }}');</script>
+    {% endif %}
+    <!-- System fonts used to align with mobile app -->
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Huddle logo text */
+        .huddle-logo { font-weight: 800; color: #e8e8e8; }
+        .huddle-h { color: #4ecdc4; }
+
+        :root {
+            --bg-primary: #1a1d27;
+            --bg-card: #242830;
+            --bg-card-hover: #2a2e38;
+            --text-primary: #e8e8e8;
+            --text-secondary: #aaaaaa;
+            --text-muted: #666;
+            --accent: #4ecdc4;
+            --success: #22c55e;
+            --danger: #ef4444;
+            --warning: #ff9800;
+            --info: #3b82f6;
+            --border-color: #333;
+            /* Person colors — fallbacks, overridden dynamically from /api/people */
+            --accent-keiran: #3b82f6;
+            --accent-ciara: #ec4899;
+            --accent-tahni: #4caf50;
+            /* Combination colors */
+            --color-ciara-tahni: #f97316;
+            --color-ciara-keiran: #a855f7;
+            --color-keiran-tahni: #ffeb3b;
+            --color-everyone: #8b5cf6;
+            --color-guests: #94a3b8;
+            --color-one-off: #06b6d4;
+            /* Status colors */
+            --status-overdue: #ef4444;
+            --status-due: var(--accent);
+            --status-tomorrow: #a0a0a0;
+            --status-done: #666;
+            --border-radius: 16px;
+            --shadow: 0 4px 24px rgba(0,0,0,0.3);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            height: 100vh;
+            padding: 12px 16px;
+            overflow: hidden;
+            margin: 0;
+        }
+
+        /* Responsive breakpoints are consolidated at the end of the stylesheet */
+
+        .container {
+            max-width: 1920px;
+            margin: 0 auto;
+            height: 100%;
+            display: grid;
+            grid-template-rows: auto auto 1fr;
+            gap: 10px;
+            overflow: hidden;
+        }
+
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            overflow-y: auto;
+            min-height: 0;
+        }
+
+        /* Header bar */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-color);
+            gap: 16px;
+        }
+
+        .title-section h1 {
+            font-family: inherit;
+            font-size: 1.8rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+        }
+
+        .title-section .admin-link {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            display: inline-block;
+            margin-top: 4px;
+        }
+
+        .clock-section {
+            text-align: center;
+        }
+
+        .clock-time {
+            font-family: inherit;
+            font-size: 2.2rem;
+            font-weight: 600;
+            line-height: 1;
+            letter-spacing: -0.02em;
+        }
+
+        .clock-date {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        .weather-section {
+            display: flex;
+            align-items: stretch;
+            gap: 14px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: 14px 18px;
+            border-radius: var(--border-radius);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+        }
+
+        .weather-current {
+            text-align: center;
+            min-width: 90px;
+        }
+
+        .weather-temp {
+            font-size: 2rem;
+            font-weight: 600;
+            line-height: 1;
+        }
+
+        .weather-minmax {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        .weather-feels {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .weather-humidity {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+        }
+
+        .weather-condition {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .weather-rain {
+            font-size: 0.7rem;
+            color: var(--accent-keiran);
+        }
+
+        .weather-divider {
+            width: 1px;
+            background: #333;
+            align-self: stretch;
+        }
+
+        .weather-details {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 6px;
+            min-width: 100px;
+        }
+
+        .weather-detail-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+        }
+
+        .weather-detail-icon {
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            color: var(--text-secondary);
+        }
+
+        .weather-detail-label {
+            color: var(--text-muted);
+            min-width: 48px;
+        }
+
+        .uv-low { color: #4caf50; }
+        .uv-moderate { color: #ffeb3b; }
+        .uv-high { color: #ff9800; }
+        .uv-very-high { color: #f44336; }
+        .uv-extreme { color: #9c27b0; }
+
+        .weather-sun-times {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 4px;
+            min-width: 80px;
+        }
+
+        .weather-sun-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+        }
+
+        .weather-sun-icon {
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            color: var(--text-secondary);
+        }
+
+        .weather-forecast {
+            display: flex;
+            gap: 6px;
+            flex-wrap: nowrap;
+            flex: 1;
+            justify-content: space-evenly;
+        }
+
+        .weather-day {
+            text-align: center;
+            min-width: 0;
+            flex: 1;
+        }
+
+        .weather-day-label {
+            font-size: 0.6rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .weather-day-icon {
+            margin: 2px auto;
+            width: 22px;
+            height: 22px;
+            color: var(--text-primary, #fff);
+        }
+
+        .weather-day-condition {
+            font-size: 0.55rem;
+            color: var(--text-secondary);
+            margin: 2px 0;
+            white-space: nowrap;
+        }
+
+        .weather-day-temp {
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .weather-day-details {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .weather-day-rain-bar {
+            height: 3px;
+            border-radius: 2px;
+            margin: 3px auto 0;
+            width: 80%;
+            background: var(--bg-primary, #1a1a2e);
+        }
+
+        .weather-day-rain-fill {
+            height: 100%;
+            border-radius: 2px;
+        }
+
+        .weather-icon {
+            width: 36px;
+            height: 36px;
+            margin: 0 auto 4px;
+            color: var(--text-primary, #fff);
+        }
+
+        /* Monthly Tally */
+        .tally-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: 10px 14px;
+            border-radius: var(--border-radius);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+        }
+
+        .tally-header {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 8px;
+        }
+
+        .tally-people {
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+
+        .tally-person {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tally-name {
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        /* Tally name colours applied dynamically via getPersonColor() */
+
+        .tally-count {
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+
+        /* Weekly Schedule Grid */
+        .schedule-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 6px;
+            margin-bottom: 6px;
+        }
+
+        .schedule-day {
+            min-height: 24px;
+        }
+
+        .schedule-item {
+            background: var(--bg-primary);
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            margin-bottom: 4px;
+        }
+
+        .schedule-item.today {
+            background: rgba(78, 205, 196, 0.2);
+            color: var(--accent-keiran);
+        }
+
+        /* Sections */
+        .sections {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 6px;
+        }
+
+        .section-title {
+            font-size: 0.9rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-secondary);
+        }
+
+        .section-count {
+            background: #333;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            padding: 3px 8px;
+            border-radius: 20px;
+        }
+
+        .section.overdue .section-title {
+            color: var(--status-overdue);
+        }
+
+        .section.overdue .section-count {
+            background: rgba(255, 107, 107, 0.2);
+            color: var(--status-overdue);
+        }
+
+        /* Chores grid */
+        .chores-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 6px;
+        }
+
+        .chore-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            padding: 10px 14px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+        }
+
+        .chore-card.completed {
+            opacity: 0.5;
+        }
+
+        .chore-card.completed .chore-name {
+            text-decoration: line-through;
+            color: var(--text-muted);
+        }
+
+        .chore-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 3px;
+            height: 100%;
+            background: var(--status-due);
+        }
+
+        .chore-card.overdue::before {
+            background: var(--status-overdue);
+        }
+
+        .chore-card.tomorrow::before {
+            background: var(--status-tomorrow);
+        }
+
+        .chore-card.completed::before {
+            background: var(--status-done);
+        }
+
+        .chore-card.adhoc::before {
+            background: #9b59b6;
+        }
+
+        .section.adhoc .section-title {
+            color: #9b59b6;
+        }
+
+        /* Urgency bar */
+        .urgency-bar {
+            height: 3px;
+            background: #333;
+            border-radius: 2px;
+            margin-top: 6px;
+            overflow: hidden;
+        }
+        .urgency-bar-fill {
+            height: 100%;
+            border-radius: 2px;
+            transition: width 0.4s ease;
+        }
+        .urgency-bar-fill.ub-red { background: #ef4444; width: 100%; }
+        .urgency-bar-fill.ub-orange { background: #f59e0b; width: 70%; }
+        .urgency-bar-fill.ub-amber { background: #fbbf24; width: 50%; }
+        .urgency-bar-fill.ub-teal { background: #4ecdc4; width: 30%; }
+        .urgency-bar-fill.ub-green { background: #22c55e; width: 100%; }
+        .urgency-bar-fill.ub-grey { background: #555; width: 10%; }
+        @keyframes urgencyPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        .urgency-bar-fill.ub-pulse { animation: urgencyPulse 2s ease-in-out infinite; }
+
+        /* Kiosk stats bar */
+        .kiosk-stats {
+            display: flex; align-items: center; gap: 16px;
+            background: var(--bg-card); border-radius: var(--border-radius); padding: 10px 16px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+        }
+        .kiosk-score-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+        .kiosk-score-value { font-size: 1.4rem; font-weight: 700; }
+        .kiosk-person-bars { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+        .kiosk-person-row { display: flex; align-items: center; gap: 8px; font-size: 0.7rem; }
+        .kiosk-person-name { width: 50px; color: var(--text-secondary); text-align: right; }
+        .kiosk-bar-track { flex: 1; height: 6px; background: #333; border-radius: 3px; overflow: hidden; }
+        .kiosk-bar-fill { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
+
+        .section.adhoc .section-count {
+            background: rgba(155, 89, 182, 0.2);
+            color: #9b59b6;
+        }
+
+        .chore-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 4px;
+        }
+
+        .chore-name {
+            font-family: inherit;
+            font-size: 1rem;
+            font-weight: 600;
+            line-height: 1.3;
+        }
+
+        .chore-status {
+            font-size: 0.65rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 3px 8px;
+            border-radius: 20px;
+            white-space: nowrap;
+        }
+
+        .chore-status.overdue {
+            background: rgba(255, 107, 107, 0.2);
+            color: var(--status-overdue);
+        }
+
+        .chore-status.due {
+            background: rgba(78, 205, 196, 0.15);
+            color: var(--accent);
+        }
+
+        .chore-status.tomorrow {
+            background: rgba(160, 160, 160, 0.2);
+            color: var(--status-tomorrow);
+        }
+
+        .chore-status.done {
+            background: rgba(102, 102, 102, 0.2);
+            color: var(--status-done);
+        }
+
+        .chore-details {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .chore-assigned {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .person-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-weight: 500;
+            font-size: 0.85rem;
+        }
+
+        /* Person badge colours applied dynamically via personBadgeStyle() */
+
+        .person-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        .streak-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            background: rgba(255, 150, 50, 0.2);
+            color: #ff9632;
+        }
+
+        .chore-meta {
+            display: flex;
+            gap: 12px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .chore-meta span {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .chore-meta svg {
+            width: 12px;
+            height: 12px;
+            opacity: 0.7;
+        }
+
+        /* Completed section - compact */
+        .completed-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .completed-item {
+            background: var(--bg-card);
+            padding: 8px 12px;
+            border-radius: var(--border-radius);
+            font-size: 0.85rem;
+            opacity: 0.6;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+        }
+
+        .completed-item .chore-name {
+            font-size: 0.85rem;
+            font-family: inherit;
+            text-decoration: line-through;
+        }
+
+        .completed-item .person-badge {
+            padding: 2px 8px;
+            font-size: 0.75rem;
+        }
+
+        /* Meal Plan Section */
+        .meal-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: 10px 14px;
+            border-radius: var(--border-radius);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+        }
+
+        .meal-header {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 4px;
+        }
+
+        .meal-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+        }
+
+        .meal-day {
+            background: var(--bg-primary);
+            border-radius: 4px;
+            padding: 4px;
+            text-align: center;
+        }
+
+        .meal-day.today {
+            background: rgba(78, 205, 196, 0.12);
+            border: 1px solid rgba(78, 205, 196, 0.3);
+        }
+
+        .meal-day-name {
+            font-size: 0.65rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .meal-day.today .meal-day-name {
+            color: var(--accent-keiran);
+        }
+
+        .meal-type {
+            margin-bottom: 5px;
+        }
+
+        .meal-type-label {
+            font-size: 0.55rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .meal-name {
+            font-size: 0.75rem;
+            font-weight: 500;
+            line-height: 1.2;
+        }
+
+        .meal-variant {
+            font-size: 0.6rem;
+            color: var(--text-muted);
+            margin-top: 1px;
+        }
+
+        .meal-variant.ciara {
+            color: var(--accent-ciara);
+        }
+
+        .meal-variant.kt {
+            color: var(--accent-keiran);
+        }
+
+        .meal-variant.ck {
+            color: var(--accent-ciara);
+        }
+
+        .meal-variant.tahni {
+            color: var(--accent-tahni);
+        }
+
+        .meal-excluded-label {
+            text-align: center;
+            color: #888;
+            font-style: italic;
+            font-size: 14px;
+            padding: 8px 0;
+        }
+
+        /* Upcoming Events Section */
+        .upcoming-events-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: 10px 14px;
+            border-radius: var(--border-radius);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+        }
+
+        .upcoming-events-header {
+            font-size: 0.65rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 4px;
+        }
+
+        .upcoming-events-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 6px;
+            max-height: 4.5em;
+            overflow: hidden;
+        }
+
+        .upcoming-event-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 8px;
+            border-radius: 8px;
+            border-left: 3px solid var(--text-muted);
+            background: rgba(255, 255, 255, 0.03);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .upcoming-event-date {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            min-width: 60px;
+            font-weight: 500;
+        }
+
+        .upcoming-event-title {
+            font-size: 0.8rem;
+            color: var(--text-primary);
+            flex: 1;
+        }
+
+        .upcoming-event-time {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+        }
+
+        .upcoming-event-participants {
+            font-size: 0.6rem;
+            color: var(--text-muted);
+        }
+
+        .upcoming-no-events {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            padding: 8px;
+        }
+
+        /* Full Month Calendar */
+        .month-calendar-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: 10px 12px;
+            border-radius: var(--border-radius);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+            flex-shrink: 0;
+            min-width: 0;
+            overflow: auto;
+        }
+
+        .month-calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .month-calendar-title {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .month-calendar-month {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .month-calendar-link {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            text-decoration: none;
+        }
+
+        .month-weekday-header {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 2px;
+            margin-bottom: 2px;
+        }
+
+        .month-weekday-name {
+            text-align: center;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            padding: 2px;
+        }
+
+        .month-calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 3px;
+        }
+
+        .month-day-cell {
+            background: var(--bg-primary);
+            border-radius: 4px;
+            padding: 2px 4px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            overflow: visible;
+            min-width: 0;
+            min-height: 40px;
+        }
+
+        .month-day-cell.other-month {
+            opacity: 0.25;
+        }
+
+        .month-day-cell.weekend:not(.other-month) {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        /* Current day indicator - brand teal */
+        .month-day-cell.today {
+            background: rgba(78, 205, 196, 0.15);
+            border: 2px solid var(--accent);
+            box-shadow: 0 0 8px rgba(78, 205, 196, 0.3);
+        }
+
+        .month-day-cell.today .month-day-number {
+            background: var(--accent);
+            color: #1a1d27;
+            font-weight: 700;
+        }
+
+        /* Past day strike-through - diagonal line */
+        .month-day-cell.past::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(
+                to bottom right,
+                transparent calc(50% - 1px),
+                rgba(100, 100, 100, 0.3) calc(50% - 1px),
+                rgba(100, 100, 100, 0.3) calc(50% + 1px),
+                transparent calc(50% + 1px)
+            );
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .month-day-number {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            width: 22px;
+            height: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            margin-bottom: 2px;
+            flex-shrink: 0;
+        }
+
+        .month-day-cell.other-month .month-day-number {
+            color: var(--text-muted);
+        }
+
+        .month-events-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            overflow: visible;
+            min-height: 0;
+        }
+
+        .month-event-item {
+            font-size: 0.65rem;
+            padding: 1px 4px;
+            border-radius: 3px;
+            white-space: normal;
+            word-break: break-word;
+            line-height: 1.2;
+            border-left: 2px solid;
+            width: 100%;
+        }
+
+        /* Event color classes - NEW DISTINCT PALETTE */
+        .month-event-keiran { background: rgba(59, 130, 246, 0.25); border-left-color: var(--accent-keiran); }
+        .month-event-ciara { background: rgba(236, 72, 153, 0.25); border-left-color: var(--accent-ciara); }
+        .month-event-tahni { background: rgba(76, 175, 80, 0.25); border-left-color: var(--accent-tahni); }
+        .month-event-ciara-tahni { background: rgba(249, 115, 22, 0.25); border-left-color: var(--color-ciara-tahni); }
+        .month-event-ciara-keiran { background: rgba(168, 85, 247, 0.25); border-left-color: var(--color-ciara-keiran); }
+        .month-event-keiran-tahni { background: rgba(255, 235, 59, 0.25); border-left-color: var(--color-keiran-tahni); }
+        .month-event-everyone { background: rgba(139, 92, 246, 0.25); border-left-color: var(--color-everyone); }
+        .month-event-guests { background: rgba(148, 163, 184, 0.25); border-left-color: var(--color-guests); }
+        .month-event-one-off { background: rgba(6, 182, 212, 0.25); border-left-color: var(--color-one-off); }
+
+        .month-more-events {
+            font-size: 0.6rem;
+            color: var(--text-muted);
+            text-align: center;
+        }
+
+        /* Meal items inside calendar cells */
+        .month-meal-item {
+            font-size: 0.55rem;
+            padding: 1px 3px;
+            border-radius: 2px;
+            white-space: normal;
+            word-break: break-word;
+            line-height: 1.1;
+            background: rgba(255, 152, 0, 0.15);
+            color: #ffb74d;
+            width: 100%;
+        }
+
+        .month-meal-item.lunch {
+            background: rgba(76, 175, 80, 0.15);
+            color: #81c784;
+        }
+
+        .month-meal-item.dinner {
+            background: rgba(255, 152, 0, 0.15);
+            color: #ffb74d;
+        }
+
+        /* Presence dots */
+
+        /* Kiosk alerts strip */
+        .kiosk-alerts-strip {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .kiosk-alert-item {
+            font-size: 0.65rem;
+            padding: 2px 8px;
+            border-radius: 8px;
+            background: rgba(255, 107, 107, 0.15);
+            color: #ff6b6b;
+            white-space: nowrap;
+        }
+        .kiosk-alert-item.bill {
+            background: rgba(255, 193, 7, 0.15);
+            color: #ffc107;
+        }
+        .kiosk-alert-item.low-stock {
+            background: rgba(255, 152, 0, 0.15);
+            color: #ff9800;
+        }
+
+        /* Active poll on kiosk */
+        .kiosk-poll {
+            background: var(--bg-card);
+            border-radius: var(--border-radius);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+            padding: 8px 12px;
+            margin-top: 8px;
+        }
+        .kiosk-poll-question {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+        .kiosk-poll-options {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+        .kiosk-poll-option {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.65rem;
+        }
+        .kiosk-poll-bar {
+            flex: 1;
+            height: 12px;
+            background: #333;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        .kiosk-poll-bar-fill {
+            height: 100%;
+            border-radius: 6px;
+            background: var(--accent-keiran);
+            transition: width 0.3s;
+        }
+        .kiosk-poll-label {
+            min-width: 60px;
+            color: var(--text-secondary);
+        }
+        .kiosk-poll-count {
+            min-width: 20px;
+            text-align: right;
+            color: var(--text-muted);
+        }
+
+        /* Kiosk Expenses Panel */
+        .kiosk-expenses {
+            background: var(--bg-card);
+            border-radius: var(--border-radius);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+            padding: 8px 12px;
+            margin-top: 8px;
+        }
+        .kiosk-expenses-title {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+        .kiosk-expense-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.65rem;
+            padding: 2px 0;
+        }
+        .kiosk-expense-names {
+            color: var(--text-secondary);
+        }
+        .kiosk-expense-arrow {
+            color: var(--text-muted);
+            margin: 0 4px;
+        }
+        .kiosk-expense-amount {
+            font-weight: 600;
+            color: #ef4444;
+        }
+
+        /* Kiosk House Rules Panel */
+        .kiosk-rules {
+            background: var(--bg-card);
+            border-radius: var(--border-radius);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+            padding: 8px 12px;
+            margin-top: 8px;
+        }
+        .kiosk-rules-title {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+        .kiosk-rule-item {
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+            padding: 1px 0;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .kiosk-rule-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        /* Kiosk module summary panels — shared styles */
+        .kiosk-panel {
+            background: var(--bg-card);
+            border-radius: var(--border-radius);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+            padding: 8px 12px;
+            margin-top: 8px;
+        }
+        .kiosk-panel-title {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+        .kiosk-panel-item {
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+            padding: 2px 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .kiosk-panel-item .badge {
+            font-size: 0.6rem;
+            padding: 1px 6px;
+            border-radius: 10px;
+            font-weight: 500;
+        }
+        .kiosk-panel-item .badge-urgent {
+            background: rgba(239,68,68,0.2);
+            color: #ef4444;
+        }
+        .kiosk-panel-item .badge-warning {
+            background: rgba(255,152,0,0.2);
+            color: #ff9800;
+        }
+        .kiosk-panel-item .badge-info {
+            background: rgba(59,130,246,0.2);
+            color: #3b82f6;
+        }
+        .kiosk-panel-item .badge-ok {
+            background: rgba(34,197,94,0.2);
+            color: #22c55e;
+        }
+
+        /* Noticeboard panel */
+        .kiosk-notice-type {
+            font-size: 0.55rem;
+            padding: 1px 5px;
+            border-radius: 8px;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+        .kiosk-notice-type.urgent {
+            background: rgba(239,68,68,0.2);
+            color: #ef4444;
+        }
+        .kiosk-notice-type.guest {
+            background: rgba(148,163,184,0.2);
+            color: #94a3b8;
+        }
+        .kiosk-notice-type.going_out {
+            background: rgba(59,130,246,0.2);
+            color: #3b82f6;
+        }
+        .kiosk-notice-type.reminder {
+            background: rgba(255,152,0,0.2);
+            color: #ff9800;
+        }
+
+        /* Shopping summary panel */
+        .kiosk-shopping-cats {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+        .kiosk-shopping-cat {
+            font-size: 0.6rem;
+            padding: 2px 6px;
+            border-radius: 8px;
+            background: rgba(78,205,196,0.15);
+            color: var(--accent);
+        }
+
+        /* Legacy 7-day calendar styles (kept for compatibility) */
+        .calendar-section {
+            background: var(--bg-card);
+            padding: 12px;
+            border-radius: var(--border-radius);
+            margin-top: 16px;
+            display: none; /* Hidden - replaced by month view */
+        }
+
+        .calendar-header {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 8px;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+            width: 100%;
+            max-width: 100%;
+            align-items: start;
+        }
+
+        .calendar-day {
+            background: var(--bg-primary);
+            border-radius: 6px;
+            padding: 6px 8px;
+            min-height: 60px;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .calendar-day.today {
+            background: rgba(78, 205, 196, 0.15);
+            border: 1px solid rgba(78, 205, 196, 0.3);
+        }
+
+        .calendar-day-header {
+            font-size: 0.6rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            margin-bottom: 4px;
+            display: flex;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+
+        .calendar-day.today .calendar-day-header {
+            color: var(--accent-keiran);
+        }
+
+        .calendar-day-date {
+            font-size: 0.6rem;
+            color: var(--text-muted);
+        }
+
+        .calendar-events {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .calendar-event {
+            font-size: 0.55rem;
+            padding: 3px 5px 3px 5px;
+            background: rgba(78, 205, 196, 0.15);
+            border-radius: 3px;
+            border-left: 2px solid var(--accent-keiran);
+            line-height: 1.4;
+            word-wrap: break-word;
+            /* Hanging indent: first line starts at 0, wrapped lines indented */
+            padding-left: 32px;
+            text-indent: -27px;
+        }
+
+        .calendar-event-time {
+            font-size: 0.5rem;
+            color: var(--text-muted);
+            font-weight: 500;
+            display: inline-block;
+            width: 27px;
+            text-indent: 0;
+        }
+
+        .calendar-event-title {
+            text-indent: 0;
+        }
+
+        .calendar-no-events {
+            font-size: 0.55rem;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        /* Fuel Prices */
+        .fuel-grid {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .fuel-type {
+            flex: 1;
+            min-width: 120px;
+        }
+
+        .fuel-type-label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .fuel-station {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.7rem;
+            padding: 2px 0;
+            gap: 4px;
+        }
+
+        .fuel-price {
+            font-weight: 600;
+            color: var(--accent-keiran);
+            min-width: 40px;
+            flex-shrink: 0;
+        }
+
+        .fuel-name {
+            flex: 1;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-width: 0;
+        }
+
+        .fuel-dist {
+            font-size: 0.6rem;
+            color: var(--text-muted);
+            flex-shrink: 0;
+            text-align: right;
+        }
+
+        .fuel-best {
+            color: #51cf66;
+        }
+
+        /* Daily Quote - hidden on kiosk to save space */
+        .quote-section {
+            display: none;
+        }
+
+        .quote-section.show {
+            display: none;
+        }
+
+        .quote-text {
+            font-family: inherit;
+            font-size: 1.4rem;
+            font-style: italic;
+            color: var(--text-primary);
+            line-height: 1.5;
+            margin-bottom: 8px;
+        }
+
+        .quote-text::before {
+            content: '"';
+            color: var(--accent-keiran);
+            font-size: 1.8rem;
+        }
+
+        .quote-text::after {
+            content: '"';
+            color: var(--accent-keiran);
+            font-size: 1.8rem;
+        }
+
+        .quote-author {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+        }
+
+        .quote-author::before {
+            content: '— ';
+        }
+
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            bottom: 32px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--bg-card);
+            color: var(--text-primary);
+            padding: 16px 24px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            z-index: 1000;
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        .toast.success {
+            border-left: 4px solid var(--status-due);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-muted);
+        }
+
+        /* Responsive — medium kiosk screens (small TVs, tablets, 1024-1366px) */
+        @media (max-width: 1366px) {
+            body { padding: 8px 10px; }
+            .container { gap: 6px; }
+            .title-section h1 { font-size: 1.4rem; }
+            .clock-time { font-size: 1.8rem; }
+            .clock-date { font-size: 0.8rem; }
+            .tally-people { gap: 14px; }
+            .tally-name { font-size: 0.8rem; }
+            .tally-count { font-size: 1.1rem; }
+            .weather-temp { font-size: 1.5rem; }
+            .weather-icon { width: 28px; height: 28px; }
+            .weather-current { min-width: 70px; }
+            .weather-details { min-width: 80px; }
+            .weather-detail-row { font-size: 0.7rem; gap: 6px; }
+            .weather-detail-label { min-width: 40px; }
+            .weather-detail-icon { width: 16px; height: 16px; }
+            .weather-sun-times { min-width: 65px; }
+            .weather-sun-row { font-size: 0.65rem; }
+            .weather-sun-icon { width: 16px; height: 16px; }
+            .weather-day-icon { width: 18px; height: 18px; }
+            .weather-day-label { font-size: 0.5rem; }
+            .weather-day-temp { font-size: 0.7rem; }
+            .weather-day-condition { font-size: 0.45rem; }
+            .weather-day-details { font-size: 0.55rem; }
+            .chores-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 4px; }
+            .chore-card { padding: 8px 10px; border-radius: 12px; }
+            .chore-name { font-size: 0.9rem; }
+            .chore-status { font-size: 0.55rem; padding: 2px 6px; }
+            .person-badge { font-size: 0.75rem; padding: 3px 8px; }
+            .month-day-cell { min-height: 32px; padding: 2px 3px; }
+            .month-day-number { font-size: 0.7rem; width: 18px; height: 18px; }
+            .month-event-item { font-size: 0.55rem; }
+            .month-meal-item { font-size: 0.45rem; }
+            .upcoming-events-list { max-height: 3.5em; }
+            .upcoming-event-item { padding: 3px 6px; }
+            .upcoming-event-date { font-size: 0.6rem; min-width: 50px; }
+            .upcoming-event-title { font-size: 0.7rem; }
+            .meal-day-name { font-size: 0.55rem; }
+            .meal-name { font-size: 0.65rem; }
+            .meal-type-label { font-size: 0.45rem; }
+            .section-title { font-size: 0.8rem; }
+            .section-count { font-size: 0.7rem; }
+            .kiosk-stats { padding: 6px 12px; gap: 10px; }
+            .kiosk-score-value { font-size: 1.1rem; }
+            .fuel-type { min-width: 80px; }
+            .fuel-station { font-size: 0.6rem; }
+        }
+
+        /* Responsive — small kiosk screens (10-13" tablets, small monitors) */
+        @media (max-width: 1024px) {
+            .info-row { gap: 8px; }
+            .weather-section { flex: 1 !important; }
+            .weather-sun-times { display: none; }
+            .weather-sun-times + .weather-divider { display: none; }
+            body { padding: 6px 8px; }
+            .container { gap: 4px; }
+            .top-bar { gap: 10px; }
+            .title-section h1 { font-size: 1.2rem; }
+            .title-section img { width: 32px; height: 32px; }
+            .clock-time { font-size: 1.5rem; }
+            .clock-date { font-size: 0.7rem; }
+            .tally-section { padding: 6px 10px; }
+            .tally-header { font-size: 0.6rem; margin-bottom: 4px; }
+            .tally-people { gap: 10px; }
+            .tally-name { font-size: 0.7rem; }
+            .tally-count { font-size: 0.9rem; }
+            .weather-section { padding: 8px 10px; gap: 8px; }
+            .weather-temp { font-size: 1.3rem; }
+            .weather-minmax { font-size: 0.65rem; }
+            .weather-feels { font-size: 0.6rem; }
+            .weather-condition { font-size: 0.6rem; }
+            .weather-current { min-width: 60px; }
+            .weather-details { min-width: 70px; gap: 3px; }
+            .weather-detail-row { font-size: 0.6rem; }
+            .weather-detail-label { min-width: 34px; font-size: 0.55rem; }
+            .weather-sun-times { min-width: 55px; gap: 2px; }
+            .weather-sun-row { font-size: 0.58rem; }
+            .weather-day-temp { font-size: 0.6rem; }
+            .weather-day-details { display: none; }
+            .weather-day-condition { display: none; }
+            .chores-grid { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+            .chore-card { padding: 6px 8px; border-radius: 10px; }
+            .chore-name { font-size: 0.85rem; }
+            .chore-meta { font-size: 0.65rem; gap: 8px; }
+            .person-badge { font-size: 0.7rem; padding: 2px 6px; }
+            .person-dot { width: 5px; height: 5px; }
+            .streak-badge { font-size: 0.65rem; padding: 2px 6px; }
+            .month-day-cell { min-height: 28px; }
+            .month-day-number { font-size: 0.6rem; width: 16px; height: 16px; }
+            .month-event-item { font-size: 0.5rem; padding: 1px 3px; }
+            .month-meal-item { font-size: 0.4rem; }
+            .month-weekday-name { font-size: 0.6rem; }
+            .upcoming-events-list { max-height: 3em; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
+            .fuel-type { min-width: 70px; }
+            .fuel-type-label { font-size: 0.6rem; }
+            .fuel-station { font-size: 0.55rem; }
+            .kiosk-panel { padding: 6px 8px; }
+            .kiosk-panel-title { font-size: 0.6rem; }
+            .kiosk-panel-item { font-size: 0.55rem; }
+        }
+
+        /* Responsive — tablet portrait / very small screens */
+        @media (max-width: 768px) {
+            body {
+                padding: 6px;
+                overflow-y: auto;
+            }
+
+            .container {
+                height: auto;
+                min-height: 100vh;
+            }
+
+            .top-bar {
+                flex-direction: column;
+                gap: 8px;
+                text-align: center;
+            }
+
+            .info-row {
+                flex-direction: column !important;
+            }
+
+            .weather-section {
+                flex: none !important;
+                flex-shrink: 1 !important;
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .weather-forecast {
+                width: 100%;
+                justify-content: center;
+                margin-top: 4px;
+            }
+
+            .weather-details { display: none; }
+            .weather-details + .weather-divider { display: none; }
+
+            .info-right-col {
+                flex: none !important;
+            }
+
+            .title-section h1 { font-size: 1.1rem; }
+            .clock-time { font-size: 1.3rem; }
+
+            .chores-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .meal-grid {
+                grid-template-columns: repeat(7, 1fr);
+                gap: 2px;
+            }
+
+            .meal-day-name { font-size: 0.55rem; }
+            .meal-name { font-size: 0.6rem; }
+            .meal-type-label { font-size: 0.45rem; }
+
+            .month-calendar-grid { gap: 2px; }
+            .month-day-cell { min-height: 24px; }
+            .month-day-number { font-size: 0.55rem; width: 14px; height: 14px; }
+            .month-event-item { font-size: 0.45rem; }
+        }
+
+        /* Responsive — phone-sized (unlikely for kiosk, but handles gracefully) */
+        @media (max-width: 480px) {
+            .meal-grid, .schedule-grid, .calendar-grid {
+                grid-template-columns: repeat(7, 1fr);
+                gap: 2px;
+            }
+            .meal-day, .calendar-day { padding: 3px; }
+            .meal-day-name, .calendar-day-header span { font-size: 0.5rem; }
+            .calendar-day { min-height: 40px; }
+            .calendar-event { font-size: 0.45rem; padding: 1px 2px 1px 22px; text-indent: -20px; }
+            .calendar-event-time { width: 20px; font-size: 0.4rem; }
+            .chore-card { padding: 6px 8px; }
+            .chore-name { font-size: 0.8rem; }
+            .weather-forecast { display: none; }
+            .weather-forecast + .weather-divider { display: none; }
+            .month-meal-item { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header: Title left, clock center, monthly tally right -->
+        <div class="top-bar">
+            <div class="title-section" style="display: flex; align-items: center; gap: 12px;">
+                <img src="/static/icon.svg" width="44" height="44" alt="Huddle" style="border-radius: 10px;">
+                <div>
+                    <h1><span class="huddle-logo"><span class="huddle-h">H</span>uddle</span></h1>
+                    <a href="/admin" class="admin-link">⚙️ Manage</a>
+                </div>
+            </div>
+
+            <div class="clock-section">
+                <div class="clock-time" id="clockTime">00:00</div>
+                <div class="clock-date" id="clockDate">Loading...</div>
+            </div>
+
+            <!-- Monthly Tally -->
+            <div class="tally-section" style="margin-bottom: 0;">
+                <div class="tally-header">This Month's Completions</div>
+                <div class="tally-people" id="tallyPeople"></div>
+            </div>
+        </div>
+
+        <!-- Weather & Fuel Prices Row -->
+        <div class="info-row" style="display: flex; gap: 12px; align-items: flex-start;">
+            <div class="weather-section" id="weatherSection" style="flex: 1.5; flex-shrink: 0;">
+                <div class="weather-current">
+                    <div class="weather-icon" id="weatherIcon">?</div>
+                    <div class="weather-temp" id="weatherTemp">--°</div>
+                    <div class="weather-minmax" id="weatherMinMax">--° / --°</div>
+                    <div class="weather-feels" id="weatherFeels">Feels --°</div>
+                    <div class="weather-condition" id="weatherCondition">Loading...</div>
+                    <div class="weather-rain" id="weatherRain"></div>
+                </div>
+                <div class="weather-divider"></div>
+                <div class="weather-details">
+                    <div class="weather-detail-row">
+                        <span class="weather-detail-icon" id="iconWind"></span>
+                        <span class="weather-detail-label">Wind</span>
+                        <span id="weatherWind">-- km/h</span>
+                    </div>
+                    <div class="weather-detail-row">
+                        <span class="weather-detail-icon" id="iconHumidity"></span>
+                        <span class="weather-detail-label">Humidity</span>
+                        <span id="weatherHumidity">--%</span>
+                    </div>
+                    <div class="weather-detail-row">
+                        <span class="weather-detail-icon" id="iconUV"></span>
+                        <span class="weather-detail-label">UV</span>
+                        <span id="weatherUV">--</span>
+                    </div>
+                    <div class="weather-detail-row">
+                        <span class="weather-detail-icon" id="iconCloud"></span>
+                        <span class="weather-detail-label">Cloud</span>
+                        <span id="weatherCloud">--%</span>
+                    </div>
+                </div>
+                <div class="weather-divider"></div>
+                <div class="weather-sun-times">
+                    <div class="weather-sun-row">
+                        <span class="weather-sun-icon" id="iconSunrise"></span>
+                        <span id="weatherSunrise">--:--</span>
+                    </div>
+                    <div class="weather-sun-row">
+                        <span class="weather-sun-icon" id="iconSunset"></span>
+                        <span id="weatherSunset">--:--</span>
+                    </div>
+                </div>
+                <div class="weather-divider"></div>
+                <div class="weather-forecast" id="weatherForecast">
+                    <!-- 6 day forecast populated by JS -->
+                </div>
+            </div>
+            <div class="info-right-col" style="flex: 1; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; min-height: 0;">
+                <div class="tally-section" style="margin-bottom: 0; padding: 8px 12px;">
+                    <div class="tally-header">Fuel Prices - Shortland</div>
+                    <div class="fuel-grid" id="fuelGrid">Loading...</div>
+                </div>
+                <div class="kiosk-alerts-strip" id="kioskAlerts"></div>
+                <div id="kioskNoticeboard"></div>
+                <div id="kioskShopping"></div>
+                <div id="kioskSelfcare"></div>
+                <div id="kioskVehicles"></div>
+                <div id="kioskPets"></div>
+                <div id="kioskExpenses"></div>
+                <div id="kioskHouseRules"></div>
+                <div id="kioskPoll"></div>
+            </div>
+        </div>
+
+        <!-- Scrollable main content area -->
+        <div class="main-content">
+            <!-- Upcoming Events (next 7 days) -->
+            <div class="upcoming-events-section">
+                <div class="upcoming-events-header">Upcoming Events</div>
+                <div class="upcoming-events-list" id="upcomingEventsList"></div>
+            </div>
+
+            <!-- Monthly Calendar with integrated Meal Plan -->
+            <div class="month-calendar-section">
+                <div class="month-calendar-header">
+                    <div>
+                        <span class="month-calendar-title">Calendar</span>
+                        <span class="month-calendar-month" id="monthCalendarTitle">Loading...</span>
+                    </div>
+                    <a href="/calendar" class="month-calendar-link">Full View</a>
+                </div>
+                <div class="month-weekday-header">
+                    <div class="month-weekday-name">Mon</div>
+                    <div class="month-weekday-name">Tue</div>
+                    <div class="month-weekday-name">Wed</div>
+                    <div class="month-weekday-name">Thu</div>
+                    <div class="month-weekday-name">Fri</div>
+                    <div class="month-weekday-name">Sat</div>
+                    <div class="month-weekday-name">Sun</div>
+                </div>
+                <div class="month-calendar-grid" id="monthCalendarGrid"></div>
+            </div>
+
+            <!-- Household Score -->
+            <div id="kioskStatsBar" style="display:none; padding: 8px 0;"></div>
+
+            <!-- Chores Sections -->
+            <div class="sections" id="choresSections"></div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <audio id="completionSound" preload="auto">
+        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdH2LkZeXl5OPi4Z/d29maGd0gIuTmZqZlI6Hf3ZsY11aX2l0gIqRl5iVkYuEfHNqYV1cX2d0gIyUm5uYk42GfnVqYVtZXGRxfouTmZqXko2Gf3ZsYl1bXmZxfYmRl5iVkIqDe3JpYV5dYGhzf4qRlZaUkIqEfHNqY15dYGdyfYeOlJaUj4mDe3JpYl5dYGhzfoeNkpSSkYyFfnVsZF9eYWlyfoiOkpOSkIuEfXRsZWBfYmlyeoaPk5STkIuFfnZuZ2JgY2lxeoWLj5GSj4uGf3dwa2RiY2hrcoeLj5CQjouHgHlzbWdkZGdscoWHjI6OjYqGgXt1b2pnZ2lsdHqDiIuMi4qIhIF8d3FsaWhpa3B2fYOHiYmIhoOAfHdyb2tpaWtudXuAhIaHhoWDgX56dnJva2prbXF2en6BhIODgoB+e3h1cm9tbW5wcnZ6fX+AgH9+fXt5dnRxb25ub3Fzdnl7fH18e3p5d3V0cnBvb29xc3V3eXp7e3p5eHd2dHNxcHBwcXJzdXd4eXl5eHh3dnV0c3JxcXFyc3R1dnd4eHh4d3d2dXR0c3JycnJzdHR1dnd3d3d3dnZ1dXR0c3NzcnNzdHV1dXZ2dnZ2dnZ1dXR0dHNzc3N0dHR1dXV1dnZ2dnZ1dXV1dHR0dHR0dHR1dXV1dXZ2dnZ1dXV1dXR0dHR0dHR1dXV1dXV1dXZ1dXV1dXV0dXR0dHR0dXV1dXV1dXV1dXV1dXV1dHR0dHR1dXV1dXV1dXV1" type="audio/wav">
+    </audio>
+
+    <script>
+        // Unregister any service worker — kiosk must always fetch fresh from network
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(registrations => {
+                registrations.forEach(r => r.unregister());
+            });
+        }
+
+        const KIOSK_TOKEN = '{{ kiosk_token | default("") }}';
+        if (KIOSK_TOKEN) {
+            try { localStorage.setItem('huddle_kiosk_token', KIOSK_TOKEN); } catch(e) {}
+        }
+        const API_HEADERS = KIOSK_TOKEN ? {'Authorization': 'Bearer ' + KIOSK_TOKEN} : {};
+        async function apiFetch(url) {
+            const resp = await fetch(url, {headers: API_HEADERS});
+            if (!resp.ok) throw new Error(`API ${resp.status}: ${url}`);
+            return resp;
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        let choresData = [];
+        let mealsData = {};
+        let mealDuties = {};
+        let adhocTasks = [];
+        let ws = null;
+        let billsData = [];
+        let inventoryData = { items: [], low_stock: [] };
+        let pollsData = [];
+        let expensesBalances = null;
+        let houseRulesData = [];
+        let tenancyData = null;
+        let enabledModules = [];
+        let peopleColors = {};
+
+        async function fetchPeople() {
+            try {
+                const resp = await apiFetch('/api/people');
+                if (resp.ok) {
+                    const data = await resp.json();
+                    (data.people || []).forEach(function(p) {
+                        peopleColors[p.name] = p.color || '#4ecdc4';
+                    });
+                }
+            } catch(e) { console.error('People fetch error:', e); }
+        }
+
+        function getPersonColor(name) {
+            return peopleColors[name] || '#4ecdc4';
+        }
+
+        function hexToRgba(hex, alpha) {
+            var r = parseInt(hex.slice(1,3), 16);
+            var g = parseInt(hex.slice(3,5), 16);
+            var b = parseInt(hex.slice(5,7), 16);
+            return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
+        }
+
+        function personBadgeStyle(name) {
+            var c = getPersonColor(name);
+            return 'background:' + hexToRgba(c, 0.15) + ';color:' + c + ';';
+        }
+
+        const icons = {
+            calendar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
+            clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>'
+        };
+
+        // SVG weather icons — inline paths for Pi Chromium compatibility (no emoji)
+        function weatherSvg(name, size) {
+            size = size || 24;
+            const icons = {
+                sun: '<circle cx="12" cy="12" r="4" fill="currentColor" opacity="0.9"/><g stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="4.22" y1="4.22" x2="6.34" y2="6.34"/><line x1="17.66" y1="17.66" x2="19.78" y2="19.78"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.22" y1="19.78" x2="6.34" y2="17.66"/><line x1="17.66" y1="6.34" x2="19.78" y2="4.22"/></g>',
+                'sun-cloud': '<g stroke="currentColor" stroke-width="1.5" fill="none"><circle cx="8" cy="8" r="3" fill="currentColor" opacity="0.7" stroke="none"/><line x1="8" y1="2" x2="8" y2="3.5"/><line x1="3" y1="5" x2="4.2" y2="5.8"/><line x1="2.5" y1="10" x2="4" y2="9.5"/><line x1="13" y1="5" x2="11.8" y2="5.8"/><path d="M7 13a4 4 0 0 1 3.5-4 3.5 3.5 0 0 1 6.5 1.5h1a2.5 2.5 0 0 1 0 5H8a3 3 0 0 1-1-2.5z" fill="currentColor" opacity="0.2" stroke="currentColor"/></g>',
+                'cloud-sun': '<g stroke="currentColor" stroke-width="1.5" fill="none"><circle cx="17" cy="7" r="3" fill="currentColor" opacity="0.5" stroke="none"/><line x1="17" y1="1.5" x2="17" y2="3"/><line x1="21" y1="4" x2="20" y2="4.8"/><line x1="22" y1="8.5" x2="20.5" y2="8"/><path d="M6 15a4 4 0 0 1 3.5-4 3.5 3.5 0 0 1 6.5 1.5h1a2.5 2.5 0 0 1 0 5H7a3 3 0 0 1-1-2.5z" fill="currentColor" opacity="0.2" stroke="currentColor"/></g>',
+                cloud: '<path d="M6 15a4 4 0 0 1 3.5-4.5 4 4 0 0 1 7 0A3.5 3.5 0 0 1 19.5 14a3 3 0 0 1 0 6H7a3.5 3.5 0 0 1-1-3z" fill="currentColor" opacity="0.25" stroke="currentColor" stroke-width="1.5"/>',
+                fog: '<g stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="8" x2="21" y2="8"/><line x1="5" y1="12" x2="19" y2="12"/><line x1="3" y1="16" x2="21" y2="16"/></g>',
+                drizzle: '<g stroke="currentColor" stroke-width="1.5" fill="none"><path d="M6 12a3.5 3.5 0 0 1 3-3.5 3 3 0 0 1 5.5 0A2.5 2.5 0 0 1 17 11a2.5 2.5 0 0 1 0 5H7a3 3 0 0 1-1-2.5z" fill="currentColor" opacity="0.2"/><line x1="9" y1="19" x2="9" y2="20" stroke-linecap="round"/><line x1="13" y1="18" x2="13" y2="19" stroke-linecap="round"/></g>',
+                rain: '<g stroke="currentColor" stroke-width="1.5" fill="none"><path d="M6 11a3.5 3.5 0 0 1 3-3.5 3 3 0 0 1 5.5 0A2.5 2.5 0 0 1 17 10a2.5 2.5 0 0 1 0 5H7a3 3 0 0 1-1-2z" fill="currentColor" opacity="0.2"/><line x1="8" y1="18" x2="7" y2="21" stroke-linecap="round"/><line x1="12" y1="17" x2="11" y2="20" stroke-linecap="round"/><line x1="16" y1="18" x2="15" y2="21" stroke-linecap="round"/></g>',
+                storm: '<g stroke="currentColor" stroke-width="1.5" fill="none"><path d="M6 10a3.5 3.5 0 0 1 3-3.5 3 3 0 0 1 5.5 0A2.5 2.5 0 0 1 17 9.5a2.5 2.5 0 0 1 0 5H7a3 3 0 0 1-1-2z" fill="currentColor" opacity="0.2"/><polyline points="13,14 10,18 13,18 11,22" fill="none" stroke="#ffeb3b" stroke-width="2"/></g>',
+                wind: '<g stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"><path d="M3 8h10a2 2 0 1 0-2-2"/><path d="M4 12h12a2 2 0 1 1-2 2"/><path d="M2 16h8a2 2 0 1 0-2-2"/></g>',
+                droplet: '<path d="M12 3C12 3 5 11 5 15a7 7 0 0 0 14 0c0-4-7-12-7-12z" fill="currentColor" opacity="0.3" stroke="currentColor" stroke-width="1.5"/>',
+                uv: '<g stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3" fill="currentColor" opacity="0.7" stroke="none"/><line x1="12" y1="3" x2="12" y2="6" stroke-linecap="round"/><line x1="12" y1="18" x2="12" y2="21" stroke-linecap="round"/><line x1="5.6" y1="5.6" x2="7.8" y2="7.8" stroke-linecap="round"/><line x1="16.2" y1="16.2" x2="18.4" y2="18.4" stroke-linecap="round"/><line x1="3" y1="12" x2="6" y2="12" stroke-linecap="round"/><line x1="18" y1="12" x2="21" y2="12" stroke-linecap="round"/></g>',
+                sunrise: '<g stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"><line x1="3" y1="17" x2="21" y2="17"/><path d="M12 13V7"/><polyline points="8,11 12,7 16,11"/><path d="M5 17a7 7 0 0 1 14 0" stroke-width="1" opacity="0.3"/></g>',
+                sunset: '<g stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"><line x1="3" y1="17" x2="21" y2="17"/><path d="M12 7v6"/><polyline points="8,9 12,13 16,9"/><path d="M5 17a7 7 0 0 1 14 0" stroke-width="1" opacity="0.3"/></g>'
+            };
+            const path = icons[name] || '';
+            return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' + path + '</svg>';
+        }
+
+        // WMO weather code mapping — uses SVG icon names
+        const weatherCodes = {
+            0: { svg: 'sun', text: 'Clear' },
+            1: { svg: 'sun-cloud', text: 'Mostly Clear' },
+            2: { svg: 'cloud-sun', text: 'Partly Cloudy' },
+            3: { svg: 'cloud', text: 'Cloudy' },
+            45: { svg: 'fog', text: 'Foggy' },
+            48: { svg: 'fog', text: 'Fog' },
+            51: { svg: 'drizzle', text: 'Light Drizzle' },
+            53: { svg: 'drizzle', text: 'Drizzle' },
+            55: { svg: 'rain', text: 'Heavy Drizzle' },
+            61: { svg: 'rain', text: 'Light Rain' },
+            63: { svg: 'rain', text: 'Rain' },
+            65: { svg: 'rain', text: 'Heavy Rain' },
+            80: { svg: 'drizzle', text: 'Showers' },
+            81: { svg: 'rain', text: 'Showers' },
+            82: { svg: 'storm', text: 'Heavy Showers' },
+            95: { svg: 'storm', text: 'Thunderstorm' }
+        };
+
+        // Rain probability color helper
+        function rainBarColor(prob) {
+            if (prob < 30) return '#4ecdc4';
+            if (prob < 60) return '#ff9800';
+            return '#3b82f6';
+        }
+
+        const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        const fullDayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+        const weeklySchedule = [
+            { day: 0, text: 'Household Debrief' },           // Monday
+            { day: 6, text: 'Hour of Power Clean' }          // Sunday
+        ];
+
+        // Clock
+        function updateClock() {
+            const now = new Date();
+            const time = now.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit', hour12: false });
+            const date = now.toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long' });
+            document.getElementById('clockTime').textContent = time;
+            document.getElementById('clockDate').textContent = date;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // Wind direction to compass
+        function windDirToCompass(deg) {
+            const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+            return dirs[Math.round(deg / 45) % 8];
+        }
+
+        // UV index description with 5-level color coding
+        function uvDescription(uv) {
+            if (uv < 3) return { text: 'Low', class: 'uv-low' };
+            if (uv < 6) return { text: 'Mod', class: 'uv-moderate' };
+            if (uv < 8) return { text: 'High', class: 'uv-high' };
+            if (uv < 11) return { text: 'V.High', class: 'uv-very-high' };
+            return { text: 'Extreme', class: 'uv-extreme' };
+        }
+
+        // Set static weather detail icons (run once on load)
+        // Note: SVG content is hardcoded in weatherSvg() — no user input, safe for DOM insertion
+        document.addEventListener('DOMContentLoaded', function() {
+            var iconMap = {
+                iconWind: ['wind', 16], iconHumidity: ['droplet', 16],
+                iconUV: ['uv', 16], iconCloud: ['cloud', 16],
+                iconSunrise: ['sunrise', 18], iconSunset: ['sunset', 18]
+            };
+            Object.keys(iconMap).forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el) el.insertAdjacentHTML('afterbegin', weatherSvg(iconMap[id][0], iconMap[id][1]));
+            });
+        });
+
+        // Weather with expanded data and 6-day forecast
+        async function fetchWeather() {
+            try {
+                // Use backend proxy to avoid CORS/SSL issues on Pi
+                const response = await apiFetch('/api/weather');
+                const data = await response.json();
+
+                if (data.error) {
+                    console.error('Weather error:', data.error);
+                    return;
+                }
+
+                const current = data.current;
+                const daily = data.daily;
+
+                const currentWeather = weatherCodes[current.weather_code] || { svg: 'cloud', text: 'Unknown' };
+
+                // Current conditions — SVG icon (hardcoded paths, no user input)
+                var weatherIconEl = document.getElementById('weatherIcon');
+                weatherIconEl.textContent = '';
+                weatherIconEl.insertAdjacentHTML('afterbegin', weatherSvg(currentWeather.svg, 36));
+                document.getElementById('weatherTemp').textContent = Math.round(current.temperature_2m) + '°';
+                document.getElementById('weatherMinMax').textContent = Math.round(daily.temperature_2m_min[0]) + '° / ' + Math.round(daily.temperature_2m_max[0]) + '°';
+                document.getElementById('weatherFeels').textContent = 'Feels ' + Math.round(current.apparent_temperature) + '°';
+                document.getElementById('weatherCondition').textContent = currentWeather.text;
+
+                // Rain probability
+                const rainChance = daily.precipitation_probability_max[0];
+                if (rainChance > 0) {
+                    document.getElementById('weatherRain').textContent = `${rainChance}% rain`;
+                } else {
+                    document.getElementById('weatherRain').textContent = '';
+                }
+
+                // Wind
+                const windSpeed = Math.round(current.wind_speed_10m);
+                const windDir = windDirToCompass(current.wind_direction_10m);
+                document.getElementById('weatherWind').textContent = `${windSpeed} km/h ${windDir}`;
+
+                // Humidity
+                document.getElementById('weatherHumidity').textContent = `${Math.round(current.relative_humidity_2m)}%`;
+
+                // UV Index
+                const uvIndex = current.uv_index || 0;
+                const uvInfo = uvDescription(uvIndex);
+                const uvEl = document.getElementById('weatherUV');
+                uvEl.textContent = `${uvIndex.toFixed(1)} (${uvInfo.text})`;
+                uvEl.className = uvInfo.class;
+
+                // Cloud cover
+                document.getElementById('weatherCloud').textContent = `${Math.round(current.cloud_cover)}%`;
+
+                // Sunrise/Sunset
+                if (daily.sunrise && daily.sunrise[0]) {
+                    const sunrise = new Date(daily.sunrise[0]);
+                    document.getElementById('weatherSunrise').textContent = sunrise.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit', hour12: false });
+                }
+                if (daily.sunset && daily.sunset[0]) {
+                    const sunset = new Date(daily.sunset[0]);
+                    document.getElementById('weatherSunset').textContent = sunset.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit', hour12: false });
+                }
+
+                // 6-day forecast
+                const forecastContainer = document.getElementById('weatherForecast');
+                const shortDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                let forecastHtml = '';
+
+                const forecastDays = Math.min(6, (daily.weather_code || []).length - 1);
+                for (let i = 1; i <= forecastDays; i++) {
+                    const forecastDate = new Date();
+                    forecastDate.setDate(forecastDate.getDate() + i);
+                    const dayName = i === 1 ? 'Tmrw' : shortDays[forecastDate.getDay()];
+                    const weather = weatherCodes[daily.weather_code[i]] || { svg: 'cloud', text: 'Unknown' };
+                    const minTemp = Math.round(daily.temperature_2m_min[i]);
+                    const maxTemp = Math.round(daily.temperature_2m_max[i]);
+                    const rainProb = daily.precipitation_probability_max[i] || 0;
+
+                    // Build forecast day card with SVG icon and rain bar
+                    forecastHtml += '<div class="weather-day">'
+                        + '<div class="weather-day-label">' + dayName + '</div>'
+                        + '<div class="weather-day-icon">' + weatherSvg(weather.svg, 22) + '</div>'
+                        + '<div class="weather-day-temp">' + minTemp + '\u00B0-' + maxTemp + '\u00B0</div>';
+
+                    if (rainProb > 0) {
+                        var barColor = rainBarColor(rainProb);
+                        forecastHtml += '<div class="weather-day-rain-bar">'
+                            + '<div class="weather-day-rain-fill" style="width:' + rainProb + '%;background:' + barColor + '"></div>'
+                            + '</div>'
+                            + '<div class="weather-day-details" style="color:' + barColor + '">' + rainProb + '%</div>';
+                    }
+
+                    forecastHtml += '</div>';
+                }
+
+                // Replace forecast content (SVG from hardcoded weatherSvg, no user input)
+                forecastContainer.textContent = '';
+                forecastContainer.insertAdjacentHTML('afterbegin', forecastHtml);
+
+            } catch (error) {
+                console.error('Weather fetch error:', error);
+            }
+        }
+        fetchWeather();
+        setInterval(fetchWeather, 600000);
+
+        // Weekly Schedule - aligned grid
+        function renderSchedule() {
+            const container = document.getElementById('scheduleGrid');
+            if (!container) return;
+            
+            const today = new Date().getDay();
+            const todayIndex = today === 0 ? 6 : today - 1; // Convert to Mon=0
+            
+            let html = '';
+            for (let i = 0; i < 7; i++) {
+                const daySchedule = weeklySchedule.filter(item => item.day === i);
+                const isToday = i === todayIndex;
+                
+                html += `<div class="schedule-day">`;
+                if (daySchedule.length > 0) {
+                    html += daySchedule.map(item => 
+                        `<div class="schedule-item ${isToday ? 'today' : ''}">${item.text}</div>`
+                    ).join('');
+                }
+                html += `</div>`;
+            }
+            
+            container.innerHTML = html;
+        }
+        renderSchedule();
+
+        // getPersonClass removed — dynamic colours via personBadgeStyle()
+
+        function formatDaysSince(chore) {
+            // Handle the case where last action was a skip
+            if (chore.was_skipped) {
+                const skipDays = chore.days_since_skip;
+                let skipText = skipDays === 0 ? 'Skipped today' : skipDays === 1 ? 'Skipped yesterday' : `Skipped ${skipDays} days ago`;
+
+                // Also show last actual completion if available
+                if (chore.last_actual_by && chore.days_since_actual !== null) {
+                    const actualDays = chore.days_since_actual;
+                    const actualText = actualDays === 0 ? 'today' : actualDays === 1 ? '1 day ago' : `${actualDays} days ago`;
+                    return `${skipText} • Last done ${actualText} by ${escapeHtml(chore.last_actual_by)}`;
+                }
+                return skipText;
+            }
+
+            const days = chore.days_since_done;
+            const lastBy = chore.last_completed_by;
+
+            if (days === null || days === undefined) return 'Never done';
+            if (days < 0) return lastBy ? `Done today by ${escapeHtml(lastBy)}` : 'Done today';
+            if (days === 0) return lastBy ? `Done today by ${escapeHtml(lastBy)}` : 'Done today';
+            if (days === 1) return lastBy ? `1 day ago by ${escapeHtml(lastBy)}` : '1 day ago';
+            return lastBy ? `${days} days ago by ${escapeHtml(lastBy)}` : `${days} days ago`;
+        }
+
+        function formatSchedule(chore) {
+            if (chore.schedule_type === 'daily') return 'Daily';
+            if (chore.schedule_type === 'interval') return `Every ${chore.schedule_interval} days`;
+            if (chore.schedule_type === 'days') {
+                try {
+                    const days = typeof chore.schedule_days === 'string' ? JSON.parse(chore.schedule_days || '[]') : (chore.schedule_days || []);
+                    const shortDays = days.map(d => d.charAt(0).toUpperCase() + d.slice(1, 3));
+                    return shortDays.join(', ');
+                } catch (e) {
+                    return '';
+                }
+            }
+            return '';
+        }
+
+        function getStatusLabel(status, daysOverdue) {
+            switch (status) {
+                case 'overdue': return daysOverdue === 1 ? '1 day overdue' : `${daysOverdue} days overdue`;
+                case 'due_today': return 'Due today';
+                case 'completed_today': return 'Done';
+                case 'tomorrow': return 'Tomorrow';
+                default: return '';
+            }
+        }
+
+        function getStatusClass(status) {
+            switch (status) {
+                case 'overdue': return 'overdue';
+                case 'due_today': return 'due';
+                case 'completed_today': return 'done';
+                case 'tomorrow': return 'tomorrow';
+                default: return '';
+            }
+        }
+
+        function getUrgencyClass(chore) {
+            if (chore.status === 'completed_today') return 'ub-green';
+            if (chore.status === 'overdue') {
+                return chore.days_overdue >= 3 ? 'ub-red ub-pulse' : 'ub-orange ub-pulse';
+            }
+            if (chore.status === 'due_today') return 'ub-amber';
+            if (chore.status === 'tomorrow') return 'ub-teal';
+            return 'ub-grey';
+        }
+
+        function openChore(id, slug) {
+            window.location.href = `/complete/${id}/${slug}`;
+        }
+
+        function renderChoreCard(chore) {
+            const statusClass = getStatusClass(chore.status);
+            const isCompleted = chore.status === 'completed_today';
+            const streak = chore.streak || 0;
+            const slug = chore.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+            const ubClass = getUrgencyClass(chore);
+
+            return `
+                <div class="chore-card ${statusClass} ${isCompleted ? 'completed' : ''}" onclick="openChore(${chore.id}, '${slug}')">
+                    <div class="chore-header">
+                        <div class="chore-name">${escapeHtml(chore.name)}</div>
+                        <span class="chore-status ${statusClass}">${getStatusLabel(chore.status, chore.days_overdue)}</span>
+                    </div>
+                    <div class="chore-details">
+                        <div class="chore-assigned">
+                            <span class="person-badge" style="${personBadgeStyle(chore.current_person)}">
+                                <span class="person-dot"></span>
+                                ${escapeHtml(chore.current_person) || 'Unassigned'}
+                            </span>
+                            ${streak >= 3 ? `<span class="streak-badge">🔥 ${streak}</span>` : ''}
+                        </div>
+                        <div class="chore-meta">
+                            <span>${icons.clock} ${formatDaysSince(chore)}</span>
+                            <span>${icons.calendar} ${formatSchedule(chore)}</span>
+                        </div>
+                        <div class="urgency-bar"><div class="urgency-bar-fill ${ubClass}"></div></div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderCompletedItem(chore) {
+            return `
+                <div class="completed-item">
+                    <span class="chore-name">${escapeHtml(chore.name)}</span>
+                    <span class="person-badge" style="${personBadgeStyle(chore.last_completed_by)}">
+                        ${escapeHtml(chore.last_completed_by) || ''}
+                    </span>
+                </div>
+            `;
+        }
+
+        function renderSection(title, chores, cssClass = '') {
+            if (chores.length === 0) return '';
+            
+            return `
+                <div class="section ${cssClass}">
+                    <div class="section-header">
+                        <span class="section-title">${title}</span>
+                        <span class="section-count">${chores.length}</span>
+                    </div>
+                    <div class="chores-grid">
+                        ${chores.map(renderChoreCard).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderCompletedSection(chores) {
+            if (chores.length === 0) return '';
+
+            return `
+                <div class="section">
+                    <div class="section-header">
+                        <span class="section-title">Completed Today</span>
+                        <span class="section-count">${chores.length}</span>
+                    </div>
+                    <div class="completed-grid">
+                        ${chores.map(renderCompletedItem).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderAdhocCard(task) {
+            const isCompleted = task.completed === 1;
+            const slug = task.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
+            return `
+                <div class="chore-card adhoc ${isCompleted ? 'completed' : ''}" onclick="openAdhocTask(${task.id}, '${slug}')">
+                    <div class="chore-header">
+                        <div class="chore-name">${escapeHtml(task.name)}</div>
+                        <span class="chore-status ${isCompleted ? 'done' : 'due'}">${isCompleted ? 'Done' : 'To Do'}</span>
+                    </div>
+                    <div class="chore-details">
+                        ${task.assigned_to ? `
+                        <div class="chore-assigned">
+                            <span class="person-badge" style="${personBadgeStyle(task.assigned_to)}">
+                                <span class="person-dot"></span>
+                                For ${escapeHtml(task.assigned_to)}
+                            </span>
+                        </div>
+                        ` : task.added_by ? `
+                        <div class="chore-assigned">
+                            <span class="person-badge" style="${personBadgeStyle(task.added_by)}">
+                                <span class="person-dot"></span>
+                                Added by ${escapeHtml(task.added_by)}
+                            </span>
+                        </div>
+                        ` : ''}
+                        <div class="chore-meta">
+                            <span>${icons.clock} One-off task</span>
+                            ${task.description ? `<span>${escapeHtml(task.description)}</span>` : ''}
+                        </div>
+                        ${task.photo_url ? `<img src="${task.photo_url}" style="width:60px;height:60px;border-radius:8px;object-fit:cover;margin-top:6px;" alt="Task photo">` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderAdhocSection(tasks) {
+            const incomplete = tasks.filter(t => t.completed === 0);
+            if (incomplete.length === 0) return '';
+
+            return `
+                <div class="section adhoc">
+                    <div class="section-header">
+                        <span class="section-title">One-Off Tasks</span>
+                        <span class="section-count">${incomplete.length}</span>
+                    </div>
+                    <div class="chores-grid">
+                        ${incomplete.map(renderAdhocCard).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function openAdhocTask(id, slug) {
+            window.location.href = `/adhoc/${id}/${slug}`;
+        }
+
+        function renderTally(stats) {
+            const container = document.getElementById('tallyPeople');
+            if (!container || !stats) return;
+            
+            const people = Object.keys(stats);
+            
+            container.innerHTML = people.map(person => {
+                const count = stats[person] || 0;
+                const color = getPersonColor(person);
+                return `
+                    <div class="tally-person">
+                        <span class="tally-name" style="color: ${color}">${escapeHtml(person)}</span>
+                        <span class="tally-count">${count}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderChoreCardForTomorrow(chore) {
+            // Render a chore card specifically for the "Due Tomorrow" section
+            // This shows it as a fresh task, not with today's completion status
+            const slug = chore.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
+            return `
+                <div class="chore-card tomorrow" onclick="openChore(${chore.id}, '${slug}')">
+                    <div class="chore-header">
+                        <div class="chore-name">${escapeHtml(chore.name)}</div>
+                        <span class="chore-status tomorrow">Tomorrow</span>
+                    </div>
+                    <div class="chore-details">
+                        <div class="chore-assigned">
+                            <span class="person-badge" style="${personBadgeStyle(chore.current_person)}">
+                                <span class="person-dot"></span>
+                                ${escapeHtml(chore.current_person) || 'Unassigned'}
+                            </span>
+                        </div>
+                        <div class="chore-meta">
+                            <span>${icons.calendar} ${formatSchedule(chore)}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderTomorrowSection(chores) {
+            if (chores.length === 0) return '';
+
+            return `
+                <div class="section tomorrow">
+                    <div class="section-header">
+                        <span class="section-title">Due Tomorrow</span>
+                        <span class="section-count">${chores.length}</span>
+                    </div>
+                    <div class="chores-grid">
+                        ${chores.map(renderChoreCardForTomorrow).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderChores(data) {
+            const sections = document.getElementById('choresSections');
+            if (!sections || !data) return;
+
+            const chores = data.chores || [];
+
+            const overdue = chores.filter(c => c.status === 'overdue');
+            const dueToday = chores.filter(c => c.status === 'due_today');
+            const completedToday = chores.filter(c => c.status === 'completed_today');
+
+            // Due tomorrow: chores with status 'tomorrow' OR chores that will be due again tomorrow
+            // Use a Set to avoid duplicates when a chore has both status=tomorrow and also_tomorrow=true
+            const tomorrowIds = new Set();
+            const dueTomorrow = chores.filter(c => {
+                if (c.status === 'tomorrow' || c.also_tomorrow) {
+                    if (!tomorrowIds.has(c.id)) {
+                        tomorrowIds.add(c.id);
+                        return true;
+                    }
+                }
+                return false;
+            });
+
+            let html = '';
+
+            if (overdue.length > 0) html += renderSection('Overdue', overdue, 'overdue');
+            // Ad-hoc tasks appear after overdue but before completed
+            if (adhocTasks.length > 0) html += renderAdhocSection(adhocTasks);
+            if (completedToday.length > 0) html += renderCompletedSection(completedToday);
+            if (dueToday.length > 0) html += renderSection('Due Today', dueToday);
+            if (dueTomorrow.length > 0) html += renderTomorrowSection(dueTomorrow);
+
+            if (html === '' && adhocTasks.filter(t => t.completed === 0).length === 0) {
+                html = '<div class="empty-state"><p>All caught up! No chores due.</p></div>';
+            }
+
+            sections.innerHTML = html;
+
+            if (data.monthly_stats) renderTally(data.monthly_stats);
+        }
+
+        // Meals
+        // Meals are now integrated into the calendar cells - see renderMonthCalendar()
+
+        async function fetchChores() {
+            try {
+                const response = await apiFetch('/api/chores');
+                const data = await response.json();
+                choresData = data.chores;
+                renderChores(data);
+            } catch (error) {
+                console.error('Error fetching chores:', error);
+            }
+        }
+
+        async function fetchKioskStats() {
+            try {
+                const resp = await apiFetch('/api/chores/stats?period=week');
+                const data = await resp.json();
+                const bar = document.getElementById('kioskStatsBar');
+                if (!bar) return;
+                while (bar.firstChild) bar.removeChild(bar.firstChild);
+
+                const rate = data.overall_rate;
+                const color = rate >= 80 ? '#22c55e' : (rate >= 60 ? '#fbbf24' : '#ef4444');
+
+                const wrap = document.createElement('div');
+                wrap.className = 'kiosk-stats';
+
+                const scoreDiv = document.createElement('div');
+                const lbl = document.createElement('div');
+                lbl.className = 'kiosk-score-label';
+                lbl.textContent = 'Score';
+                scoreDiv.appendChild(lbl);
+                const val = document.createElement('div');
+                val.className = 'kiosk-score-value';
+                val.style.color = color;
+                val.textContent = rate + '%';
+                scoreDiv.appendChild(val);
+                wrap.appendChild(scoreDiv);
+
+                const barsDiv = document.createElement('div');
+                barsDiv.className = 'kiosk-person-bars';
+                (data.per_person || []).forEach(pp => {
+                    const pKey = pp.name.toLowerCase();
+                    const pColor = getComputedStyle(document.documentElement).getPropertyValue('--accent-' + pKey).trim() || '#4ecdc4';
+                    const row = document.createElement('div');
+                    row.className = 'kiosk-person-row';
+                    const nm = document.createElement('div');
+                    nm.className = 'kiosk-person-name';
+                    nm.textContent = pp.name;
+                    row.appendChild(nm);
+                    const track = document.createElement('div');
+                    track.className = 'kiosk-bar-track';
+                    const fill = document.createElement('div');
+                    fill.className = 'kiosk-bar-fill';
+                    fill.style.width = Math.min(pp.rate, 100) + '%';
+                    fill.style.background = pColor;
+                    track.appendChild(fill);
+                    row.appendChild(track);
+                    barsDiv.appendChild(row);
+                });
+                wrap.appendChild(barsDiv);
+                bar.appendChild(wrap);
+                bar.style.display = '';
+            } catch(e) { console.error('Kiosk stats error:', e); }
+        }
+
+        async function fetchAdhoc() {
+            try {
+                const response = await apiFetch('/api/adhoc');
+                const data = await response.json();
+                adhocTasks = data.tasks || [];
+                // Re-render chores to include adhoc section
+                if (choresData.length > 0) {
+                    renderChores({ chores: choresData });
+                }
+            } catch (error) {
+                console.error('Error fetching adhoc tasks:', error);
+            }
+        }
+
+        async function fetchMeals() {
+            try {
+                const response = await apiFetch('/api/meals');
+                const data = await response.json();
+                mealsData = data.meals;
+                mealDuties = data.duties || {};
+                // Re-render calendar to update meal info in cells
+                if (monthCalendarData) renderMonthCalendar();
+            } catch (error) {
+                console.error('Error fetching meals:', error);
+            }
+        }
+
+        // Full Month Calendar
+        let monthCalendarData = null;
+
+        async function fetchMonthCalendar() {
+            try {
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = now.getMonth() + 1; // 1-indexed
+
+                const response = await apiFetch(`/api/family-calendar/month/${year}/${month}`);
+                monthCalendarData = await response.json();
+
+                renderMonthCalendar();
+            } catch (error) {
+                console.error('Error fetching month calendar:', error);
+            }
+        }
+
+        function getMonthEventColorClass(participants) {
+            if (!participants || participants.length === 0) return 'month-event-guests';
+
+            const pSet = new Set(participants.map(p => p.toLowerCase()));
+
+            if (pSet.has('guests')) return 'month-event-guests';
+
+            if (pSet.size === 1) {
+                const person = [...pSet][0];
+                if (person === 'keiran') return 'month-event-keiran';
+                if (person === 'ciara') return 'month-event-ciara';
+                if (person === 'tahni') return 'month-event-tahni';
+            }
+
+            if (pSet.size === 2) {
+                if (pSet.has('ciara') && pSet.has('tahni')) return 'month-event-ciara-tahni';
+                if (pSet.has('ciara') && pSet.has('keiran')) return 'month-event-ciara-keiran';
+                if (pSet.has('keiran') && pSet.has('tahni')) return 'month-event-keiran-tahni';
+            }
+
+            if (pSet.size === 3) return 'month-event-everyone';
+
+            return 'month-event-guests';
+        }
+
+        function renderMonthCalendar() {
+            const grid = document.getElementById('monthCalendarGrid');
+            const titleEl = document.getElementById('monthCalendarTitle');
+            if (!grid || !monthCalendarData) return;
+
+            const data = monthCalendarData;
+            const today = data.today;
+            const firstDayWeekday = data.first_day_weekday; // 0=Monday
+            const daysInMonth = data.days_in_month;
+
+            // Update title
+            if (titleEl) {
+                titleEl.textContent = `${data.month_name} ${data.year}`;
+            }
+
+            // Calculate previous month info
+            const currentYear = data.year;
+            const currentMonth = data.month;
+            const prevMonthYear = currentMonth === 1 ? currentYear - 1 : currentYear;
+            const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
+            const daysInPrevMonth = new Date(prevMonthYear, prevMonth, 0).getDate();
+
+            // Build events by date lookup
+            const eventsByDate = {};
+            (data.events || []).forEach(event => {
+                const dateKey = event.date;
+                if (!eventsByDate[dateKey]) eventsByDate[dateKey] = [];
+                eventsByDate[dateKey].push(event);
+            });
+
+            // Find current week range (Mon-Sun containing today)
+            const todayDate = new Date(today + 'T00:00:00');
+            const todayDow = todayDate.getDay(); // 0=Sun, 1=Mon...
+            const mondayOffset = todayDow === 0 ? -6 : 1 - todayDow;
+            const weekStart = new Date(todayDate);
+            weekStart.setDate(todayDate.getDate() + mondayOffset);
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekStart.getDate() + 6);
+            const weekStartStr = weekStart.toISOString().split('T')[0];
+            const weekEndStr = weekEnd.toISOString().split('T')[0];
+
+            let html = '';
+            let dayCounter = 1;
+            let nextMonthDay = 1;
+
+            // Always render 6 rows (42 cells)
+            const totalCells = 42;
+
+            for (let i = 0; i < totalCells; i++) {
+                let dayNum, dateStr, isOtherMonth = false, isWeekend = false, isPast = false;
+                let cellYear = currentYear, cellMonth = currentMonth;
+
+                const weekday = i % 7; // 0=Mon, 6=Sun
+                isWeekend = weekday === 5 || weekday === 6;
+
+                if (i < firstDayWeekday) {
+                    dayNum = daysInPrevMonth - firstDayWeekday + i + 1;
+                    cellMonth = prevMonth;
+                    cellYear = prevMonthYear;
+                    isOtherMonth = true;
+                } else if (dayCounter <= daysInMonth) {
+                    dayNum = dayCounter;
+                    dayCounter++;
+                } else {
+                    dayNum = nextMonthDay;
+                    nextMonthDay++;
+                    cellMonth = currentMonth === 12 ? 1 : currentMonth + 1;
+                    cellYear = currentMonth === 12 ? currentYear + 1 : currentYear;
+                    isOtherMonth = true;
+                }
+
+                dateStr = `${cellYear}-${String(cellMonth).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+                const isToday = dateStr === today;
+
+                if (!isOtherMonth && !isToday) {
+                    isPast = dateStr < today;
+                }
+
+                const dayEvents = eventsByDate[dateStr] || [];
+                dayEvents.sort((a, b) => {
+                    const timeA = a.start_time || '00:00';
+                    const timeB = b.start_time || '00:00';
+                    return timeA.localeCompare(timeB);
+                });
+
+                // Check if this cell is in the current week (for meal display)
+                const isCurrentWeek = dateStr >= weekStartStr && dateStr <= weekEndStr;
+
+                let cellClass = 'month-day-cell';
+                if (isOtherMonth) cellClass += ' other-month';
+                if (isToday) cellClass += ' today';
+                if (isWeekend && !isOtherMonth) cellClass += ' weekend';
+                if (isPast) cellClass += ' past';
+
+                html += `<div class="${cellClass}">`;
+                html += `<div class="month-day-number">${dayNum}</div>`;
+                html += `<div class="month-events-container">`;
+
+                // Show all events (no truncation)
+                dayEvents.forEach(event => {
+                    const colorClass = getMonthEventColorClass(event.participants);
+                    html += `<div class="month-event-item ${colorClass}" title="${escapeHtml(event.title)}">${escapeHtml(event.title)}</div>`;
+                });
+
+                // Show meals for current week's days
+                if (isCurrentWeek && mealsData) {
+                    const excludedDays = mealDuties.excluded_days || {};
+                    const excludedLabel = excludedDays[String(weekday)];
+
+                    if (excludedLabel) {
+                        html += `<div class="month-meal-item meal-excluded-label" title="${escapeHtml(excludedLabel)}">${escapeHtml(excludedLabel)}</div>`;
+                    } else {
+                        const dayMeals = mealsData[weekday] || { lunch: [], dinner: [] };
+                        const lunch = dayMeals.lunch && dayMeals.lunch[0] ? dayMeals.lunch[0].meal_name : null;
+                        const dinnerAll = dayMeals.dinner ? dayMeals.dinner.find(d => d.meal_variant === 'all') : null;
+                        const dinnerName = dinnerAll ? dinnerAll.meal_name :
+                            (dayMeals.dinner && dayMeals.dinner.length > 0 ? dayMeals.dinner[0].meal_name : null);
+
+                        const lunchCook = mealDuties.cook_lunch ? mealDuties.cook_lunch[weekday] : null;
+                        const dinnerCook = mealDuties.cook_dinner ? mealDuties.cook_dinner[weekday] : null;
+
+                        if (lunch) {
+                            const cookLabel = lunchCook ? ` (${escapeHtml(lunchCook)})` : '';
+                            html += `<div class="month-meal-item lunch" title="Lunch: ${escapeHtml(lunch)}${cookLabel}">${escapeHtml(lunch)}</div>`;
+                        }
+                        if (dinnerName) {
+                            const cookLabel = dinnerCook ? ` (${escapeHtml(dinnerCook)})` : '';
+                            html += `<div class="month-meal-item dinner" title="Dinner: ${escapeHtml(dinnerName)}${cookLabel}">${escapeHtml(dinnerName)}</div>`;
+                        }
+                    }
+                }
+
+                html += `</div>`;
+                html += `</div>`;
+            }
+
+            grid.innerHTML = html;
+        }
+
+        // Check for midnight to refresh calendar (date change in Sydney timezone)
+        let lastCheckedDate = null;
+        function checkMidnightRefresh() {
+            const now = new Date();
+            const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+            if (lastCheckedDate === null) {
+                lastCheckedDate = todayStr;
+            } else if (todayStr !== lastCheckedDate) {
+                // Date has changed - refresh calendar to update strike-through and current day
+                lastCheckedDate = todayStr;
+                fetchMonthCalendar();
+            }
+        }
+        // Check every minute for midnight rollover
+        setInterval(checkMidnightRefresh, 60000);
+
+        // Upcoming Events List (next 7 days)
+        async function fetchUpcomingEvents() {
+            try {
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = now.getMonth() + 1;
+                // Use the already-fetched month calendar data
+                if (!monthCalendarData) return;
+
+                const todayStr = monthCalendarData.today;
+                const endDate = new Date(now);
+                endDate.setDate(endDate.getDate() + 7);
+                const endStr = endDate.toISOString().split('T')[0];
+
+                const events = (monthCalendarData.events || []).filter(e => {
+                    return e.date >= todayStr && e.date <= endStr;
+                });
+
+                // Sort by date then time
+                events.sort((a, b) => {
+                    if (a.date !== b.date) return a.date.localeCompare(b.date);
+                    return (a.start_time || '00:00').localeCompare(b.start_time || '00:00');
+                });
+
+                renderUpcomingEvents(events, todayStr);
+            } catch (error) {
+                console.error('Error rendering upcoming events:', error);
+            }
+        }
+
+        function renderUpcomingEvents(events, todayStr) {
+            const container = document.getElementById('upcomingEventsList');
+            if (!container) return;
+
+            if (events.length === 0) {
+                container.innerHTML = '<div class="upcoming-no-events">No events in the next 7 days</div>';
+                return;
+            }
+
+            const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+            let html = '';
+            events.forEach(event => {
+                const d = new Date(event.date + 'T00:00:00');
+                const isToday = event.date === todayStr;
+                const dateLabel = isToday ? 'Today' : `${dayNames[d.getDay()]} ${d.getDate()} ${monthNames[d.getMonth()]}`;
+
+                const colorClass = getMonthEventColorClass(event.participants || []);
+                const colorStyle = colorClass.replace('month-event-', '');
+                const colorVar = colorStyle === 'guests' ? 'var(--color-guests)' :
+                                 colorStyle === 'everyone' ? 'var(--color-everyone)' :
+                                 colorStyle === 'one-off' ? 'var(--color-one-off)' :
+                                 `var(--accent-${colorStyle}, var(--color-${colorStyle}, var(--text-muted)))`;
+
+                let timeStr = '';
+                if (event.start_time) {
+                    timeStr = event.start_time;
+                    if (event.end_time) timeStr += '-' + event.end_time;
+                } else if (event.all_day) {
+                    timeStr = 'All day';
+                }
+
+                const participants = event.participants || [];
+                const participantStr = participants.length <= 3 ? participants.join(', ') : 'Everyone';
+
+                html += `<div class="upcoming-event-item" style="border-left-color: ${colorVar};">
+                    <div class="upcoming-event-date">${dateLabel}</div>
+                    <div class="upcoming-event-title">${escapeHtml(event.title)}</div>
+                    <div class="upcoming-event-time">${timeStr}</div>
+                    <div class="upcoming-event-participants">${escapeHtml(participantStr)}</div>
+                </div>`;
+            });
+
+            container.innerHTML = html;
+        }
+
+        // Hook into month calendar fetch to also update upcoming events
+        const origFetchMonthCalendar = fetchMonthCalendar;
+        fetchMonthCalendar = async function() {
+            await origFetchMonthCalendar();
+            fetchUpcomingEvents();
+        };
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type} show`;
+            
+            try {
+                document.getElementById('completionSound').play();
+            } catch (e) {}
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        function connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const tokenParam = KIOSK_TOKEN ? `?token=${encodeURIComponent(KIOSK_TOKEN)}` : '';
+            ws = new WebSocket(`${protocol}//${window.location.host}/ws${tokenParam}`);
+            
+            ws.onclose = () => {
+                setTimeout(connectWebSocket, 3000);
+            };
+            
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+
+                if (data.type === 'refresh') {
+                    location.reload(true);
+                } else if (data.type === 'screen_on') {
+                    document.body.style.visibility = 'visible';
+                    document.body.style.background = '';
+                    window._kioskScreenOff = false;
+                } else if (data.type === 'screen_off') {
+                    document.body.style.visibility = 'hidden';
+                    document.body.style.background = '#000';
+                    window._kioskScreenOff = true;
+                } else if (data.type === 'chore_completed') {
+                    showToast(`${data.completed_by} completed a chore!`);
+                } else if (data.type === 'chore_skipped') {
+                    showToast('Chore skipped');
+                } else if (data.type === 'meals_updated') {
+                    fetchMeals();
+                } else if (data.type === 'adhoc_created') {
+                    fetchAdhoc();
+                } else if (data.type === 'adhoc_completed') {
+                    showToast(`${data.completed_by} completed a task!`);
+                    fetchAdhoc();
+                } else if (data.type === 'adhoc_deleted' || data.type === 'adhoc_cleared') {
+                    fetchAdhoc();
+                } else if (data.type === 'calendar_updated') {
+                    fetchMonthCalendar();
+                } else if (data.type === 'bills_updated') {
+                    fetchBills();
+                } else if (data.type === 'inventory_updated') {
+                    fetchInventory();
+                } else if (data.type === 'poll_created' || data.type === 'poll_voted' || data.type === 'poll_closed' || data.type === 'poll_deleted') {
+                    fetchPolls();
+                } else if (data.type === 'shopping_updated') {
+                    fetchShopping();
+                } else if (data.type === 'noticeboard_updated') {
+                    fetchNoticeboard();
+                } else if (data.type === 'pets_updated') {
+                    fetchPets();
+                } else if (data.type === 'expenses_updated') {
+                    fetchExpensesBalances();
+                } else if (data.type === 'house_rules_updated') {
+                    fetchHouseRules();
+                } else if (data.type === 'tenancy_updated') {
+                    fetchTenancy();
+                } else if (data.type === 'selfcare_updated') {
+                    fetchSelfcare();
+                } else if (data.type === 'vehicles_updated') {
+                    fetchVehicles();
+                } else if (data.type === 'modules_updated') {
+                    fetchEnabledModules().then(function() {
+                        fetchExpensesBalances();
+                        fetchHouseRules();
+                        fetchTenancy();
+                        fetchNoticeboard();
+                        fetchShopping();
+                        fetchSelfcare();
+                        fetchVehicles();
+                        fetchPets();
+                    });
+                }
+
+                // Only refresh chores for chore-related events
+                const CHORE_EVENTS = new Set(['chore_completed', 'chore_skipped', 'chores_updated', 'refresh', 'chore_added', 'chore_deleted', 'chore_updated']);
+                if (CHORE_EVENTS.has(data.type)) {
+                    fetchChores();
+                }
+            };
+        }
+
+        // Fuel prices
+        async function fetchFuel() {
+            try {
+                const response = await apiFetch('/api/fuel');
+                const data = await response.json();
+                renderFuel(data);
+            } catch (error) {
+                console.error('Error fetching fuel:', error);
+                document.getElementById('fuelGrid').innerHTML = '<span style="color: var(--text-muted)">Unable to load</span>';
+            }
+        }
+
+        function renderFuel(data) {
+            const container = document.getElementById('fuelGrid');
+            if (!container || !data.fuel) return;
+
+            const fuelTypes = ['E10', 'U91', 'P95', 'P98'];
+            let html = '';
+
+            // Common abbreviations for cleaner display
+            const abbreviations = {
+                '7-Eleven': '7-Eleven',
+                'Metro Petroleum': 'Metro',
+                'Metro ': 'Metro ',
+                'PEARL ENERGY': 'Pearl Energy',
+                'Speedway': 'Speedway',
+                'Enhance': 'Enhance',
+                'Medco': 'Medco'
+            };
+
+            function formatStationName(name) {
+                // Clean up common patterns
+                let formatted = name;
+                // Remove suburb duplicates like "Metro Sandgate" -> keep as is
+                // Shorten very long names
+                if (formatted.length > 22) {
+                    formatted = formatted.substring(0, 20) + '..';
+                }
+                return formatted;
+            }
+
+            for (const type of fuelTypes) {
+                const stations = data.fuel[type] || [];
+                html += `<div class="fuel-type">
+                    <div class="fuel-type-label">${type}</div>`;
+
+                if (stations.length === 0) {
+                    html += '<div class="fuel-station"><span style="color: var(--text-muted)">No data</span></div>';
+                } else {
+                    stations.forEach((station, idx) => {
+                        const name = formatStationName(station.name);
+                        html += `<div class="fuel-station" title="${escapeHtml(station.name)}">
+                            <span class="fuel-price ${idx === 0 ? 'fuel-best' : ''}">${station.price.toFixed(1)}c</span>
+                            <span class="fuel-name">${escapeHtml(name)}</span>
+                            <span class="fuel-dist">${station.distance.toFixed(1)}km</span>
+                        </div>`;
+                    });
+                }
+                html += '</div>';
+            }
+
+            container.innerHTML = html;
+        }
+
+        // Quote of the hour
+        async function fetchQuote() {
+            try {
+                const response = await apiFetch('/api/quote');
+                const data = await response.json();
+                if (data.quote) {
+                    document.getElementById('quoteText').textContent = data.quote;
+                    document.getElementById('quoteAuthor').textContent = data.author || 'Unknown';
+                    document.getElementById('quoteSection').classList.add('show');
+                }
+            } catch (error) {
+                console.error('Error fetching quote:', error);
+                // Hide quote section on error
+                document.getElementById('quoteSection').classList.remove('show');
+            }
+        }
+
+        // Bills due soon (kiosk alerts)
+        async function fetchBills() {
+            try {
+                const response = await apiFetch('/api/bills');
+                const data = await response.json();
+                billsData = data.bills || [];
+                renderKioskAlerts();
+            } catch (e) { console.error('Bills fetch error:', e); }
+        }
+
+        // Inventory low stock (kiosk alerts)
+        async function fetchInventory() {
+            try {
+                const response = await apiFetch('/api/inventory');
+                inventoryData = await response.json();
+                renderKioskAlerts();
+            } catch (e) { console.error('Inventory fetch error:', e); }
+        }
+
+        function renderKioskAlerts() {
+            const container = document.getElementById('kioskAlerts');
+            if (!container) return;
+            container.textContent = '';
+
+            // Bills due within 7 days
+            const now = new Date();
+            const weekFromNow = new Date(now.getTime() + 7 * 86400000);
+            const todayStr = now.toISOString().split('T')[0];
+            const weekStr = weekFromNow.toISOString().split('T')[0];
+
+            const dueBills = billsData.filter(b => !b.paid && b.due_date <= weekStr);
+            dueBills.forEach(b => {
+                const overdue = b.due_date < todayStr;
+                const label = overdue ? 'OVERDUE' : (b.due_date === todayStr ? 'TODAY' : b.due_date.slice(5));
+                const amt = b.amount ? ' $' + b.amount.toFixed(0) : '';
+                const span = document.createElement('span');
+                span.className = 'kiosk-alert-item bill';
+                if (overdue) { span.style.background = 'rgba(255,107,107,0.2)'; span.style.color = '#ff6b6b'; }
+                span.textContent = b.name + amt + ' - ' + label;
+                container.appendChild(span);
+            });
+
+            // Low stock items
+            (inventoryData.low_stock || []).forEach(item => {
+                const span = document.createElement('span');
+                span.className = 'kiosk-alert-item low-stock';
+                span.textContent = item.name + ': ' + item.quantity + (item.unit ? ' ' + item.unit : '');
+                container.appendChild(span);
+            });
+
+            // Meal duties for today
+            if (mealDuties) {
+                const todayDow = now.getDay() === 0 ? 6 : now.getDay() - 1;
+                const excludedDays = mealDuties.excluded_days || {};
+                const excludedLabel = excludedDays[String(todayDow)];
+
+                if (excludedLabel) {
+                    const span = document.createElement('span');
+                    span.className = 'kiosk-alert-item';
+                    span.style.background = 'rgba(136,136,136,0.15)';
+                    span.style.color = '#888';
+                    span.style.fontStyle = 'italic';
+                    span.textContent = '\uD83C\uDF7D\uFE0F ' + excludedLabel;
+                    container.appendChild(span);
+                } else {
+                    const dinnerCook = mealDuties.cook_dinner ? mealDuties.cook_dinner[todayDow] : null;
+                    if (dinnerCook) {
+                        const span = document.createElement('span');
+                        span.className = 'kiosk-alert-item';
+                        span.style.background = 'rgba(255,152,0,0.15)';
+                        span.style.color = '#ff9800';
+                        span.textContent = '\uD83C\uDF73 Cooking: ' + dinnerCook;
+                        container.appendChild(span);
+                    }
+                }
+                if (mealDuties.baking) {
+                    const span = document.createElement('span');
+                    span.className = 'kiosk-alert-item';
+                    span.textContent = '\uD83E\uDDC1 Baking: ' + mealDuties.baking;
+                    container.appendChild(span);
+                }
+                if (mealDuties.shopping) {
+                    const span = document.createElement('span');
+                    span.className = 'kiosk-alert-item';
+                    span.textContent = '\uD83D\uDED2 Shopping: ' + mealDuties.shopping;
+                    container.appendChild(span);
+                }
+            }
+
+            // Lease countdown (tenancy module)
+            if (isModuleEnabled('tenancy') && tenancyData && tenancyData.days_remaining !== null && tenancyData.days_remaining !== undefined) {
+                const days = tenancyData.days_remaining;
+                const span = document.createElement('span');
+                span.className = 'kiosk-alert-item';
+                if (days < 0) {
+                    span.style.background = 'rgba(255,107,107,0.2)';
+                    span.style.color = '#ff6b6b';
+                    span.textContent = '\uD83C\uDFE0 Lease expired ' + Math.abs(days) + 'd ago';
+                } else if (days <= 30) {
+                    span.style.background = 'rgba(255,152,0,0.2)';
+                    span.style.color = '#ff9800';
+                    span.textContent = '\uD83C\uDFE0 Lease: ' + days + ' days left';
+                } else {
+                    span.textContent = '\uD83C\uDFE0 Lease: ' + days + ' days left';
+                }
+                container.appendChild(span);
+            }
+        }
+
+        // Polls display on kiosk
+        async function fetchPolls() {
+            try {
+                const response = await apiFetch('/api/polls');
+                const data = await response.json();
+                pollsData = (data.polls || []).filter(p => p.status === 'active');
+                renderKioskPoll();
+            } catch (e) { console.error('Polls fetch error:', e); }
+        }
+
+        function renderKioskPoll() {
+            const container = document.getElementById('kioskPoll');
+            if (!container) return;
+            if (pollsData.length === 0) { container.innerHTML = ''; return; }
+
+            const poll = pollsData[0]; // Show first active poll
+            let html = `<div class="kiosk-poll">
+                <div class="kiosk-poll-question">${escapeHtml(poll.question)}</div>
+                <div class="kiosk-poll-options">`;
+
+            const total = poll.total_votes || 0;
+            (poll.options || []).forEach(opt => {
+                const pct = total > 0 ? Math.round((opt.vote_count / total) * 100) : 0;
+                html += `<div class="kiosk-poll-option">
+                    <span class="kiosk-poll-label">${escapeHtml(opt.option_text)}</span>
+                    <div class="kiosk-poll-bar"><div class="kiosk-poll-bar-fill" style="width:${pct}%"></div></div>
+                    <span class="kiosk-poll-count">${opt.vote_count}</span>
+                </div>`;
+            });
+            html += '</div></div>';
+            container.innerHTML = html;
+        }
+
+        // ─── Enabled modules check ───
+        async function fetchEnabledModules() {
+            try {
+                const resp = await apiFetch('/api/modules/enabled');
+                if (resp.ok) {
+                    const data = await resp.json();
+                    enabledModules = data.enabled || [];
+                }
+            } catch(e) { console.error('Modules fetch error:', e); }
+        }
+        function isModuleEnabled(key) { return enabledModules.includes(key); }
+
+        // ─── Expenses balance panel (kiosk) ───
+        async function fetchExpensesBalances() {
+            if (!isModuleEnabled('expenses')) return;
+            try {
+                const resp = await apiFetch('/api/expenses/balances');
+                if (resp.ok) {
+                    expensesBalances = await resp.json();
+                    renderKioskExpenses();
+                }
+            } catch(e) { console.error('Expenses balance fetch error:', e); }
+        }
+
+        function renderKioskExpenses() {
+            const container = document.getElementById('kioskExpenses');
+            if (!container) return;
+            if (!expensesBalances || !isModuleEnabled('expenses')) { container.textContent = ''; return; }
+            const settlements = expensesBalances.settlements_needed || [];
+            if (settlements.length === 0) { container.textContent = ''; return; }
+
+            // Build with DOM methods (kiosk data is from our own API, but using safe methods)
+            const wrapper = document.createElement('div');
+            wrapper.className = 'kiosk-expenses';
+            const title = document.createElement('div');
+            title.className = 'kiosk-expenses-title';
+            title.textContent = '\uD83D\uDCB8 Outstanding Balances';
+            wrapper.appendChild(title);
+
+            settlements.forEach(function(s) {
+                const row = document.createElement('div');
+                row.className = 'kiosk-expense-row';
+                const names = document.createElement('span');
+                names.className = 'kiosk-expense-names';
+                names.textContent = s.from + ' \u2192 ' + s.to;
+                row.appendChild(names);
+                const amt = document.createElement('span');
+                amt.className = 'kiosk-expense-amount';
+                amt.textContent = '$' + Number(s.amount).toFixed(2);
+                row.appendChild(amt);
+                wrapper.appendChild(row);
+            });
+
+            container.textContent = '';
+            container.appendChild(wrapper);
+        }
+
+        // ─── House Rules panel (kiosk) ───
+        async function fetchHouseRules() {
+            if (!isModuleEnabled('house_rules')) return;
+            try {
+                const resp = await apiFetch('/api/house-rules');
+                if (resp.ok) {
+                    const data = await resp.json();
+                    houseRulesData = data.rules || [];
+                    renderKioskHouseRules();
+                }
+            } catch(e) { console.error('House rules fetch error:', e); }
+        }
+
+        function renderKioskHouseRules() {
+            const container = document.getElementById('kioskHouseRules');
+            if (!container) return;
+            if (houseRulesData.length === 0 || !isModuleEnabled('house_rules')) { container.textContent = ''; return; }
+            const unacked = houseRulesData.filter(function(r) { return (r.not_acknowledged || []).length > 0; });
+            if (unacked.length === 0) { container.textContent = ''; return; }
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'kiosk-rules';
+            const title = document.createElement('div');
+            title.className = 'kiosk-rules-title';
+            title.textContent = '\uD83D\uDCDC Rules Need Acknowledgement';
+            wrapper.appendChild(title);
+
+            unacked.slice(0, 5).forEach(function(r) {
+                const count = (r.not_acknowledged || []).length;
+                const item = document.createElement('div');
+                item.className = 'kiosk-rule-item';
+                const dot = document.createElement('span');
+                dot.className = 'kiosk-rule-dot';
+                dot.style.background = '#ff9800';
+                item.appendChild(dot);
+                const text = document.createTextNode(r.title + ' ');
+                item.appendChild(text);
+                const pending = document.createElement('span');
+                pending.style.color = 'var(--text-muted)';
+                pending.textContent = '(' + count + ' pending)';
+                item.appendChild(pending);
+                wrapper.appendChild(item);
+            });
+
+            container.textContent = '';
+            container.appendChild(wrapper);
+        }
+
+        // ─── Noticeboard panel (kiosk) ───
+        let noticeboardData = [];
+        async function fetchNoticeboard() {
+            if (!isModuleEnabled('noticeboard')) return;
+            try {
+                const resp = await apiFetch('/api/noticeboard');
+                if (resp.ok) {
+                    const data = await resp.json();
+                    noticeboardData = data.posts || [];
+                    renderKioskNoticeboard();
+                }
+            } catch(e) { console.error('Noticeboard fetch error:', e); }
+        }
+
+        function renderKioskNoticeboard() {
+            const container = document.getElementById('kioskNoticeboard');
+            if (!container) return;
+            if (noticeboardData.length === 0 || !isModuleEnabled('noticeboard')) { container.textContent = ''; return; }
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'kiosk-panel';
+            const title = document.createElement('div');
+            title.className = 'kiosk-panel-title';
+            title.textContent = '\uD83D\uDCCC Noticeboard';
+            wrapper.appendChild(title);
+
+            noticeboardData.slice(0, 5).forEach(function(post) {
+                const item = document.createElement('div');
+                item.className = 'kiosk-panel-item';
+
+                if (post.post_type && post.post_type !== 'notice') {
+                    const typeBadge = document.createElement('span');
+                    typeBadge.className = 'kiosk-notice-type ' + post.post_type;
+                    typeBadge.textContent = post.post_type === 'going_out' ? 'out' : post.post_type;
+                    item.appendChild(typeBadge);
+                }
+
+                const text = document.createElement('span');
+                text.style.flex = '1';
+                text.textContent = post.title;
+                item.appendChild(text);
+
+                if (post.posted_by) {
+                    const by = document.createElement('span');
+                    by.style.color = getPersonColor(post.posted_by);
+                    by.style.fontSize = '0.6rem';
+                    by.textContent = post.posted_by;
+                    item.appendChild(by);
+                }
+
+                wrapper.appendChild(item);
+            });
+
+            container.textContent = '';
+            container.appendChild(wrapper);
+        }
+
+        // ─── Shopping summary panel (kiosk) ───
+        let shoppingData = [];
+        async function fetchShopping() {
+            if (!isModuleEnabled('shopping')) return;
+            try {
+                const resp = await apiFetch('/api/shopping');
+                if (resp.ok) {
+                    const data = await resp.json();
+                    shoppingData = (data.items || []).filter(function(i) { return !i.purchased; });
+                    renderKioskShopping();
+                }
+            } catch(e) { console.error('Shopping fetch error:', e); }
+        }
+
+        function renderKioskShopping() {
+            const container = document.getElementById('kioskShopping');
+            if (!container) return;
+            if (shoppingData.length === 0 || !isModuleEnabled('shopping')) { container.textContent = ''; return; }
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'kiosk-panel';
+            const title = document.createElement('div');
+            title.className = 'kiosk-panel-title';
+            title.textContent = '\uD83D\uDED2 Shopping List (' + shoppingData.length + ')';
+            wrapper.appendChild(title);
+
+            // Group by category
+            const cats = {};
+            shoppingData.forEach(function(item) {
+                const cat = item.category || 'other';
+                if (!cats[cat]) cats[cat] = 0;
+                cats[cat]++;
+            });
+
+            const catsDiv = document.createElement('div');
+            catsDiv.className = 'kiosk-shopping-cats';
+            Object.keys(cats).forEach(function(cat) {
+                const chip = document.createElement('span');
+                chip.className = 'kiosk-shopping-cat';
+                chip.textContent = cat + ' (' + cats[cat] + ')';
+                catsDiv.appendChild(chip);
+            });
+            wrapper.appendChild(catsDiv);
+
+            // Show first few items
+            shoppingData.slice(0, 6).forEach(function(item) {
+                const row = document.createElement('div');
+                row.className = 'kiosk-panel-item';
+                row.textContent = (item.quantity ? item.quantity + 'x ' : '') + item.name;
+                wrapper.appendChild(row);
+            });
+            if (shoppingData.length > 6) {
+                const more = document.createElement('div');
+                more.className = 'kiosk-panel-item';
+                more.style.color = 'var(--text-muted)';
+                more.textContent = '+ ' + (shoppingData.length - 6) + ' more items';
+                wrapper.appendChild(more);
+            }
+
+            container.textContent = '';
+            container.appendChild(wrapper);
+        }
+
+        // ─── Self Care / Medication alerts panel (kiosk) ───
+        let selfcareData = [];
+        async function fetchSelfcare() {
+            if (!isModuleEnabled('selfcare')) return;
+            try {
+                const resp = await apiFetch('/api/selfcare');
+                if (resp.ok) {
+                    const data = await resp.json();
+                    selfcareData = data.items || [];
+                    renderKioskSelfcare();
+                }
+            } catch(e) { console.error('Selfcare fetch error:', e); }
+        }
+
+        function renderKioskSelfcare() {
+            const container = document.getElementById('kioskSelfcare');
+            if (!container) return;
+            if (!isModuleEnabled('selfcare')) { container.textContent = ''; return; }
+
+            // Only show if there are stock alerts
+            const itemsWithAlerts = selfcareData.filter(function(i) {
+                return i.stock_alerts && i.stock_alerts.length > 0;
+            });
+            if (itemsWithAlerts.length === 0) { container.textContent = ''; return; }
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'kiosk-panel';
+            const title = document.createElement('div');
+            title.className = 'kiosk-panel-title';
+            title.textContent = '\uD83D\uDC8A Medication Alerts';
+            wrapper.appendChild(title);
+
+            itemsWithAlerts.forEach(function(item) {
+                item.stock_alerts.forEach(function(alert) {
+                    const row = document.createElement('div');
+                    row.className = 'kiosk-panel-item';
+
+                    const badge = document.createElement('span');
+                    badge.className = 'badge ' + (alert.severity === 'urgent' ? 'badge-urgent' : (alert.severity === 'warning' ? 'badge-warning' : 'badge-info'));
+                    badge.textContent = alert.type;
+                    row.appendChild(badge);
+
+                    const text = document.createElement('span');
+                    text.style.flex = '1';
+                    text.textContent = item.name + ' — ' + alert.message;
+                    row.appendChild(text);
+
+                    wrapper.appendChild(row);
+                });
+            });
+
+            container.textContent = '';
+            container.appendChild(wrapper);
+        }
+
+        // ─── Vehicles / Services panel (kiosk) ───
+        let vehiclesData = [];
+        async function fetchVehicles() {
+            if (!isModuleEnabled('vehicles')) return;
+            try {
+                const resp = await apiFetch('/api/vehicles');
+                if (resp.ok) {
+                    const data = await resp.json();
+                    vehiclesData = data.vehicles || [];
+                    renderKioskVehicles();
+                }
+            } catch(e) { console.error('Vehicles fetch error:', e); }
+        }
+
+        function renderKioskVehicles() {
+            const container = document.getElementById('kioskVehicles');
+            if (!container) return;
+            if (!isModuleEnabled('vehicles') || vehiclesData.length === 0) { container.textContent = ''; return; }
+
+            // Collect upcoming/overdue services
+            const services = [];
+            vehiclesData.forEach(function(v) {
+                (v.maintenance || []).forEach(function(m) {
+                    if (m.completed) return;
+                    services.push({ vehicle: v.name, service: m });
+                });
+            });
+
+            if (services.length === 0) { container.textContent = ''; return; }
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'kiosk-panel';
+            const title = document.createElement('div');
+            title.className = 'kiosk-panel-title';
+            title.textContent = '\uD83D\uDE97 Vehicle Services';
+            wrapper.appendChild(title);
+
+            const today = new Date().toISOString().split('T')[0];
+            services.slice(0, 5).forEach(function(s) {
+                const row = document.createElement('div');
+                row.className = 'kiosk-panel-item';
+
+                const isOverdue = s.service.due_date && s.service.due_date < today;
+                const badge = document.createElement('span');
+                badge.className = 'badge ' + (isOverdue ? 'badge-urgent' : 'badge-warning');
+                badge.textContent = isOverdue ? 'overdue' : (s.service.due_date || 'scheduled');
+                row.appendChild(badge);
+
+                const text = document.createElement('span');
+                text.style.flex = '1';
+                text.textContent = s.vehicle + ' — ' + (s.service.service_type || s.service.description || 'Service');
+                row.appendChild(text);
+
+                wrapper.appendChild(row);
+            });
+
+            container.textContent = '';
+            container.appendChild(wrapper);
+        }
+
+        // ─── Pets panel (kiosk) ───
+        let petsData = [];
+        async function fetchPets() {
+            if (!isModuleEnabled('pets')) return;
+            try {
+                const resp = await apiFetch('/api/pets');
+                if (resp.ok) {
+                    const data = await resp.json();
+                    petsData = data.pets || [];
+                    renderKioskPets();
+                }
+            } catch(e) { console.error('Pets fetch error:', e); }
+        }
+
+        function renderKioskPets() {
+            const container = document.getElementById('kioskPets');
+            if (!container) return;
+            if (!isModuleEnabled('pets') || petsData.length === 0) { container.textContent = ''; return; }
+
+            // Collect pets with tasks due today
+            const petsWithDue = petsData.filter(function(p) { return p.tasks_due_today > 0; });
+
+            // Collect upcoming vet appointments
+            const upcomingVet = [];
+            petsData.forEach(function(pet) {
+                (pet.upcoming_vet_appointments || []).forEach(function(appt) {
+                    upcomingVet.push({ pet: pet.name, appt: appt });
+                });
+            });
+
+            if (petsWithDue.length === 0 && upcomingVet.length === 0) { container.textContent = ''; return; }
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'kiosk-panel';
+            const title = document.createElement('div');
+            title.className = 'kiosk-panel-title';
+            title.textContent = '\uD83D\uDC3E Pets';
+            wrapper.appendChild(title);
+
+            petsWithDue.forEach(function(pet) {
+                const row = document.createElement('div');
+                row.className = 'kiosk-panel-item';
+                const badge = document.createElement('span');
+                badge.className = 'badge badge-warning';
+                badge.textContent = pet.tasks_due_today + ' due';
+                row.appendChild(badge);
+                const text = document.createElement('span');
+                text.style.flex = '1';
+                text.textContent = pet.name + ' — care tasks today';
+                row.appendChild(text);
+                wrapper.appendChild(row);
+            });
+
+            upcomingVet.forEach(function(v) {
+                const row = document.createElement('div');
+                row.className = 'kiosk-panel-item';
+                const badge = document.createElement('span');
+                badge.className = 'badge badge-info';
+                badge.textContent = 'vet';
+                row.appendChild(badge);
+                const text = document.createElement('span');
+                text.style.flex = '1';
+                text.textContent = v.pet + ' — ' + v.appt.title + ' (' + v.appt.date + ')';
+                row.appendChild(text);
+                wrapper.appendChild(row);
+            });
+
+            container.textContent = '';
+            container.appendChild(wrapper);
+        }
+
+        // ─── Tenancy lease alert (kiosk) ───
+        async function fetchTenancy() {
+            if (!isModuleEnabled('tenancy')) return;
+            try {
+                const resp = await apiFetch('/api/tenancy');
+                if (resp.ok) {
+                    tenancyData = await resp.json();
+                    renderKioskAlerts(); // Lease countdown renders inside alerts
+                }
+            } catch(e) { console.error('Tenancy fetch error:', e); }
+        }
+
+        // Initial load — fetch modules first, then everything else
+        async function initKiosk() {
+            await fetchEnabledModules();
+            await fetchPeople();
+            fetchChores();
+            fetchKioskStats();
+            fetchAdhoc();
+            fetchMeals();
+            fetchMonthCalendar();
+            fetchFuel();
+            fetchQuote();
+            fetchBills();
+            fetchInventory();
+            fetchPolls();
+            fetchExpensesBalances();
+            fetchHouseRules();
+            fetchTenancy();
+            fetchNoticeboard();
+            fetchShopping();
+            fetchSelfcare();
+            fetchVehicles();
+            fetchPets();
+            connectWebSocket();
+        }
+        initKiosk();
+
+        // Refresh calendar every 10 minutes, fuel every 10 minutes, quote every hour
+        setInterval(fetchMonthCalendar, 600000);
+        setInterval(fetchFuel, 600000);
+        setInterval(fetchQuote, 3600000);
+        setInterval(fetchBills, 300000);
+        setInterval(fetchInventory, 300000);
+        setInterval(fetchPolls, 60000);
+        setInterval(fetchExpensesBalances, 300000);
+        setInterval(fetchTenancy, 600000);
+        setInterval(fetchNoticeboard, 300000);
+        setInterval(fetchShopping, 300000);
+        setInterval(fetchSelfcare, 300000);
+        setInterval(fetchVehicles, 600000);
+        setInterval(fetchPets, 300000);
+
+        // Auto-refresh page every 6 hours to prevent memory bloat
+        // Only refresh when screen is on (not blanked) to avoid visible reload flicker
+        setInterval(() => {
+            if (!window._kioskScreenOff) {
+                location.reload(true);
+            }
+        }, 6 * 60 * 60 * 1000);
+    </script>
+</body>
+</html>

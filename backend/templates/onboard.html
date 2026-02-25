@@ -1,0 +1,2183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Huddle - Get Started</title>
+    <meta name="theme-color" content="#1a1d27">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" type="image/svg+xml" href="/static/icon.svg">
+    <link rel="apple-touch-icon" href="/static/icon-192.png">
+    {% if GA4_MEASUREMENT_ID %}
+    <script async src="https://www.googletagmanager.com/gtag/js?id={{ GA4_MEASUREMENT_ID }}"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','{{ GA4_MEASUREMENT_ID }}');</script>
+    {% endif %}
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1d27;
+            color: #e8e8e8;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 420px;
+        }
+
+        /* Steps */
+        .step { display: none; }
+        .step.active { display: block; animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Logo block */
+        .logo-block {
+            text-align: center;
+            margin-bottom: 28px;
+        }
+        .logo-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 20px;
+            background: linear-gradient(135deg, #4ecdc4, #3db8b0);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(78,205,196,0.3);
+        }
+        .logo-icon svg {
+            width: 40px;
+            height: 40px;
+        }
+
+        /* Huddle logo text */
+        .huddle-logo { font-weight: 800; color: #e8e8e8; }
+        .huddle-h { color: #4ecdc4; }
+
+        .welcome-heading {
+            font-size: 28px;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+        .welcome-sub {
+            font-size: 15px;
+            color: #888;
+            line-height: 1.5;
+        }
+
+        /* Form inputs */
+        .form-input {
+            width: 100%;
+            background: #242830;
+            border: 2px solid #333;
+            border-radius: 12px;
+            padding: 14px 16px;
+            font-size: 15px;
+            color: #e0e0e0;
+            font-family: inherit;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .form-input:focus {
+            border-color: #4ecdc4;
+        }
+        .form-input::placeholder {
+            color: #555;
+        }
+        .form-input-label {
+            display: block;
+            font-size: 13px;
+            color: #888;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        /* Primary button */
+        .btn-primary {
+            display: block;
+            width: 100%;
+            background: #4ecdc4;
+            border: none;
+            border-radius: 12px;
+            padding: 14px;
+            font-size: 16px;
+            font-weight: 700;
+            color: #1a1d27;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+        .btn-primary:hover { background: #45b7b0; }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* Secondary button */
+        .btn-secondary {
+            display: block;
+            width: 100%;
+            background: transparent;
+            border: 2px solid #333;
+            border-radius: 12px;
+            padding: 14px;
+            font-size: 15px;
+            font-weight: 600;
+            color: #e0e0e0;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+        .btn-secondary:hover { background: #242830; border-color: #444; }
+
+        /* Helper / hint text */
+        .helper-text {
+            font-size: 12px;
+            color: #555;
+            text-align: center;
+            margin-top: 12px;
+        }
+        .hint-text {
+            font-size: 13px;
+            color: #666;
+            margin-top: 8px;
+        }
+
+        /* Progress indicator */
+        .progress-dots {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 28px;
+        }
+        .progress-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 4px;
+            background: #333;
+            transition: all 0.3s ease;
+        }
+        .progress-dot.active {
+            width: 24px;
+            background: #4ecdc4;
+        }
+
+        /* Step indicator label */
+        .step-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #4ecdc4;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+        .step-heading {
+            font-size: 22px;
+            font-weight: 800;
+            color: #fff;
+            margin-bottom: 6px;
+        }
+        .step-subtitle {
+            font-size: 13px;
+            color: #888;
+            margin-bottom: 20px;
+            line-height: 1.4;
+        }
+
+        /* Messages */
+        .msg {
+            padding: 12px 16px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+        .msg-success { background: rgba(78,205,196,0.12); color: #4ecdc4; }
+        .msg-error { background: rgba(255,107,107,0.12); color: #ff6b6b; }
+        .msg-info { background: rgba(78,205,196,0.08); color: #888; }
+
+        /* Choice cards */
+        .choice-cards {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 24px;
+        }
+        .choice-card {
+            background: #242830;
+            border: 2px solid #333;
+            border-radius: 12px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .choice-card:hover { border-color: #4ecdc4; background: #2a2e38; }
+        .choice-card h3 { font-size: 16px; font-weight: 700; margin-bottom: 4px; color: #e8e8e8; }
+        .choice-card p { color: #888; font-size: 13px; line-height: 1.4; }
+
+        /* Back link */
+        .back-link {
+            display: block;
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+            cursor: pointer;
+            margin-top: 12px;
+            padding: 8px;
+            border: none;
+            background: none;
+            font-family: inherit;
+            width: 100%;
+        }
+        .back-link:hover { color: #888; }
+
+        /* Colour picker */
+        .color-picker-row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 8px;
+        }
+        .color-swatch {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 3px solid transparent;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+        .color-swatch:hover { transform: scale(1.1); }
+        .color-swatch.selected { border-color: #e0e0e0; }
+
+        /* Member cards */
+        .member-card {
+            background: #242830;
+            border-radius: 12px;
+            padding: 12px 14px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+        .member-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+            font-weight: 700;
+            color: #fff;
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+        .member-card-info {
+            flex: 1;
+            min-width: 0;
+        }
+        .member-card-name {
+            font-size: 15px;
+            font-weight: 700;
+            color: #e8e8e8;
+        }
+        .member-card-tag {
+            font-size: 12px;
+            color: #4ecdc4;
+            font-weight: 500;
+        }
+        .member-card-role {
+            font-size: 12px;
+            font-weight: 600;
+            padding: 3px 10px;
+            border-radius: 20px;
+            flex-shrink: 0;
+        }
+        .role-manager {
+            background: rgba(78,205,196,0.15);
+            color: #4ecdc4;
+        }
+        .role-member {
+            background: #333;
+            color: #888;
+        }
+        .member-card .remove-btn {
+            background: none;
+            border: none;
+            color: #555;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 4px 8px;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+        .member-card .remove-btn:hover { color: #ff6b6b; }
+
+        /* Add person dashed card */
+        .add-person-card {
+            border: 2px dashed #333;
+            border-radius: 12px;
+            padding: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            cursor: pointer;
+            color: #666;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+            margin-bottom: 10px;
+        }
+        .add-person-card:hover { border-color: #4ecdc4; color: #4ecdc4; }
+        .add-person-card .plus-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: 700;
+            color: #888;
+        }
+
+        /* Add member inline form */
+        .add-member-form {
+            background: #242830;
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 10px;
+            display: none;
+        }
+        .add-member-form.show { display: block; }
+        .add-member-form .form-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .add-member-form .form-input {
+            flex: 1;
+        }
+        .add-member-form select {
+            padding: 12px 10px;
+            background: #242830;
+            border: 2px solid #333;
+            border-radius: 10px;
+            color: #e0e0e0;
+            font-family: inherit;
+            font-size: 13px;
+            outline: none;
+            min-width: 100px;
+        }
+        .add-member-form select:focus { border-color: #4ecdc4; }
+        .add-member-form .btn-row {
+            display: flex;
+            gap: 8px;
+        }
+        .add-member-form .btn-small {
+            flex: 1;
+            padding: 10px;
+            border-radius: 10px;
+            border: none;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        /* Spinner */
+        .spinner {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 2px solid transparent;
+            border-top-color: currentColor;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            vertical-align: middle;
+            margin-right: 6px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Join step input overrides */
+        .invite-input {
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 600;
+            text-align: center;
+            font-size: 18px;
+        }
+
+        /* Module toggle grid */
+        .module-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        .module-card {
+            background: #242830;
+            border: 2px solid #333;
+            border-radius: 12px;
+            padding: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: left;
+            position: relative;
+        }
+        .module-card.selected { border-color: #4ecdc4; background: rgba(78,205,196,0.08); }
+        .module-card .module-icon { font-size: 24px; margin-bottom: 6px; }
+        .module-card .module-name { font-size: 13px; font-weight: 600; color: #e8e8e8; }
+        .module-card .module-desc { font-size: 11px; color: #666; margin-top: 2px; }
+
+        /* Module preset buttons */
+        .module-presets {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+            -webkit-overflow-scrolling: touch;
+        }
+        .preset-btn {
+            padding: 10px 16px;
+            border-radius: 12px;
+            border: 1.5px solid #333;
+            background: #242830;
+            color: #e8e8e8;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.15s;
+            font-family: inherit;
+        }
+        .preset-btn.active {
+            border-color: #4ecdc4;
+            background: rgba(78,205,196,0.08);
+            color: #4ecdc4;
+        }
+
+        /* Check indicator for module cards */
+        .module-card .check-indicator {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid #444;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            transition: all 0.15s;
+        }
+        .module-card.selected .check-indicator {
+            background: #4ecdc4;
+            border-color: #4ecdc4;
+            color: #1a1d27;
+        }
+
+        /* Preset description text */
+        .preset-desc {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 16px;
+            min-height: 18px;
+            transition: opacity 0.2s;
+        }
+
+        /* Token display */
+        .token-display {
+            background: #242830;
+            border: 2px solid #333;
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            margin-bottom: 16px;
+        }
+        .token-display .token-value {
+            font-family: monospace;
+            font-size: 13px;
+            color: #4ecdc4;
+            word-break: break-all;
+            margin: 8px 0;
+        }
+        .token-display .token-label {
+            font-size: 12px;
+            color: #666;
+        }
+
+        /* Invite code display */
+        .invite-display {
+            background: #242830;
+            border: 2px solid #4ecdc4;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 16px;
+        }
+        .invite-display .invite-code-large {
+            font-size: 28px;
+            font-weight: 800;
+            letter-spacing: 4px;
+            color: #4ecdc4;
+            margin: 8px 0;
+        }
+
+        /* Copy button */
+        .btn-copy {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #333;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #e0e0e0;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+        .btn-copy:hover { background: #444; }
+
+        /* Profile photo upload */
+        .avatar-upload {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .avatar-upload-circle {
+            width: 88px;
+            height: 88px;
+            border-radius: 50%;
+            background: #242830;
+            border: 3px dashed #444;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            overflow: hidden;
+            position: relative;
+        }
+        .avatar-upload-circle:hover {
+            border-color: #4ecdc4;
+        }
+        .avatar-upload-circle.has-photo {
+            border-style: solid;
+            border-color: #4ecdc4;
+        }
+        .avatar-upload-circle img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .avatar-upload-circle .camera-icon {
+            color: #555;
+            font-size: 28px;
+            transition: color 0.2s;
+        }
+        .avatar-upload-circle:hover .camera-icon {
+            color: #4ecdc4;
+        }
+        .avatar-upload-hint {
+            font-size: 12px;
+            color: #555;
+            margin-top: 6px;
+        }
+        .avatar-upload-circle .photo-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0,0,0,0.5);
+            color: #fff;
+            font-size: 10px;
+            text-align: center;
+            padding: 3px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <!-- Step 0: Welcome / Login -->
+    <div class="step active" id="stepLogin">
+        <div class="logo-block">
+            <div class="logo-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                    <polyline points="9 22 9 12 15 12 15 22"/>
+                </svg>
+            </div>
+            <div class="welcome-heading">
+                Welcome to <span class="huddle-logo"><span class="huddle-h">H</span>uddle</span>
+            </div>
+            <div class="welcome-sub">Your household, organised.<br>Set up your home in under 2 minutes.</div>
+        </div>
+
+        <div id="loginMsg"></div>
+
+        <div class="form-group">
+            <input type="email" class="form-input" id="loginEmail" placeholder="Enter your email to get started" autocomplete="email" inputmode="email" autofocus>
+        </div>
+
+        <button class="btn-primary" id="loginBtn" onclick="requestMagicLink()">
+            Send Magic Link &#10024;
+        </button>
+
+        <div class="helper-text">We'll email you a link to log in &#8212; no password needed</div>
+
+        <div style="text-align:center;margin-top:24px;padding-top:20px;border-top:1px solid #333;">
+            <span style="color:#888;font-size:13px;">No email? </span>
+            <span style="color:#4ecdc4;font-size:13px;cursor:pointer;font-weight:600;" onclick="showStep('stepRequestAccess')">Request access with household code</span>
+        </div>
+    </div>
+
+    <!-- Request Access Step (replaces PIN login) -->
+    <div class="step" id="stepRequestAccess">
+        <div class="logo-block">
+            <div class="logo-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                    <circle cx="8.5" cy="7" r="4"/>
+                    <line x1="20" y1="8" x2="20" y2="14"/>
+                    <line x1="23" y1="11" x2="17" y2="11"/>
+                </svg>
+            </div>
+            <div class="welcome-heading">Request Access</div>
+            <div class="welcome-sub">Enter your household code and a manager will approve your device.</div>
+        </div>
+
+        <div id="accessMsg"></div>
+
+        <!-- Phase 1: Enter household code -->
+        <div id="accessPhase1">
+            <div class="form-group">
+                <input type="text" class="form-input" id="accessHouseholdCode" placeholder="Household code (e.g. ABC123)" autocomplete="off" style="text-transform:uppercase;letter-spacing:2px;text-align:center;font-size:20px;">
+            </div>
+            <button class="btn-primary" onclick="lookupAccessHousehold()">Find Household</button>
+        </div>
+
+        <!-- Phase 2: Pick your name or enter it -->
+        <div id="accessPhase2" style="display:none;">
+            <div id="accessHouseholdLabel" style="text-align:center;color:#4ecdc4;font-weight:600;margin-bottom:16px;font-size:15px;"></div>
+            <div id="accessMemberList" style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;"></div>
+            <div style="text-align:center;padding-top:12px;border-top:1px solid #2a2a4a;">
+                <div style="color:#888;font-size:13px;margin-bottom:10px;">Not on the list?</div>
+                <div style="display:flex;gap:8px;">
+                    <input type="text" class="form-input" id="accessCustomName" placeholder="Enter your name" style="flex:1;font-size:14px;">
+                    <button class="btn-primary" onclick="requestAccessCustomName()" style="white-space:nowrap;padding:12px 20px;">Request</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Phase 3: Waiting for approval -->
+        <div id="accessPhase3" style="display:none;">
+            <div style="text-align:center;margin-bottom:20px;">
+                <span id="accessSelectedAvatar" style="display:inline-block;width:56px;height:56px;border-radius:50%;line-height:56px;font-size:22px;font-weight:600;color:#fff;text-align:center;margin-bottom:8px;"></span>
+                <div id="accessSelectedName" style="color:#e8e8e8;font-weight:600;font-size:16px;"></div>
+            </div>
+            <div style="text-align:center;padding:24px;background:#16213e;border:1px solid #2a2a4a;border-radius:16px;">
+                <div style="margin-bottom:12px;">
+                    <span class="spinner" style="display:inline-block;width:28px;height:28px;border:3px solid #333;border-top-color:#4ecdc4;border-radius:50%;animation:spin 1s linear infinite;"></span>
+                </div>
+                <div style="color:#e8e8e8;font-weight:600;font-size:15px;margin-bottom:6px;">Waiting for approval</div>
+                <div style="color:#888;font-size:13px;">We've sent an email to your household manager.<br>This page will load automatically when approved.</div>
+            </div>
+        </div>
+
+        <button class="back-link" onclick="resetAccessRequest(); showStep('stepLogin')">Back to email login</button>
+    </div>
+
+    <!-- Step 0b: Check email -->
+    <div class="step" id="stepCheckEmail">
+        <div class="logo-block">
+            <div class="logo-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                    <polyline points="22,6 12,13 2,6"/>
+                </svg>
+            </div>
+            <div class="welcome-heading">Check your inbox</div>
+            <div class="welcome-sub">We've sent a login link to<br><strong id="sentEmailDisplay" style="color: #4ecdc4;"></strong></div>
+        </div>
+
+        <div class="msg msg-success" style="text-align: center;">
+            Click the link in your email to continue.
+            <div style="font-size:12px;color:#888;margin-top:6px;">The link is valid for 10 minutes.</div>
+        </div>
+
+        <div class="helper-text" style="text-align:center;">
+            Didn't get it? Check your spam folder, or<br>
+            <span id="resendLink" style="color: #4ecdc4; cursor: pointer; font-weight:600;" onclick="resendMagicLink()">Resend email</span>
+            &nbsp;·&nbsp;
+            <span style="color: #4ecdc4; cursor: pointer;" onclick="showStep('stepLogin')">Try a different email</span>
+        </div>
+    </div>
+
+    <!-- Choose: Create or Join -->
+    <div class="step" id="stepChoose">
+        <div class="logo-block">
+            <div class="logo-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                    <polyline points="9 22 9 12 15 12 15 22"/>
+                </svg>
+            </div>
+            <div class="welcome-heading">
+                <span class="huddle-logo"><span class="huddle-h">H</span>uddle</span>
+            </div>
+            <div class="welcome-sub">Let's get your household set up.</div>
+        </div>
+
+        <div class="choice-cards">
+            <div class="choice-card" onclick="showStep('stepUserType')">
+                <h3>Create a household</h3>
+                <p>Start a new household and invite your family or housemates.</p>
+            </div>
+            <div class="choice-card" onclick="showStep('stepJoin')">
+                <h3>Join a household</h3>
+                <p>Got an invite code? Join an existing household.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- User type selection -->
+    <div class="step" id="stepUserType">
+        <div class="logo-block">
+            <div class="logo-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                    <polyline points="9 22 9 12 15 12 15 22"/>
+                </svg>
+            </div>
+            <div class="welcome-heading">How will you use Huddle?</div>
+            <div class="welcome-sub">Choose the setup that matches your home</div>
+        </div>
+
+        <div class="choice-cards">
+            <div class="choice-card" onclick="selectUserType('app')">
+                <h3>App only</h3>
+                <p>Use Huddle on your phone and browser. No extra hardware needed.</p>
+            </div>
+            <div class="choice-card" onclick="selectUserType('pi')">
+                <h3>I have a display kiosk</h3>
+                <p>I have (or plan to get) a Raspberry Pi or tablet for a household dashboard.</p>
+            </div>
+        </div>
+        <button class="back-link" onclick="showStep('stepChoose')">Back</button>
+    </div>
+
+    <!-- Create Step 0: Household Type -->
+    <div class="step" id="stepHouseholdType">
+        <div class="progress-dots" id="progressHouseholdType"></div>
+        <div class="step-label" id="labelHouseholdType"></div>
+        <div class="step-heading">What kind of household is this?</div>
+        <div class="step-subtitle">This helps us set up the right features for you</div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:16px 0;">
+            <div class="choice-card" style="text-align:center; padding:16px 12px;" onclick="selectHouseholdType('family')">
+                <div style="font-size:2em; margin-bottom:4px;">&#128104;&#8205;&#128105;&#8205;&#128103;&#8205;&#128102;</div>
+                <h3 style="margin:0;font-size:0.95em;">Family</h3>
+            </div>
+            <div class="choice-card" style="text-align:center; padding:16px 12px;" onclick="selectHouseholdType('sharehouse')">
+                <div style="font-size:2em; margin-bottom:4px;">&#127968;</div>
+                <h3 style="margin:0;font-size:0.95em;">Sharehouse</h3>
+            </div>
+            <div class="choice-card" style="text-align:center; padding:16px 12px;" onclick="selectHouseholdType('couple')">
+                <div style="font-size:2em; margin-bottom:4px;">&#128107;</div>
+                <h3 style="margin:0;font-size:0.95em;">Couple</h3>
+            </div>
+            <div class="choice-card" style="text-align:center; padding:16px 12px;" onclick="selectHouseholdType('student_house')">
+                <div style="font-size:2em; margin-bottom:4px;">&#127891;</div>
+                <h3 style="margin:0;font-size:0.95em;">Student House</h3>
+            </div>
+            <div class="choice-card" style="text-align:center; padding:16px 12px;" onclick="selectHouseholdType('solo')">
+                <div style="font-size:2em; margin-bottom:4px;">&#128100;</div>
+                <h3 style="margin:0;font-size:0.95em;">Living Solo</h3>
+            </div>
+            <div class="choice-card" style="text-align:center; padding:16px 12px;" onclick="selectHouseholdType('other')">
+                <div style="font-size:2em; margin-bottom:4px;">&#127970;</div>
+                <h3 style="margin:0;font-size:0.95em;">Other</h3>
+            </div>
+        </div>
+        <button class="back-link" onclick="showStep('stepUserType')">Back</button>
+    </div>
+
+    <!-- Create Step 1: Name your household -->
+    <div class="step" id="stepHouseholdName">
+        <div class="progress-dots" id="progressHouseholdName"></div>
+        <div class="step-label" id="labelHouseholdName"></div>
+        <div class="step-heading">Name your household</div>
+        <div class="step-subtitle">This is how your home will appear in Huddle</div>
+
+        <div id="createMsg"></div>
+
+        <div class="form-group">
+            <input type="text" class="form-input" id="householdName" placeholder="e.g. 4 Figbird Rtt" maxlength="50">
+            <div class="hint-text">&#128161; Most people use their address or a nickname</div>
+        </div>
+
+        <button class="btn-primary" onclick="goToStep2()">Continue</button>
+        <button class="back-link" onclick="showCreateStep('stepHouseholdType')">Back</button>
+    </div>
+
+    <!-- Create Step 2: About you -->
+    <div class="step" id="stepAboutYou">
+        <div class="progress-dots" id="progressAboutYou"></div>
+        <div class="step-label" id="labelAboutYou"></div>
+        <div class="step-heading">About you</div>
+        <div class="step-subtitle">Tell us your name and pick a colour</div>
+
+        <div id="aboutYouMsg"></div>
+
+        <div class="avatar-upload">
+            <div class="avatar-upload-circle" id="createAvatarCircle" onclick="document.getElementById('createAvatarInput').click()">
+                <span class="camera-icon">&#128247;</span>
+            </div>
+            <div class="avatar-upload-hint">Tap to add a photo (optional)</div>
+            <input type="file" id="createAvatarInput" accept="image/*" style="display:none;" onchange="previewAvatar(this, 'createAvatarCircle')">
+        </div>
+
+        <div class="form-group">
+            <div class="form-input-label">Your name</div>
+            <input type="text" class="form-input" id="createDisplayName" placeholder="e.g. Alex" maxlength="30">
+        </div>
+
+        <div class="form-group">
+            <div class="form-input-label">Pick your colour</div>
+            <div class="color-picker-row" id="createColorPicker"></div>
+        </div>
+
+        <button class="btn-primary" onclick="goToStep3()">Continue</button>
+        <button class="back-link" onclick="showCreateStep('stepHouseholdName')">Back</button>
+    </div>
+
+    <!-- Create Step 3: Who lives here -->
+    <div class="step" id="stepMembers">
+        <div class="progress-dots" id="progressMembers"></div>
+        <div class="step-label" id="labelMembers"></div>
+        <div class="step-heading">Who lives here?</div>
+        <div class="step-subtitle">Add everyone in your household &#8212; you can invite them later</div>
+
+        <div id="membersMsg"></div>
+
+        <!-- Your own card (auto-populated) -->
+        <div class="member-card" id="selfMemberCard">
+            <div class="member-avatar" id="selfAvatar"></div>
+            <div class="member-card-info">
+                <div class="member-card-name" id="selfName"></div>
+                <div class="member-card-tag">That's you!</div>
+            </div>
+            <div class="member-card-role role-manager">&#128081; Manager</div>
+        </div>
+
+        <!-- Added members container -->
+        <div id="memberCards"></div>
+
+        <!-- Add another person card -->
+        <div class="add-person-card" id="addPersonCard" onclick="showAddMemberForm()">
+            <div class="plus-icon">+</div>
+            <span>Add another person</span>
+        </div>
+
+        <!-- Inline add member form -->
+        <div class="add-member-form" id="addMemberForm">
+            <div class="form-row">
+                <input type="text" class="form-input" id="newMemberName" placeholder="Name" maxlength="30">
+                <select id="newMemberRole">
+                    <option value="member">Member</option>
+                    <option value="manager">Co-manager</option>
+                    <option value="dependent">Dependent</option>
+                </select>
+            </div>
+            <div class="form-group" style="margin-top:8px;">
+                <input type="email" class="form-input" id="newMemberEmail" placeholder="Email (optional — sends invite)" autocomplete="off" style="font-size:14px;">
+            </div>
+            <div class="btn-row">
+                <button class="btn-small" style="background: #4ecdc4; color: #1a1d27;" onclick="confirmAddMember()">Add</button>
+                <button class="btn-small" style="background: #333; color: #888;" onclick="cancelAddMember()">Cancel</button>
+            </div>
+        </div>
+
+        <div style="margin-top: 16px;"></div>
+        <button class="btn-primary" id="membersBtn" onclick="finishCreate()">Continue</button>
+        <button class="back-link" onclick="skipMembers()">Skip for now</button>
+        <button class="back-link" onclick="showCreateStep('stepAboutYou')">Back</button>
+    </div>
+
+    <!-- Choose features -->
+    <div class="step" id="stepModules">
+        <div class="progress-dots" id="progressModules"></div>
+        <div class="step-label" id="labelModules"></div>
+        <div class="step-heading">What do you need?</div>
+        <div class="step-subtitle">Pick the features your household will use. You can always change this later in settings.</div>
+
+        <div id="modulesMsg"></div>
+
+        <!-- Preset buttons -->
+        <div class="module-presets" id="modulePresets"></div>
+        <div class="preset-desc" id="presetDesc"></div>
+
+        <!-- Module grid -->
+        <div class="module-grid" id="moduleGrid"></div>
+
+        <button class="btn-primary" id="modulesBtn" onclick="saveModulesAndContinue()">Continue</button>
+        <button class="back-link" onclick="showCreateStep('stepMembers')">Back</button>
+    </div>
+
+    <!-- Location -->
+    <div class="step" id="stepLocation">
+        <div class="progress-dots" id="progressLocation"></div>
+        <div class="step-label" id="labelLocation"></div>
+        <div class="step-heading">Where's home?</div>
+        <div class="step-subtitle">Your location powers weather forecasts and nearby fuel prices.</div>
+
+        <div id="locationMsg"></div>
+
+        <div style="text-align: center; margin: 24px 0;">
+            <div id="locationIcon" style="font-size: 48px; margin-bottom: 12px;">&#127758;</div>
+            <div id="locationStatus" style="color: #888; font-size: 14px;">Tap below to share your location</div>
+            <div id="locationName" style="color: #4ecdc4; font-weight: 600; font-size: 16px; margin-top: 8px; display: none;"></div>
+        </div>
+
+        <button class="btn-primary" id="locationBtn" onclick="requestLocation()">Use My Location</button>
+        <button class="back-link" onclick="skipLocation()">Skip for now</button>
+        <button class="back-link" onclick="showCreateStep('stepModules')">Back</button>
+    </div>
+
+    <!-- Kiosk setup (Pi users only) -->
+    <div class="step" id="stepKioskSetup">
+        <div class="progress-dots" id="progressKioskSetup"></div>
+        <div class="step-label" id="labelKioskSetup"></div>
+        <div class="step-heading">Set up your display</div>
+        <div class="step-subtitle">Connect your kiosk screen to this household</div>
+
+        <div id="kioskMsg"></div>
+
+        <div class="token-display" id="kioskTokenDisplay">
+            <div class="token-label">Your kiosk URL</div>
+            <div class="token-value" id="kioskUrl">Generating...</div>
+            <button class="btn-copy" id="copyKioskUrl" onclick="copyKioskUrl()">Copy URL</button>
+        </div>
+
+        <div style="font-size: 13px; color: #888; line-height: 1.5; margin-bottom: 16px;">
+            Open this URL on your Pi or tablet in fullscreen mode. The display will connect automatically.
+        </div>
+
+        <div style="margin-bottom: 16px;">
+            <button class="btn-secondary" onclick="downloadPiScript()">Download Pi setup script</button>
+            <div style="font-size: 12px; color: #555; margin-top: 6px; text-align: center;">
+                Optional: auto-configures a Raspberry Pi for kiosk mode
+            </div>
+        </div>
+
+        <button class="btn-primary" onclick="showCreateStep('stepInviteMembers')">Continue</button>
+        <button class="back-link" onclick="showCreateStep('stepInviteMembers')">I'll do this later</button>
+    </div>
+
+    <!-- Invite members -->
+    <div class="step" id="stepInviteMembers">
+        <div class="progress-dots" id="progressInviteMembers"></div>
+        <div class="step-label" id="labelInviteMembers"></div>
+        <div class="step-heading">Invite your household</div>
+        <div class="step-subtitle">Share this code so others can join</div>
+
+        <div class="invite-display">
+            <div class="token-label">Invite code</div>
+            <div class="invite-code-large" id="onboardInviteCode">--------</div>
+        </div>
+
+        <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+            <button class="btn-secondary" style="flex: 1;" onclick="shareInvite()">Share invite link</button>
+            <button class="btn-copy" style="flex: 0;" onclick="copyInviteCode()">Copy code</button>
+        </div>
+
+        <div id="inviteShareMsg"></div>
+
+        <div style="font-size: 13px; color: #888; line-height: 1.5; margin-bottom: 16px;">
+            Anyone with this code can join your household at the login page.
+        </div>
+
+        <button class="btn-primary" onclick="finishOnboarding()">Done, take me to Huddle</button>
+        <button class="back-link" onclick="finishOnboarding()">Skip</button>
+    </div>
+
+    <!-- All set -->
+    <div class="step" id="stepDone">
+        <div class="progress-dots" id="progressDone"></div>
+
+        <div class="logo-block">
+            <div class="logo-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12"/>
+                </svg>
+            </div>
+            <div class="welcome-heading">You're all set!</div>
+            <div class="welcome-sub">Your household is ready. Taking you to <span class="huddle-logo"><span class="huddle-h">H</span>uddle</span>...</div>
+        </div>
+    </div>
+
+    <!-- Join household -->
+    <div class="step" id="stepJoin">
+        <div class="logo-block">
+            <div class="logo-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                    <polyline points="9 22 9 12 15 12 15 22"/>
+                </svg>
+            </div>
+            <div class="welcome-heading">Join a household</div>
+            <div class="welcome-sub">Enter the invite code you were given</div>
+        </div>
+
+        <div id="joinMsg"></div>
+
+        <div class="form-group">
+            <div class="form-input-label">Invite code</div>
+            <input type="text" class="form-input invite-input" id="inviteCode" placeholder="AB12CD34" maxlength="8"
+                   oninput="this.value = this.value.toUpperCase()">
+        </div>
+
+        <div class="avatar-upload">
+            <div class="avatar-upload-circle" id="joinAvatarCircle" onclick="document.getElementById('joinAvatarInput').click()">
+                <span class="camera-icon">&#128247;</span>
+            </div>
+            <div class="avatar-upload-hint">Tap to add a photo (optional)</div>
+            <input type="file" id="joinAvatarInput" accept="image/*" style="display:none;" onchange="previewAvatar(this, 'joinAvatarCircle')">
+        </div>
+
+        <div class="form-group">
+            <div class="form-input-label">Your name</div>
+            <input type="text" class="form-input" id="joinDisplayName" placeholder="e.g. Alex" maxlength="30">
+        </div>
+
+        <div class="form-group">
+            <div class="form-input-label">Pick your colour</div>
+            <div class="color-picker-row" id="joinColorPicker"></div>
+        </div>
+
+        <button class="btn-primary" id="joinBtn" onclick="joinHousehold()">Join household</button>
+        <button class="back-link" onclick="showStep('stepChoose')">Back</button>
+    </div>
+
+</div>
+
+<script>
+    // CSRF protection: auto-inject X-Requested-With on state-changing requests
+    (function() {
+        const _origFetch = window.fetch;
+        const CSRF_METHODS = new Set(['POST', 'PUT', 'DELETE', 'PATCH']);
+        window.fetch = function(input, init) {
+            if (init && CSRF_METHODS.has((init.method || 'GET').toUpperCase())) {
+                init.headers = init.headers || {};
+                if (init.headers instanceof Headers) {
+                    if (!init.headers.has('X-Requested-With')) init.headers.set('X-Requested-With', 'XMLHttpRequest');
+                } else {
+                    if (!init.headers['X-Requested-With']) init.headers['X-Requested-With'] = 'XMLHttpRequest';
+                }
+            }
+            return _origFetch.call(this, input, init);
+        };
+    })();
+
+    const COLORS = [
+        '#ff6b9d', '#4caf50', '#ff9800', '#9c27b0', '#2196f3',
+        '#e91e63', '#00bcd4', '#ffeb3b', '#8bc34a', '#ff5722'
+    ];
+
+    let selectedCreateColor = COLORS[0];
+    let selectedJoinColor = COLORS[1];
+    let addedMembers = [];
+    let usedColors = new Set();
+    let userType = 'app'; // 'app' or 'pi'
+    let createdHouseholdData = null; // stored after household creation
+    let selectedModules = new Set();
+    let activePreset = null;
+
+    const AVAILABLE_MODULES = [
+        // Core modules
+        { key: 'chores', icon: '\u2713', label: 'Chores', desc: 'Assign and rotate household tasks', color: '#4ecdc4' },
+        { key: 'calendar', icon: '\uD83D\uDCC5', label: 'Calendar', desc: 'Shared family calendar', color: '#7e57c2' },
+        { key: 'meals', icon: '\uD83C\uDF7D\uFE0F', label: 'Meals', desc: 'Weekly meal planning', color: '#ff9800' },
+        { key: 'recipes', icon: '\uD83D\uDCD6', label: 'Recipes', desc: 'Save and share recipes', color: '#e91e63' },
+        { key: 'shopping', icon: '\uD83D\uDED2', label: 'Shopping', desc: 'Shared shopping list', color: '#2196f3' },
+        { key: 'inventory', icon: '\uD83D\uDCE6', label: 'Pantry', desc: 'Track what you have at home', color: '#8bc34a' },
+        { key: 'bills', icon: '\uD83D\uDCB5', label: 'Bills', desc: 'Track and split bills', color: '#ef4444' },
+        { key: 'adhoc_tasks', icon: '\u26A1', label: 'Tasks', desc: 'Quick to-do items and requests', color: '#22c55e' },
+        { key: 'polls', icon: '\uD83D\uDCCA', label: 'Polls', desc: 'Vote on household decisions', color: '#9c27b0' },
+        // Sharehouse-focused
+        { key: 'expenses', icon: '\uD83D\uDCB8', label: 'Expenses', desc: 'Split costs between housemates', color: '#ef4444' },
+        { key: 'house_rules', icon: '\uD83D\uDCDC', label: 'House Rules', desc: 'Shared agreements everyone acknowledges', color: '#6366f1' },
+        { key: 'tenancy', icon: '\uD83C\uDFE0', label: 'Tenancy', desc: 'Lease, bond, and moving checklists', color: '#0891b2' },
+        { key: 'vehicles', icon: '\uD83D\uDE97', label: 'Vehicles', desc: 'Vehicle tracking and maintenance', color: '#64748b' },
+        // Family-focused
+        { key: 'routines', icon: '\u2600\uFE0F', label: 'Routines', desc: 'Morning and bedtime checklists', color: '#ff9800' },
+        { key: 'rewards', icon: '\u2B50', label: 'Rewards', desc: 'Earn stars for completed tasks', color: '#fbbf24' },
+        { key: 'allowances', icon: '\uD83D\uDCB0', label: 'Allowances', desc: 'Pocket money and savings goals', color: '#22c55e' },
+        { key: 'pets', icon: '\uD83D\uDC3E', label: 'Pets', desc: 'Pet care schedules and reminders', color: '#8d6e63' },
+        // Utility
+        { key: 'fuel', icon: '\u26FD', label: 'Fuel', desc: 'Nearby fuel prices', color: '#f59e0b' },
+        { key: 'weather', icon: '\uD83C\uDF24\uFE0F', label: 'Weather', desc: 'Local weather forecast', color: '#42a5f5' },
+    ];
+
+    const PRESETS = {
+        family: {
+            enabled: ['chores', 'calendar', 'meals', 'recipes', 'shopping', 'inventory', 'bills', 'adhoc_tasks', 'routines', 'rewards', 'pets', 'weather'],
+            label: '\uD83D\uDC68\u200D\uD83D\uDC69\u200D\uD83D\uDC67 Family',
+            description: 'Everything families need, including routines and rewards for kids'
+        },
+        sharehouse: {
+            enabled: ['chores', 'expenses', 'shopping', 'house_rules', 'tenancy', 'bills', 'noticeboard', 'polls', 'adhoc_tasks'],
+            label: '\uD83C\uDFE0 Sharehouse',
+            description: 'Expense splitting, house rules, and shared living essentials'
+        },
+        student_house: {
+            enabled: ['chores', 'expenses', 'shopping', 'house_rules', 'assignments', 'noticeboard', 'polls', 'adhoc_tasks'],
+            label: '\uD83C\uDF93 Student House',
+            description: 'Expenses, assignments, and shared living for students'
+        },
+        couple: {
+            enabled: ['chores', 'calendar', 'meals', 'recipes', 'shopping', 'bills'],
+            label: '\uD83D\uDC91 Couple',
+            description: 'Essentials for two people'
+        },
+        minimal: {
+            enabled: ['chores', 'shopping', 'adhoc_tasks'],
+            label: '\u2728 Just the basics',
+            description: 'Just chores, shopping, and tasks'
+        },
+        other: {
+            enabled: ['chores', 'calendar', 'shopping', 'bills', 'adhoc_tasks'],
+            label: '\uD83C\uDFE2 Other',
+            description: 'A flexible starting point you can customise'
+        }
+    };
+
+    // Dynamic progress for create flow
+    function getCreateSteps() {
+        var steps = ['stepHouseholdType', 'stepHouseholdName', 'stepAboutYou', 'stepMembers', 'stepModules', 'stepLocation'];
+        if (userType === 'pi') steps.push('stepKioskSetup');
+        steps.push('stepInviteMembers', 'stepDone');
+        return steps;
+    }
+
+    function updateCreateProgress(stepId) {
+        var steps = getCreateSteps();
+        var current = steps.indexOf(stepId) + 1;
+        var total = steps.length;
+        var progressEl = document.getElementById('progress' + stepId.replace('step', ''));
+        var labelEl = document.getElementById('label' + stepId.replace('step', ''));
+        if (progressEl) {
+            while (progressEl.firstChild) progressEl.removeChild(progressEl.firstChild);
+            for (var i = 0; i < total; i++) {
+                var dot = document.createElement('div');
+                dot.className = 'progress-dot' + (i < current ? ' active' : '');
+                progressEl.appendChild(dot);
+            }
+        }
+        if (labelEl && current <= total) {
+            labelEl.textContent = 'Step ' + current + ' of ' + total;
+        }
+    }
+
+    function showCreateStep(stepId) {
+        updateCreateProgress(stepId);
+        showStep(stepId);
+    }
+
+    var householdType = 'family';
+
+    function getSegmentFromType(type) {
+        var map = {'solo': 'solo', 'couple': 'solo', 'sharehouse': 'sharehouse',
+                   'student_house': 'sharehouse', 'family': 'household', 'other': 'household'};
+        return map[type] || 'household';
+    }
+
+    function selectUserType(type) {
+        userType = type;
+        showCreateStep('stepHouseholdType');
+    }
+
+    function selectHouseholdType(type) {
+        householdType = type;
+        // Highlight the selected card
+        var cards = document.getElementById('stepHouseholdType').querySelectorAll('.choice-card');
+        cards.forEach(function(c) { c.style.borderColor = ''; c.style.background = ''; });
+        // Apply preset if a matching preset exists
+        var presetMap = {
+            'family': 'family', 'sharehouse': 'sharehouse', 'student_house': 'student_house',
+            'couple': 'couple', 'solo': 'minimal', 'other': 'other'
+        };
+        var presetKey = presetMap[type] || 'family';
+        if (PRESETS[presetKey]) {
+            selectedPreset = presetKey;
+        }
+        showCreateStep('stepHouseholdName');
+    }
+
+    function buildColorPicker(containerId, selectedColor) {
+        const el = document.getElementById(containerId);
+        // Build colour swatches using DOM methods
+        el.textContent = '';
+        COLORS.forEach(function(c) {
+            var swatch = document.createElement('div');
+            swatch.className = 'color-swatch' + (c === selectedColor ? ' selected' : '');
+            swatch.style.background = c;
+            swatch.addEventListener('click', function() {
+                el.querySelectorAll('.color-swatch').forEach(function(s) { s.classList.remove('selected'); });
+                swatch.classList.add('selected');
+                if (containerId === 'createColorPicker') selectedCreateColor = c;
+                else selectedJoinColor = c;
+            });
+            el.appendChild(swatch);
+        });
+    }
+
+    function showStep(id) {
+        document.querySelectorAll('.step').forEach(function(s) { s.classList.remove('active'); });
+        document.getElementById(id).classList.add('active');
+    }
+
+    function showMsg(containerId, msg, type) {
+        var el = document.getElementById(containerId);
+        el.textContent = '';
+        var div = document.createElement('div');
+        div.className = 'msg msg-' + type;
+        div.textContent = msg;
+        el.appendChild(div);
+    }
+
+    function clearMsg(containerId) {
+        var el = document.getElementById(containerId);
+        if (el) el.textContent = '';
+    }
+
+    // Step 0: Request magic link
+    async function requestMagicLink() {
+        var email = document.getElementById('loginEmail').value.trim().toLowerCase();
+        if (!email || !email.includes('@')) {
+            showMsg('loginMsg', 'Please enter a valid email address.', 'error');
+            return;
+        }
+
+        var btn = document.getElementById('loginBtn');
+        btn.disabled = true;
+        btn.textContent = '';
+        var spinner = document.createElement('span');
+        spinner.className = 'spinner';
+        btn.appendChild(spinner);
+        btn.appendChild(document.createTextNode(' Sending...'));
+
+        try {
+            var resp = await fetch('/api/auth/magic-link', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({email: email})
+            });
+            var data = await resp.json();
+
+            if (resp.ok) {
+                window._lastLoginEmail = email;
+                document.getElementById('sentEmailDisplay').textContent = email;
+                showStep('stepCheckEmail');
+            } else if (resp.status === 429) {
+                showMsg('loginMsg', 'Too many requests — please wait a few minutes and try again.', 'error');
+            } else if (resp.status === 400) {
+                showMsg('loginMsg', data.detail || 'Please check your email address and try again.', 'error');
+            } else {
+                showMsg('loginMsg', data.detail || 'Something went wrong. Please try again.', 'error');
+            }
+        } catch (e) {
+            showMsg('loginMsg', 'Network error. Please try again.', 'error');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Send Magic Link \u2728';
+        }
+    }
+
+    // Resend magic link from the "check your email" step
+    async function resendMagicLink() {
+        var email = window._lastLoginEmail;
+        if (!email) { showStep('stepLogin'); return; }
+
+        var link = document.getElementById('resendLink');
+        var origText = link.textContent;
+        link.textContent = 'Sending...';
+        link.style.pointerEvents = 'none';
+
+        try {
+            var resp = await fetch('/api/auth/magic-link', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({email: email})
+            });
+            if (resp.ok) {
+                link.textContent = 'Sent!';
+                link.style.color = '#66bb6a';
+                setTimeout(function() {
+                    link.textContent = origText;
+                    link.style.color = '#4ecdc4';
+                    link.style.pointerEvents = '';
+                }, 3000);
+            } else if (resp.status === 429) {
+                link.textContent = 'Too many requests';
+                link.style.color = '#ff6b6b';
+                setTimeout(function() {
+                    link.textContent = origText;
+                    link.style.color = '#4ecdc4';
+                    link.style.pointerEvents = '';
+                }, 5000);
+            } else {
+                link.textContent = 'Failed — try again';
+                link.style.color = '#ff6b6b';
+                setTimeout(function() {
+                    link.textContent = origText;
+                    link.style.color = '#4ecdc4';
+                    link.style.pointerEvents = '';
+                }, 3000);
+            }
+        } catch (e) {
+            link.textContent = 'Network error';
+            link.style.color = '#ff6b6b';
+            setTimeout(function() {
+                link.textContent = origText;
+                link.style.color = '#4ecdc4';
+                link.style.pointerEvents = '';
+            }, 3000);
+        }
+    }
+
+    // Create Step 1 -> 2
+    function goToStep2() {
+        var name = document.getElementById('householdName').value.trim();
+        if (!name) {
+            showMsg('createMsg', 'Please enter a household name.', 'error');
+            return;
+        }
+        clearMsg('createMsg');
+        showCreateStep('stepAboutYou');
+    }
+
+    // Create Step 2 -> 3
+    async function goToStep3() {
+        var displayName = document.getElementById('createDisplayName').value.trim();
+        if (!displayName) {
+            showMsg('aboutYouMsg', 'Please enter your name.', 'error');
+            return;
+        }
+        clearMsg('aboutYouMsg');
+
+        // Upload avatar if one was selected (non-blocking — don't halt onboarding)
+        uploadAvatarIfPending();
+
+        // Update the "self" member card on step 3
+        document.getElementById('selfName').textContent = displayName;
+        var selfAvatar = document.getElementById('selfAvatar');
+        // Show photo if uploaded, otherwise show initial
+        var createCircle = document.getElementById('createAvatarCircle');
+        var photoImg = createCircle.querySelector('img');
+        if (photoImg) {
+            selfAvatar.textContent = '';
+            selfAvatar.style.background = 'transparent';
+            var selfImg = document.createElement('img');
+            selfImg.src = photoImg.src;
+            selfImg.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:50%;';
+            selfAvatar.appendChild(selfImg);
+        } else {
+            selfAvatar.textContent = displayName.charAt(0).toUpperCase();
+            selfAvatar.style.background = selectedCreateColor;
+        }
+        usedColors.add(selectedCreateColor);
+        showCreateStep('stepMembers');
+    }
+
+    // Add member functions
+    function showAddMemberForm() {
+        document.getElementById('addMemberForm').classList.add('show');
+        document.getElementById('addPersonCard').style.display = 'none';
+        document.getElementById('newMemberName').value = '';
+        document.getElementById('newMemberEmail').value = '';
+        document.getElementById('newMemberRole').value = 'member';
+        document.getElementById('newMemberName').focus();
+    }
+
+    function cancelAddMember() {
+        document.getElementById('addMemberForm').classList.remove('show');
+        document.getElementById('addPersonCard').style.display = 'flex';
+    }
+
+    function getNextColor() {
+        for (var i = 0; i < COLORS.length; i++) {
+            if (!usedColors.has(COLORS[i])) return COLORS[i];
+        }
+        return COLORS[Math.floor(Math.random() * COLORS.length)];
+    }
+
+    function confirmAddMember() {
+        var name = document.getElementById('newMemberName').value.trim();
+        var role = document.getElementById('newMemberRole').value;
+        var email = document.getElementById('newMemberEmail').value.trim().toLowerCase();
+        if (!name) return;
+
+        // Basic email validation if provided
+        if (email && !email.includes('@')) {
+            showMsg('membersMsg', 'Please enter a valid email address or leave it blank.', 'error');
+            return;
+        }
+        clearMsg('membersMsg');
+
+        var color = getNextColor();
+        usedColors.add(color);
+        addedMembers.push({name: name, role: role, color: color, email: email || ''});
+        renderMemberCards();
+        cancelAddMember();
+    }
+
+    function removeMember(index) {
+        var removed = addedMembers.splice(index, 1);
+        if (removed[0]) usedColors.delete(removed[0].color);
+        renderMemberCards();
+    }
+
+    function renderMemberCards() {
+        var container = document.getElementById('memberCards');
+        container.textContent = '';
+        addedMembers.forEach(function(m, i) {
+            var card = document.createElement('div');
+            card.className = 'member-card';
+
+            var avatar = document.createElement('div');
+            avatar.className = 'member-avatar';
+            avatar.style.background = m.color;
+            avatar.textContent = m.name.charAt(0).toUpperCase();
+            card.appendChild(avatar);
+
+            var info = document.createElement('div');
+            info.className = 'member-card-info';
+            var nameEl = document.createElement('div');
+            nameEl.className = 'member-card-name';
+            nameEl.textContent = m.name;
+            info.appendChild(nameEl);
+            if (m.email) {
+                var emailEl = document.createElement('div');
+                emailEl.className = 'member-card-tag';
+                emailEl.style.color = '#4ecdc4';
+                emailEl.textContent = m.email;
+                info.appendChild(emailEl);
+            }
+            card.appendChild(info);
+
+            var roleEl = document.createElement('div');
+            roleEl.className = 'member-card-role ' + (m.role === 'manager' ? 'role-manager' : 'role-member');
+            roleEl.textContent = m.role === 'manager' ? '\uD83D\uDC51 Manager' : m.role === 'dependent' ? 'Dependent' : 'Member';
+            card.appendChild(roleEl);
+
+            var removeBtn = document.createElement('button');
+            removeBtn.className = 'remove-btn';
+            removeBtn.textContent = '\u00d7';
+            removeBtn.addEventListener('click', (function(idx) {
+                return function() { removeMember(idx); };
+            })(i));
+            card.appendChild(removeBtn);
+
+            container.appendChild(card);
+        });
+    }
+
+    // Skip members and just create household
+    async function skipMembers() {
+        await finishCreate();
+    }
+
+    // Finish create flow: create household + add members
+    async function finishCreate() {
+        var householdName = document.getElementById('householdName').value.trim();
+        var displayName = document.getElementById('createDisplayName').value.trim();
+
+        // Count managers (creator is already a manager)
+        var managerCount = 1;
+        for (var i = 0; i < addedMembers.length; i++) {
+            if (addedMembers[i].role === 'manager') managerCount++;
+        }
+        if (managerCount > 2) {
+            showMsg('membersMsg', 'You can have at most 2 managers (including yourself).', 'error');
+            return;
+        }
+
+        var btn = document.getElementById('membersBtn');
+        btn.disabled = true;
+        btn.textContent = '';
+        var spinner = document.createElement('span');
+        spinner.className = 'spinner';
+        btn.appendChild(spinner);
+        btn.appendChild(document.createTextNode(' Setting up...'));
+
+        try {
+            // Step 1: Create household
+            var createResp = await fetch('/api/household/create', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({name: householdName, display_name: displayName, color: selectedCreateColor, household_type: householdType, segment: getSegmentFromType(householdType)})
+            });
+            var createData = await createResp.json();
+
+            if (!createResp.ok) {
+                showMsg('membersMsg', createData.detail || 'Failed to create household.', 'error');
+                btn.disabled = false;
+                btn.textContent = 'Continue';
+                return;
+            }
+
+            // Step 2: Add members (if any)
+            if (addedMembers.length > 0) {
+                var members = addedMembers.map(function(m) {
+                    var obj = {name: m.name, role: m.role};
+                    if (m.email) obj.email = m.email;
+                    return obj;
+                });
+                var membersResp = await fetch('/api/household/add-members', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({members: members})
+                });
+                if (!membersResp.ok) {
+                    var membersData = await membersResp.json();
+                    showMsg('membersMsg', membersData.detail || 'Household created but failed to add members.', 'error');
+                    btn.disabled = false;
+                    btn.textContent = 'Continue';
+                    return;
+                }
+            }
+
+            // Store household data for later steps
+            createdHouseholdData = createData;
+
+            // Detect best preset based on member roles and build module picker
+            var detectedPreset = detectPreset(addedMembers);
+            applyPreset(detectedPreset);
+            buildPresetButtons();
+            showCreateStep('stepModules');
+
+        } catch (e) {
+            showMsg('membersMsg', 'Network error. Please try again.', 'error');
+            btn.disabled = false;
+            btn.textContent = 'Continue';
+        }
+    }
+
+    // Build module toggle grid
+    function buildModuleGrid() {
+        var grid = document.getElementById('moduleGrid');
+        while (grid.firstChild) grid.removeChild(grid.firstChild);
+        AVAILABLE_MODULES.forEach(function(mod) {
+            var card = document.createElement('div');
+            card.className = 'module-card' + (selectedModules.has(mod.key) ? ' selected' : '');
+            card.dataset.key = mod.key;
+
+            var check = document.createElement('div');
+            check.className = 'check-indicator';
+            check.textContent = selectedModules.has(mod.key) ? '\u2713' : '';
+            card.appendChild(check);
+
+            var icon = document.createElement('div');
+            icon.className = 'module-icon';
+            icon.textContent = mod.icon;
+            card.appendChild(icon);
+
+            var name = document.createElement('div');
+            name.className = 'module-name';
+            name.textContent = mod.label;
+            card.appendChild(name);
+
+            var desc = document.createElement('div');
+            desc.className = 'module-desc';
+            desc.textContent = mod.desc;
+            card.appendChild(desc);
+
+            card.addEventListener('click', function() {
+                if (selectedModules.has(mod.key)) {
+                    selectedModules.delete(mod.key);
+                    card.classList.remove('selected');
+                    check.textContent = '';
+                } else {
+                    selectedModules.add(mod.key);
+                    card.classList.add('selected');
+                    check.textContent = '\u2713';
+                }
+                // Clear active preset since user customized
+                activePreset = null;
+                document.querySelectorAll('.preset-btn').forEach(function(b) { b.classList.remove('active'); });
+                document.getElementById('presetDesc').textContent = '';
+            });
+            grid.appendChild(card);
+        });
+    }
+
+    function buildPresetButtons() {
+        var container = document.getElementById('modulePresets');
+        while (container.firstChild) container.removeChild(container.firstChild);
+        Object.keys(PRESETS).forEach(function(key) {
+            var preset = PRESETS[key];
+            var btn = document.createElement('button');
+            btn.className = 'preset-btn' + (activePreset === key ? ' active' : '');
+            btn.textContent = preset.label;
+            btn.addEventListener('click', function() { applyPreset(key); });
+            container.appendChild(btn);
+        });
+    }
+
+    function applyPreset(presetKey) {
+        var preset = PRESETS[presetKey];
+        if (!preset) return;
+        selectedModules = new Set(preset.enabled);
+        activePreset = presetKey;
+
+        // Update preset button states
+        document.querySelectorAll('.preset-btn').forEach(function(b) { b.classList.remove('active'); });
+        var btns = document.querySelectorAll('.preset-btn');
+        var keys = Object.keys(PRESETS);
+        for (var i = 0; i < keys.length; i++) {
+            if (keys[i] === presetKey && btns[i]) btns[i].classList.add('active');
+        }
+
+        document.getElementById('presetDesc').textContent = preset.description;
+        buildModuleGrid();
+    }
+
+    function detectPreset(members) {
+        var hasDependents = members.some(function(m) { return m.role === 'dependent'; });
+        var nonManagers = members.filter(function(m) { return m.role !== 'manager'; });
+
+        if (hasDependents) return 'family';
+        if (nonManagers.length >= 3) return 'sharehouse';
+        if (nonManagers.length <= 1) return 'couple';
+        return 'family';
+    }
+
+    // Save module selections and continue
+    async function saveModulesAndContinue() {
+        try {
+            await fetch('/api/modules/bulk-update', {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ enabled: Array.from(selectedModules) })
+            });
+        } catch (e) {
+            // Non-blocking — modules can be toggled later
+            console.error('Module save error:', e);
+        }
+
+        showCreateStep('stepLocation');
+    }
+
+    // Location step
+    var locationSaved = false;
+
+    async function requestLocation() {
+        if (!navigator.geolocation) {
+            showMsg('locationMsg', 'Geolocation is not supported by your browser.', 'error');
+            return;
+        }
+
+        var btn = document.getElementById('locationBtn');
+        btn.disabled = true;
+        btn.textContent = 'Locating...';
+        document.getElementById('locationStatus').textContent = 'Getting your location...';
+
+        navigator.geolocation.getCurrentPosition(
+            async function(position) {
+                var lat = position.coords.latitude.toFixed(3);
+                var lon = position.coords.longitude.toFixed(3);
+
+                try {
+                    // Save location to settings
+                    await fetch('/api/settings', {
+                        method: 'PUT',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ location_lat: lat, location_lon: lon })
+                    });
+
+                    // Try reverse geocode for display name
+                    try {
+                        var geoResp = await fetch('https://nominatim.openstreetmap.org/reverse?lat=' + lat + '&lon=' + lon + '&format=json');
+                        var geoData = await geoResp.json();
+                        if (geoData.address) {
+                            var a = geoData.address;
+                            var name = ((a.suburb || a.town || a.city || '') + ' ' + (a.postcode || '')).trim();
+                            if (name) {
+                                await fetch('/api/settings/location_name', {
+                                    method: 'PUT',
+                                    headers: {'Content-Type': 'application/json'},
+                                    body: JSON.stringify({ value: name })
+                                });
+                                document.getElementById('locationName').textContent = name;
+                                document.getElementById('locationName').style.display = '';
+                            }
+                        }
+                    } catch (e) { /* geocode optional */ }
+
+                    locationSaved = true;
+                    document.getElementById('locationIcon').textContent = '\u2705';
+                    document.getElementById('locationStatus').textContent = 'Location saved!';
+                    btn.textContent = 'Continue';
+                    btn.disabled = false;
+                    btn.onclick = function() { continueAfterLocation(); };
+                } catch (e) {
+                    showMsg('locationMsg', 'Failed to save location. You can set it later in settings.', 'error');
+                    btn.textContent = 'Try Again';
+                    btn.disabled = false;
+                }
+            },
+            function(error) {
+                var msg = 'Location access denied. You can set it later in Settings.';
+                if (error.code === 2) msg = 'Location unavailable. You can set it later in Settings.';
+                if (error.code === 3) msg = 'Location request timed out. Please try again.';
+                showMsg('locationMsg', msg, 'error');
+                btn.textContent = 'Try Again';
+                btn.disabled = false;
+            },
+            { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
+        );
+    }
+
+    function skipLocation() {
+        continueAfterLocation();
+    }
+
+    function continueAfterLocation() {
+        if (userType === 'pi') {
+            setupKiosk();
+            showCreateStep('stepKioskSetup');
+        } else {
+            showInviteStep();
+        }
+    }
+
+    // Generate kiosk token
+    async function setupKiosk() {
+        try {
+            var resp = await fetch('/api/household/kiosk-token', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({label: 'Kiosk Display'})
+            });
+            if (resp.ok) {
+                var data = await resp.json();
+                var token = data.kiosk_token.token;
+                var base = window.location.origin;
+                var url = base + '/kiosk?token=' + encodeURIComponent(token);
+                document.getElementById('kioskUrl').textContent = url;
+            } else {
+                document.getElementById('kioskUrl').textContent = 'Failed to generate. You can create one later in Settings.';
+            }
+        } catch (e) {
+            document.getElementById('kioskUrl').textContent = 'Failed to generate. You can create one later in Settings.';
+        }
+    }
+
+    function downloadPiScript() {
+        window.location = '/api/household/pi-setup-script';
+    }
+
+    function copyKioskUrl() {
+        var url = document.getElementById('kioskUrl').textContent;
+        navigator.clipboard.writeText(url).then(function() {
+            var btn = document.getElementById('copyKioskUrl');
+            btn.textContent = 'Copied!';
+            setTimeout(function() { btn.textContent = 'Copy URL'; }, 2000);
+        });
+    }
+
+    // Show invite step with household data
+    function showInviteStep() {
+        if (createdHouseholdData && createdHouseholdData.household) {
+            document.getElementById('onboardInviteCode').textContent = createdHouseholdData.household.invite_code || '--------';
+        }
+        showCreateStep('stepInviteMembers');
+    }
+
+    function copyInviteCode() {
+        var code = document.getElementById('onboardInviteCode').textContent;
+        navigator.clipboard.writeText(code).then(function() {
+            showMsg('inviteShareMsg', 'Copied to clipboard!', 'success');
+            setTimeout(function() { clearMsg('inviteShareMsg'); }, 2000);
+        });
+    }
+
+    async function shareInvite() {
+        var code = document.getElementById('onboardInviteCode').textContent;
+        var url = window.location.origin + '/onboard?invite=' + code;
+        var shareData = {
+            title: 'Join my Huddle household',
+            text: 'Join my household on Huddle! Use invite code: ' + code,
+            url: url,
+        };
+        if (navigator.share) {
+            try {
+                await navigator.share(shareData);
+            } catch (e) {
+                // User cancelled or share failed — copy as fallback
+                copyInviteCode();
+            }
+        } else {
+            navigator.clipboard.writeText(url).then(function() {
+                showMsg('inviteShareMsg', 'Link copied to clipboard!', 'success');
+                setTimeout(function() { clearMsg('inviteShareMsg'); }, 2000);
+            });
+        }
+    }
+
+    function finishOnboarding() {
+        showCreateStep('stepDone');
+        setTimeout(function() { window.location = '/mobile'; }, 1500);
+    }
+
+    // Join household
+    async function joinHousehold() {
+        var inviteCode = document.getElementById('inviteCode').value.trim().toUpperCase();
+        var displayName = document.getElementById('joinDisplayName').value.trim();
+
+        if (!inviteCode) { showMsg('joinMsg', 'Please enter an invite code.', 'error'); return; }
+        if (!displayName) { showMsg('joinMsg', 'Please enter your name.', 'error'); return; }
+
+        var btn = document.getElementById('joinBtn');
+        btn.disabled = true;
+        btn.textContent = '';
+        var spinner = document.createElement('span');
+        spinner.className = 'spinner';
+        btn.appendChild(spinner);
+        btn.appendChild(document.createTextNode(' Joining...'));
+
+        // Upload avatar if one was selected (non-blocking)
+        uploadAvatarIfPending();
+
+        try {
+            var resp = await fetch('/api/household/join', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({invite_code: inviteCode, display_name: displayName, color: selectedJoinColor})
+            });
+            var data = await resp.json();
+
+            if (resp.ok) {
+                window.location = '/mobile';
+            } else {
+                showMsg('joinMsg', data.detail || 'Failed to join household.', 'error');
+            }
+        } catch (e) {
+            showMsg('joinMsg', 'Network error. Please try again.', 'error');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Join household';
+        }
+    }
+
+    // Profile photo preview
+    var pendingAvatarFile = null;
+
+    function previewAvatar(input, circleId) {
+        var file = input.files[0];
+        if (!file) return;
+
+        // Validate file size (10MB max)
+        if (file.size > 10 * 1024 * 1024) {
+            alert('Photo must be under 10MB');
+            input.value = '';
+            return;
+        }
+
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+            alert('Please select an image file');
+            input.value = '';
+            return;
+        }
+
+        pendingAvatarFile = file;
+
+        var circle = document.getElementById(circleId);
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            // Clear circle and show preview
+            circle.textContent = '';
+            var img = document.createElement('img');
+            img.src = e.target.result;
+            circle.appendChild(img);
+
+            var overlay = document.createElement('div');
+            overlay.className = 'photo-overlay';
+            overlay.textContent = 'Change';
+            circle.appendChild(overlay);
+
+            circle.classList.add('has-photo');
+        };
+        reader.readAsDataURL(file);
+    }
+
+    async function uploadAvatarIfPending() {
+        if (!pendingAvatarFile) return true;
+        try {
+            var formData = new FormData();
+            formData.append('file', pendingAvatarFile);
+            var resp = await fetch('/api/auth/avatar', {
+                method: 'POST',
+                body: formData,
+            });
+            if (!resp.ok) {
+                console.error('Avatar upload failed:', resp.status);
+                return false;
+            }
+            pendingAvatarFile = null;
+            return true;
+        } catch (e) {
+            console.error('Avatar upload error:', e);
+            return false;
+        }
+    }
+
+    // Init colour pickers
+    buildColorPicker('createColorPicker', selectedCreateColor);
+    buildColorPicker('joinColorPicker', selectedJoinColor);
+
+    // Parse URL params: ?invite=, ?setup=pi|app
+    var params = new URLSearchParams(window.location.search);
+    var inviteParam = params.get('invite');
+    var setupParam = params.get('setup');
+    var errorParam = params.get('error');
+
+    // Show expired link message and auto-focus email input
+    if (errorParam === 'expired') {
+        var loginStep = document.getElementById('stepLogin');
+        if (loginStep) {
+            var msg = document.createElement('div');
+            msg.style.cssText = 'background:#ff6b6b22;border:1px solid #ff6b6b44;border-radius:8px;padding:12px 16px;margin-bottom:16px;color:#ff6b6b;font-size:0.9rem;text-align:center;';
+            msg.textContent = 'Your login link has expired. Enter your email below to get a new one.';
+            var form = loginStep.querySelector('form') || loginStep.querySelector('input');
+            if (form) loginStep.insertBefore(msg, form);
+            else loginStep.prepend(msg);
+        }
+        setTimeout(function() {
+            var emailInput = document.getElementById('loginEmail');
+            if (emailInput) emailInput.focus();
+        }, 300);
+    }
+
+    // Pre-select user type from URL param
+    if (setupParam === 'pi' || setupParam === 'app') {
+        userType = setupParam;
+    }
+
+    // Check if user is already authenticated but has no household
+    (async function() {
+        try {
+            var resp = await fetch('/api/auth/me');
+            if (resp.ok) {
+                var data = await resp.json();
+                if (data.household && data.household.id > 0) {
+                    window.location = '/mobile';
+                    return;
+                }
+                // Authenticated but no household
+                if (inviteParam) {
+                    document.getElementById('inviteCode').value = inviteParam;
+                    showStep('stepJoin');
+                } else if (setupParam === 'pi' || setupParam === 'app') {
+                    // Skip straight to household name if user type is pre-selected
+                    showCreateStep('stepHouseholdName');
+                } else {
+                    showStep('stepChoose');
+                }
+            } else {
+                showStep('stepLogin');
+            }
+        } catch (e) {
+            showStep('stepLogin');
+        }
+    })();
+
+    // Enter key support
+    document.getElementById('loginEmail').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') requestMagicLink();
+    });
+    document.getElementById('householdName').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') goToStep2();
+    });
+    document.getElementById('createDisplayName').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') goToStep3();
+    });
+    document.getElementById('inviteCode').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') document.getElementById('joinDisplayName').focus();
+    });
+    document.getElementById('joinDisplayName').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') joinHousehold();
+    });
+    document.getElementById('newMemberName').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') { document.getElementById('newMemberEmail').focus(); e.preventDefault(); }
+    });
+    document.getElementById('newMemberEmail').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') confirmAddMember();
+    });
+    document.getElementById('accessHouseholdCode').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') lookupAccessHousehold();
+    });
+    document.getElementById('accessCustomName').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') requestAccessCustomName();
+    });
+
+    // --- Request Access (Manager Approval) ---
+    var accessHouseholdCode = '';
+    var accessPollingTimer = null;
+
+    function resetAccessRequest() {
+        document.getElementById('accessPhase1').style.display = '';
+        document.getElementById('accessPhase2').style.display = 'none';
+        document.getElementById('accessPhase3').style.display = 'none';
+        document.getElementById('accessHouseholdCode').value = '';
+        document.getElementById('accessCustomName').value = '';
+        clearMsg('accessMsg');
+        accessHouseholdCode = '';
+        if (accessPollingTimer) { clearInterval(accessPollingTimer); accessPollingTimer = null; }
+    }
+
+    async function lookupAccessHousehold() {
+        var code = document.getElementById('accessHouseholdCode').value.trim().toUpperCase();
+        if (!code) {
+            showMsg('accessMsg', 'Please enter a household code.', 'error');
+            return;
+        }
+        clearMsg('accessMsg');
+        accessHouseholdCode = code;
+
+        try {
+            var resp = await fetch('/api/auth/household-members?code=' + encodeURIComponent(code));
+            var data = await resp.json();
+            if (!resp.ok) {
+                showMsg('accessMsg', data.detail || 'Household not found.', 'error');
+                return;
+            }
+
+            document.getElementById('accessHouseholdLabel').textContent = data.household_name;
+
+            var list = document.getElementById('accessMemberList');
+            list.textContent = '';
+            if (data.members && data.members.length > 0) {
+                data.members.forEach(function(m) {
+                    var card = document.createElement('div');
+                    card.style.cssText = 'display:flex;align-items:center;gap:12px;padding:14px 16px;background:#16213e;border:1px solid #2a2a4a;border-radius:12px;cursor:pointer;transition:all 0.2s;';
+                    card.onmouseenter = function() { card.style.borderColor = '#4ecdc4'; };
+                    card.onmouseleave = function() { card.style.borderColor = '#2a2a4a'; };
+                    card.onclick = function() { requestAccessForMember(m.display_name, m.color, m.member_id); };
+
+                    var avatar = document.createElement('div');
+                    avatar.style.cssText = 'width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:16px;flex-shrink:0;background:' + (m.color || '#4ecdc4') + ';';
+                    avatar.textContent = m.display_name.charAt(0).toUpperCase();
+
+                    var name = document.createElement('div');
+                    name.style.cssText = 'color:#e8e8e8;font-weight:600;font-size:15px;';
+                    name.textContent = m.display_name;
+
+                    card.appendChild(avatar);
+                    card.appendChild(name);
+                    list.appendChild(card);
+                });
+            }
+
+            document.getElementById('accessPhase1').style.display = 'none';
+            document.getElementById('accessPhase2').style.display = '';
+        } catch (e) {
+            showMsg('accessMsg', 'Network error. Please try again.', 'error');
+        }
+    }
+
+    async function requestAccessForMember(displayName, color, memberId) {
+        clearMsg('accessMsg');
+        var avatar = document.getElementById('accessSelectedAvatar');
+        avatar.style.background = color || '#4ecdc4';
+        avatar.textContent = displayName.charAt(0).toUpperCase();
+        document.getElementById('accessSelectedName').textContent = displayName;
+
+        try {
+            var resp = await fetch('/api/auth/request-access', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    invite_code: accessHouseholdCode,
+                    display_name: displayName,
+                    member_id: memberId || null
+                })
+            });
+            var data = await resp.json();
+            if (!resp.ok) {
+                showMsg('accessMsg', data.detail || 'Failed to request access.', 'error');
+                return;
+            }
+
+            document.getElementById('accessPhase2').style.display = 'none';
+            document.getElementById('accessPhase3').style.display = '';
+
+            // Poll for approval
+            startAccessPolling(data.token);
+        } catch (e) {
+            showMsg('accessMsg', 'Network error. Please try again.', 'error');
+        }
+    }
+
+    function requestAccessCustomName() {
+        var name = document.getElementById('accessCustomName').value.trim();
+        if (!name) {
+            showMsg('accessMsg', 'Please enter your name.', 'error');
+            return;
+        }
+        requestAccessForMember(name, '#4ecdc4', null);
+    }
+
+    function startAccessPolling(token) {
+        if (accessPollingTimer) clearInterval(accessPollingTimer);
+        accessPollingTimer = setInterval(async function() {
+            try {
+                var resp = await fetch('/api/auth/access-status?token=' + encodeURIComponent(token));
+                var data = await resp.json();
+                if (data.status === 'approved') {
+                    clearInterval(accessPollingTimer);
+                    accessPollingTimer = null;
+                    window.location = '/mobile';
+                } else if (data.status === 'denied') {
+                    clearInterval(accessPollingTimer);
+                    accessPollingTimer = null;
+                    showMsg('accessMsg', 'Access request was denied by the household manager.', 'error');
+                    document.getElementById('accessPhase3').style.display = 'none';
+                    document.getElementById('accessPhase1').style.display = '';
+                } else if (data.status === 'expired') {
+                    clearInterval(accessPollingTimer);
+                    accessPollingTimer = null;
+                    showMsg('accessMsg', 'Request expired. Please try again.', 'error');
+                    document.getElementById('accessPhase3').style.display = 'none';
+                    document.getElementById('accessPhase1').style.display = '';
+                }
+            } catch (e) {
+                // Silently retry on network error
+            }
+        }, 3000);
+    }
+</script>
+</body>
+</html>

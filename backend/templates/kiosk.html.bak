@@ -1,0 +1,2248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chores</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Fraunces:opsz,wght@9..144,400;9..144,600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #1a1a1a;
+            --bg-card: #242424;
+            --bg-card-hover: #2a2a2a;
+            --text-primary: #f5f5f5;
+            --text-secondary: #a0a0a0;
+            --text-muted: #666;
+            /* NEW DISTINCT COLOR PALETTE - Each person has a unique hue */
+            --accent-keiran: #3b82f6;    /* Electric Blue - cool, professional */
+            --accent-ciara: #ec4899;     /* Hot Pink/Magenta - warm, vibrant */
+            --accent-tahni: #f59e0b;     /* Amber/Golden - warm, energetic */
+            /* Combination colors */
+            --color-ciara-tahni: #f97316;   /* Coral/Orange blend */
+            --color-ciara-keiran: #a855f7;  /* Purple blend */
+            --color-keiran-tahni: #14b8a6;  /* Teal blend */
+            --color-everyone: #8b5cf6;      /* Violet - distinct group color */
+            --color-guests: #94a3b8;        /* Slate gray - neutral */
+            --color-one-off: #06b6d4;       /* Cyan - for one-off events */
+            /* Status colors */
+            --status-overdue: #ef4444;
+            --status-due: #3b82f6;
+            --status-tomorrow: #a0a0a0;
+            --status-done: #666;
+            --border-radius: 16px;
+            --shadow: 0 4px 24px rgba(0,0,0,0.3);
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 16px 20px;
+            overflow-x: hidden;
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            body {
+                padding: 12px;
+            }
+            
+            .top-bar {
+                flex-direction: column;
+                gap: 12px;
+                text-align: center;
+            }
+            
+            .title-section h1 {
+                font-size: 1.6rem;
+            }
+            
+            .clock-time {
+                font-size: 2rem;
+            }
+            
+            .weather-section {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            
+            .weather-forecast {
+                width: 100%;
+                justify-content: center;
+                margin-top: 8px;
+            }
+            
+            .chores-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .meal-grid, .schedule-grid, .calendar-grid {
+                grid-template-columns: repeat(7, 1fr);
+                gap: 3px;
+            }
+
+            .meal-day, .calendar-day {
+                min-width: 0;
+                padding: 4px;
+            }
+            
+            .meal-day-name, .calendar-day-header span {
+                font-size: 0.65rem;
+            }
+            
+            .meal-type-label, .meal-name {
+                font-size: 0.65rem;
+            }
+            
+            .calendar-day {
+                min-height: 50px;
+            }
+
+            .calendar-event {
+                font-size: 0.5rem;
+                padding: 2px 4px 2px 28px;
+                text-indent: -24px;
+            }
+
+            .calendar-event-time {
+                width: 24px;
+            }
+
+            .schedule-item {
+                font-size: 0.6rem;
+                padding: 2px 4px;
+            }
+            
+            .tally-section {
+                padding: 12px;
+            }
+            
+            .tally-people {
+                gap: 12px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .meal-grid, .schedule-grid, .calendar-grid {
+                grid-template-columns: repeat(7, 1fr);
+                gap: 2px;
+            }
+
+            .meal-day, .calendar-day {
+                padding: 3px;
+            }
+
+            .meal-day-name, .calendar-day-header span {
+                font-size: 0.5rem;
+            }
+
+            .calendar-day {
+                min-height: 40px;
+            }
+
+            .calendar-event {
+                font-size: 0.45rem;
+                padding: 1px 2px 1px 22px;
+                text-indent: -20px;
+            }
+
+            .calendar-event-time {
+                width: 20px;
+                font-size: 0.4rem;
+            }
+
+            .chore-card {
+                padding: 12px;
+            }
+
+            .chore-name {
+                font-size: 1rem;
+            }
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Header bar */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 14px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid #333;
+            gap: 16px;
+        }
+
+        .title-section h1 {
+            font-family: 'Fraunces', serif;
+            font-size: 2.2rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+        }
+
+        .title-section .admin-link {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            display: inline-block;
+            margin-top: 4px;
+        }
+
+        .title-section .admin-link:hover {
+            color: var(--text-secondary);
+        }
+
+        .clock-section {
+            text-align: center;
+        }
+
+        .clock-time {
+            font-family: 'Fraunces', serif;
+            font-size: 2.8rem;
+            font-weight: 600;
+            line-height: 1;
+            letter-spacing: -0.02em;
+        }
+
+        .clock-date {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        .weather-section {
+            display: flex;
+            align-items: stretch;
+            gap: 16px;
+            background: var(--bg-card);
+            padding: 14px 18px;
+            border-radius: var(--border-radius);
+        }
+
+        .weather-current {
+            text-align: center;
+            min-width: 90px;
+        }
+
+        .weather-temp {
+            font-size: 2rem;
+            font-weight: 600;
+            line-height: 1;
+        }
+
+        .weather-minmax {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        .weather-feels {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .weather-humidity {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+        }
+
+        .weather-condition {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .weather-rain {
+            font-size: 0.7rem;
+            color: var(--accent-keiran);
+        }
+
+        .weather-divider {
+            width: 1px;
+            background: #333;
+            align-self: stretch;
+        }
+
+        .weather-details {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 4px;
+            min-width: 100px;
+        }
+
+        .weather-detail-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+        }
+
+        .weather-detail-icon {
+            font-size: 0.9rem;
+            width: 18px;
+            text-align: center;
+        }
+
+        .weather-detail-label {
+            color: var(--text-muted);
+            min-width: 48px;
+        }
+
+        .weather-uv-high {
+            color: #ff9800;
+        }
+
+        .weather-uv-extreme {
+            color: #f44336;
+        }
+
+        .weather-sun-times {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 4px;
+            min-width: 80px;
+        }
+
+        .weather-sun-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+        }
+
+        .weather-sun-icon {
+            font-size: 0.9rem;
+        }
+
+        .weather-forecast {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .weather-day {
+            text-align: center;
+            min-width: 52px;
+        }
+
+        .weather-day-label {
+            font-size: 0.6rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .weather-day-icon {
+            font-size: 1rem;
+            margin: 2px 0;
+        }
+
+        .weather-day-condition {
+            font-size: 0.55rem;
+            color: var(--text-secondary);
+            margin: 2px 0;
+            white-space: nowrap;
+        }
+
+        .weather-day-temp {
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .weather-day-details {
+            font-size: 0.5rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .weather-icon {
+            font-size: 1.6rem;
+        }
+
+        /* Monthly Tally */
+        .tally-section {
+            background: var(--bg-card);
+            padding: 10px 14px;
+            border-radius: var(--border-radius);
+            margin-bottom: 14px;
+        }
+
+        .tally-header {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 8px;
+        }
+
+        .tally-people {
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+
+        .tally-person {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tally-name {
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .tally-name.keiran { color: var(--accent-keiran); }
+        .tally-name.ciara { color: var(--accent-ciara); }
+        .tally-name.tahni { color: var(--accent-tahni); }
+
+        .tally-count {
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+
+        /* Weekly Schedule Grid */
+        .schedule-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 6px;
+            margin-bottom: 6px;
+        }
+
+        .schedule-day {
+            min-height: 24px;
+        }
+
+        .schedule-item {
+            background: var(--bg-primary);
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            margin-bottom: 4px;
+        }
+
+        .schedule-item.today {
+            background: rgba(78, 205, 196, 0.2);
+            color: var(--accent-keiran);
+        }
+
+        /* Sections */
+        .sections {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .section-title {
+            font-size: 0.9rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-secondary);
+        }
+
+        .section-count {
+            background: #333;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            padding: 3px 8px;
+            border-radius: 20px;
+        }
+
+        .section.overdue .section-title {
+            color: var(--status-overdue);
+        }
+
+        .section.overdue .section-count {
+            background: rgba(255, 107, 107, 0.2);
+            color: var(--status-overdue);
+        }
+
+        /* Chores grid */
+        .chores-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 10px;
+        }
+
+        .chore-card {
+            background: var(--bg-card);
+            border-radius: var(--border-radius);
+            padding: 12px 14px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .chore-card:hover {
+            background: var(--bg-card-hover);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        .chore-card.completed {
+            opacity: 0.5;
+        }
+
+        .chore-card.completed .chore-name {
+            text-decoration: line-through;
+            color: var(--text-muted);
+        }
+
+        .chore-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 3px;
+            height: 100%;
+            background: var(--status-due);
+        }
+
+        .chore-card.overdue::before {
+            background: var(--status-overdue);
+        }
+
+        .chore-card.tomorrow::before {
+            background: var(--status-tomorrow);
+        }
+
+        .chore-card.completed::before {
+            background: var(--status-done);
+        }
+
+        .chore-card.adhoc::before {
+            background: #9b59b6;
+        }
+
+        .section.adhoc .section-title {
+            color: #9b59b6;
+        }
+
+        .section.adhoc .section-count {
+            background: rgba(155, 89, 182, 0.2);
+            color: #9b59b6;
+        }
+
+        .chore-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+
+        .chore-name {
+            font-family: 'Fraunces', serif;
+            font-size: 1rem;
+            font-weight: 600;
+            line-height: 1.3;
+        }
+
+        .chore-status {
+            font-size: 0.65rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 3px 8px;
+            border-radius: 20px;
+            white-space: nowrap;
+        }
+
+        .chore-status.overdue {
+            background: rgba(255, 107, 107, 0.2);
+            color: var(--status-overdue);
+        }
+
+        .chore-status.due {
+            background: rgba(78, 205, 196, 0.2);
+            color: var(--status-due);
+        }
+
+        .chore-status.tomorrow {
+            background: rgba(160, 160, 160, 0.2);
+            color: var(--status-tomorrow);
+        }
+
+        .chore-status.done {
+            background: rgba(102, 102, 102, 0.2);
+            color: var(--status-done);
+        }
+
+        .chore-details {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .chore-assigned {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .person-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-weight: 500;
+            font-size: 0.85rem;
+        }
+
+        .person-badge.keiran {
+            background: rgba(59, 130, 246, 0.2);
+            color: var(--accent-keiran);
+        }
+
+        .person-badge.ciara {
+            background: rgba(236, 72, 153, 0.2);
+            color: var(--accent-ciara);
+        }
+
+        .person-badge.tahni {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--accent-tahni);
+        }
+
+        .person-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        .streak-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            background: rgba(255, 150, 50, 0.2);
+            color: #ff9632;
+        }
+
+        .chore-meta {
+            display: flex;
+            gap: 12px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .chore-meta span {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .chore-meta svg {
+            width: 12px;
+            height: 12px;
+            opacity: 0.7;
+        }
+
+        /* Completed section - compact */
+        .completed-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .completed-item {
+            background: var(--bg-card);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            opacity: 0.6;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .completed-item .chore-name {
+            font-size: 0.85rem;
+            font-family: 'Outfit', sans-serif;
+            text-decoration: line-through;
+        }
+
+        .completed-item .person-badge {
+            padding: 2px 8px;
+            font-size: 0.75rem;
+        }
+
+        /* Meal Plan Section */
+        .meal-section {
+            background: var(--bg-card);
+            padding: 12px;
+            border-radius: var(--border-radius);
+            margin-top: 16px;
+        }
+
+        .meal-header {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 8px;
+        }
+
+        .meal-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 6px;
+        }
+
+        .meal-day {
+            background: var(--bg-primary);
+            border-radius: 6px;
+            padding: 8px;
+            text-align: center;
+        }
+
+        .meal-day.today {
+            background: rgba(78, 205, 196, 0.15);
+            border: 1px solid rgba(78, 205, 196, 0.3);
+        }
+
+        .meal-day-name {
+            font-size: 0.65rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .meal-day.today .meal-day-name {
+            color: var(--accent-keiran);
+        }
+
+        .meal-type {
+            margin-bottom: 5px;
+        }
+
+        .meal-type-label {
+            font-size: 0.55rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .meal-name {
+            font-size: 0.75rem;
+            font-weight: 500;
+            line-height: 1.2;
+        }
+
+        .meal-variant {
+            font-size: 0.6rem;
+            color: var(--text-muted);
+            margin-top: 1px;
+        }
+
+        .meal-variant.ciara {
+            color: var(--accent-ciara);
+        }
+
+        .meal-variant.kt {
+            color: var(--accent-keiran);
+        }
+
+        .meal-variant.ck {
+            color: var(--accent-ciara);
+        }
+
+        .meal-variant.tahni {
+            color: var(--accent-tahni);
+        }
+
+        /* Full Month Calendar - Bottom 1/3 of screen */
+        .month-calendar-section {
+            background: var(--bg-card);
+            padding: 10px;
+            border-radius: var(--border-radius);
+            margin-top: 12px;
+            flex-shrink: 0;
+        }
+
+        .month-calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .month-calendar-title {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .month-calendar-month {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .month-calendar-link {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            text-decoration: none;
+        }
+
+        .month-calendar-link:hover {
+            color: var(--text-secondary);
+        }
+
+        .month-weekday-header {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 2px;
+            margin-bottom: 2px;
+        }
+
+        .month-weekday-name {
+            text-align: center;
+            font-size: 0.55rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            padding: 2px;
+        }
+
+        .month-calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 2px;
+            /* Calculate row height to maintain 1:1 aspect ratio */
+            /* Grid will auto-size based on available width */
+        }
+
+        .month-day-cell {
+            background: var(--bg-primary);
+            border-radius: 4px;
+            padding: 3px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            /* Perfect 1:1 square using aspect-ratio */
+            aspect-ratio: 1 / 1;
+            /* Minimum touch target size */
+            min-width: 40px;
+            min-height: 40px;
+        }
+
+        .month-day-cell.other-month {
+            opacity: 0.25;
+        }
+
+        .month-day-cell.weekend:not(.other-month) {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        /* Current day indicator - bright border and background */
+        .month-day-cell.today {
+            background: rgba(0, 188, 212, 0.15);
+            border: 2px solid var(--accent-keiran);
+            box-shadow: 0 0 8px rgba(0, 188, 212, 0.3);
+        }
+
+        .month-day-cell.today .month-day-number {
+            background: var(--accent-keiran);
+            color: #000;
+            font-weight: 700;
+        }
+
+        /* Past day strike-through - diagonal line */
+        .month-day-cell.past::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(
+                to bottom right,
+                transparent calc(50% - 1px),
+                rgba(100, 100, 100, 0.3) calc(50% - 1px),
+                rgba(100, 100, 100, 0.3) calc(50% + 1px),
+                transparent calc(50% + 1px)
+            );
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .month-day-number {
+            font-size: 0.7rem;
+            font-weight: 500;
+            color: var(--text-primary);
+            width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            margin-bottom: 1px;
+            flex-shrink: 0;
+        }
+
+        .month-day-cell.other-month .month-day-number {
+            color: var(--text-muted);
+        }
+
+        .month-events-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+            overflow: hidden;
+            min-height: 0;
+        }
+
+        .month-event-item {
+            font-size: 0.5rem;
+            padding: 1px 3px;
+            border-radius: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 1.2;
+            border-left: 2px solid;
+        }
+
+        /* Event color classes - NEW DISTINCT PALETTE */
+        .month-event-keiran { background: rgba(59, 130, 246, 0.25); border-left-color: var(--accent-keiran); }
+        .month-event-ciara { background: rgba(236, 72, 153, 0.25); border-left-color: var(--accent-ciara); }
+        .month-event-tahni { background: rgba(245, 158, 11, 0.25); border-left-color: var(--accent-tahni); }
+        .month-event-ciara-tahni { background: rgba(249, 115, 22, 0.25); border-left-color: var(--color-ciara-tahni); }
+        .month-event-ciara-keiran { background: rgba(168, 85, 247, 0.25); border-left-color: var(--color-ciara-keiran); }
+        .month-event-keiran-tahni { background: rgba(20, 184, 166, 0.25); border-left-color: var(--color-keiran-tahni); }
+        .month-event-everyone { background: rgba(139, 92, 246, 0.25); border-left-color: var(--color-everyone); }
+        .month-event-guests { background: rgba(148, 163, 184, 0.25); border-left-color: var(--color-guests); }
+        .month-event-one-off { background: rgba(6, 182, 212, 0.25); border-left-color: var(--color-one-off); }
+
+        .month-more-events {
+            font-size: 0.45rem;
+            color: var(--text-muted);
+            text-align: center;
+        }
+
+        /* Legacy 7-day calendar styles (kept for compatibility) */
+        .calendar-section {
+            background: var(--bg-card);
+            padding: 12px;
+            border-radius: var(--border-radius);
+            margin-top: 16px;
+            display: none; /* Hidden - replaced by month view */
+        }
+
+        .calendar-header {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 8px;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+            width: 100%;
+            max-width: 100%;
+            align-items: start;
+        }
+
+        .calendar-day {
+            background: var(--bg-primary);
+            border-radius: 6px;
+            padding: 6px 8px;
+            min-height: 60px;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .calendar-day.today {
+            background: rgba(78, 205, 196, 0.15);
+            border: 1px solid rgba(78, 205, 196, 0.3);
+        }
+
+        .calendar-day-header {
+            font-size: 0.6rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            margin-bottom: 4px;
+            display: flex;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+
+        .calendar-day.today .calendar-day-header {
+            color: var(--accent-keiran);
+        }
+
+        .calendar-day-date {
+            font-size: 0.6rem;
+            color: var(--text-muted);
+        }
+
+        .calendar-events {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .calendar-event {
+            font-size: 0.55rem;
+            padding: 3px 5px 3px 5px;
+            background: rgba(78, 205, 196, 0.15);
+            border-radius: 3px;
+            border-left: 2px solid var(--accent-keiran);
+            line-height: 1.4;
+            word-wrap: break-word;
+            /* Hanging indent: first line starts at 0, wrapped lines indented */
+            padding-left: 32px;
+            text-indent: -27px;
+        }
+
+        .calendar-event-time {
+            font-size: 0.5rem;
+            color: var(--text-muted);
+            font-weight: 500;
+            display: inline-block;
+            width: 27px;
+            text-indent: 0;
+        }
+
+        .calendar-event-title {
+            text-indent: 0;
+        }
+
+        .calendar-no-events {
+            font-size: 0.55rem;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        /* Fuel Prices */
+        .fuel-grid {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .fuel-type {
+            flex: 1;
+            min-width: 120px;
+        }
+
+        .fuel-type-label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .fuel-station {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.7rem;
+            padding: 2px 0;
+            gap: 4px;
+        }
+
+        .fuel-price {
+            font-weight: 600;
+            color: var(--accent-keiran);
+            min-width: 40px;
+            flex-shrink: 0;
+        }
+
+        .fuel-name {
+            flex: 1;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-width: 0;
+        }
+
+        .fuel-dist {
+            font-size: 0.6rem;
+            color: var(--text-muted);
+            flex-shrink: 0;
+            text-align: right;
+        }
+
+        .fuel-best {
+            color: #51cf66;
+        }
+
+        /* Daily Quote */
+        .quote-section {
+            background: linear-gradient(135deg, rgba(78, 205, 196, 0.1) 0%, rgba(255, 107, 157, 0.1) 100%);
+            border-radius: var(--border-radius);
+            padding: 12px 16px;
+            margin-bottom: 14px;
+            text-align: center;
+            border-left: 3px solid var(--accent-keiran);
+            display: none;
+        }
+
+        .quote-section.show {
+            display: block;
+        }
+
+        .quote-text {
+            font-family: 'Fraunces', serif;
+            font-size: 1.4rem;
+            font-style: italic;
+            color: var(--text-primary);
+            line-height: 1.5;
+            margin-bottom: 8px;
+        }
+
+        .quote-text::before {
+            content: '"';
+            color: var(--accent-keiran);
+            font-size: 1.8rem;
+        }
+
+        .quote-text::after {
+            content: '"';
+            color: var(--accent-keiran);
+            font-size: 1.8rem;
+        }
+
+        .quote-author {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+        }
+
+        .quote-author::before {
+            content: '— ';
+        }
+
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            bottom: 32px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--bg-card);
+            color: var(--text-primary);
+            padding: 16px 24px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            z-index: 1000;
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        .toast.success {
+            border-left: 4px solid var(--status-due);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-muted);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            body {
+                padding: 16px;
+            }
+
+            .top-bar {
+                flex-wrap: wrap;
+            }
+
+            .chores-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .meal-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header: Chores left, clock center, monthly tally right (swapped from weather) -->
+        <div class="top-bar">
+            <div class="title-section">
+                <h1>Chores</h1>
+                <a href="/admin" class="admin-link">⚙️ Manage</a>
+            </div>
+
+            <div class="clock-section">
+                <div class="clock-time" id="clockTime">00:00</div>
+                <div class="clock-date" id="clockDate">Loading...</div>
+            </div>
+
+            <!-- Monthly Tally moved to header position (swapped with weather) -->
+            <div class="tally-section" style="margin-bottom: 0; padding: 10px 16px;">
+                <div class="tally-header">This Month's Completions</div>
+                <div class="tally-people" id="tallyPeople"></div>
+            </div>
+        </div>
+
+        <!-- Weather & Fuel Prices Row (weather moved here, swapped with tally) -->
+        <div style="display: flex; gap: 14px; margin-bottom: 14px;">
+            <div class="weather-section" id="weatherSection" style="flex: 1.5;">
+                <div class="weather-current">
+                    <div class="weather-icon" id="weatherIcon">?</div>
+                    <div class="weather-temp" id="weatherTemp">--°</div>
+                    <div class="weather-minmax" id="weatherMinMax">--° / --°</div>
+                    <div class="weather-feels" id="weatherFeels">Feels --°</div>
+                    <div class="weather-condition" id="weatherCondition">Loading...</div>
+                    <div class="weather-rain" id="weatherRain"></div>
+                </div>
+                <div class="weather-divider"></div>
+                <div class="weather-details">
+                    <div class="weather-detail-row">
+                        <span class="weather-detail-icon">💨</span>
+                        <span class="weather-detail-label">Wind</span>
+                        <span id="weatherWind">-- km/h</span>
+                    </div>
+                    <div class="weather-detail-row">
+                        <span class="weather-detail-icon">💧</span>
+                        <span class="weather-detail-label">Humidity</span>
+                        <span id="weatherHumidity">--%</span>
+                    </div>
+                    <div class="weather-detail-row">
+                        <span class="weather-detail-icon">☀️</span>
+                        <span class="weather-detail-label">UV</span>
+                        <span id="weatherUV">--</span>
+                    </div>
+                    <div class="weather-detail-row">
+                        <span class="weather-detail-icon">☁️</span>
+                        <span class="weather-detail-label">Cloud</span>
+                        <span id="weatherCloud">--%</span>
+                    </div>
+                </div>
+                <div class="weather-divider"></div>
+                <div class="weather-sun-times">
+                    <div class="weather-sun-row">
+                        <span class="weather-sun-icon">🌅</span>
+                        <span id="weatherSunrise">--:--</span>
+                    </div>
+                    <div class="weather-sun-row">
+                        <span class="weather-sun-icon">🌇</span>
+                        <span id="weatherSunset">--:--</span>
+                    </div>
+                </div>
+                <div class="weather-divider"></div>
+                <div class="weather-forecast" id="weatherForecast">
+                    <!-- 6 day forecast populated by JS -->
+                </div>
+            </div>
+            <div class="tally-section" style="flex: 1; margin-bottom: 0;">
+                <div class="tally-header">Fuel Prices - Shortland</div>
+                <div class="fuel-grid" id="fuelGrid">Loading...</div>
+            </div>
+        </div>
+
+        <!-- Daily Quote -->
+        <div class="quote-section" id="quoteSection">
+            <div class="quote-text" id="quoteText"></div>
+            <div class="quote-author" id="quoteAuthor"></div>
+        </div>
+
+        <!-- Chores Sections -->
+        <div class="sections" id="choresSections"></div>
+
+        <!-- Meal Plan with Weekly Schedule -->
+        <div class="meal-section">
+            <div class="meal-header">Weekly Schedule & Meal Plan</div>
+            <div class="schedule-grid" id="scheduleGrid"></div>
+            <div class="meal-grid" id="mealGrid"></div>
+        </div>
+
+        <!-- Full Month Calendar - Bottom 1/3 of screen -->
+        <div class="month-calendar-section">
+            <div class="month-calendar-header">
+                <div>
+                    <span class="month-calendar-title">Calendar</span>
+                    <span class="month-calendar-month" id="monthCalendarTitle">Loading...</span>
+                </div>
+                <a href="/calendar" class="month-calendar-link">Full View</a>
+            </div>
+            <div class="month-weekday-header">
+                <div class="month-weekday-name">Mon</div>
+                <div class="month-weekday-name">Tue</div>
+                <div class="month-weekday-name">Wed</div>
+                <div class="month-weekday-name">Thu</div>
+                <div class="month-weekday-name">Fri</div>
+                <div class="month-weekday-name">Sat</div>
+                <div class="month-weekday-name">Sun</div>
+            </div>
+            <div class="month-calendar-grid" id="monthCalendarGrid">
+                <!-- Full month calendar rendered by JS -->
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <audio id="completionSound" preload="auto">
+        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdH2LkZeXl5OPi4Z/d29maGd0gIuTmZqZlI6Hf3ZsY11aX2l0gIqRl5iVkYuEfHNqYV1cX2d0gIyUm5uYk42GfnVqYVtZXGRxfouTmZqXko2Gf3ZsYl1bXmZxfYmRl5iVkIqDe3JpYV5dYGhzf4qRlZaUkIqEfHNqY15dYGdyfYeOlJaUj4mDe3JpYl5dYGhzfoeNkpSSkYyFfnVsZF9eYWlyfoiOkpOSkIuEfXRsZWBfYmlyeoaPk5STkIuFfnZuZ2JgY2lxeoWLj5GSj4uGf3dwa2RiY2hrcoeLj5CQjouHgHlzbWdkZGdscoWHjI6OjYqGgXt1b2pnZ2lsdHqDiIuMi4qIhIF8d3FsaWhpa3B2fYOHiYmIhoOAfHdyb2tpaWtudXuAhIaHhoWDgX56dnJva2prbXF2en6BhIODgoB+e3h1cm9tbW5wcnZ6fX+AgH9+fXt5dnRxb25ub3Fzdnl7fH18e3p5d3V0cnBvb29xc3V3eXp7e3p5eHd2dHNxcHBwcXJzdXd4eXl5eHh3dnV0c3JxcXFyc3R1dnd4eHh4d3d2dXR0c3JycnJzdHR1dnd3d3d3dnZ1dXR0c3NzcnNzdHV1dXZ2dnZ2dnZ1dXR0dHNzc3N0dHR1dXV1dnZ2dnZ1dXV1dHR0dHR0dHR1dXV1dXZ2dnZ1dXV1dXR0dHR0dHR1dXV1dXV1dXZ1dXV1dXV0dXR0dHR0dXV1dXV1dXV1dXV1dXV1dHR0dHR1dXV1dXV1dXV1" type="audio/wav">
+    </audio>
+
+    <script>
+        let choresData = [];
+        let mealsData = {};
+        let adhocTasks = [];
+        let ws = null;
+
+        const icons = {
+            calendar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
+            clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>'
+        };
+
+        const weatherCodes = {
+            0: { icon: '☀', text: 'Clear' },
+            1: { icon: '🌤', text: 'Mostly Clear' },
+            2: { icon: '⛅', text: 'Partly Cloudy' },
+            3: { icon: '☁', text: 'Cloudy' },
+            45: { icon: '🌫', text: 'Foggy' },
+            48: { icon: '🌫', text: 'Fog' },
+            51: { icon: '🌦', text: 'Light Drizzle' },
+            53: { icon: '🌦', text: 'Drizzle' },
+            55: { icon: '🌧', text: 'Heavy Drizzle' },
+            61: { icon: '🌧', text: 'Light Rain' },
+            63: { icon: '🌧', text: 'Rain' },
+            65: { icon: '🌧', text: 'Heavy Rain' },
+            80: { icon: '🌦', text: 'Showers' },
+            81: { icon: '🌧', text: 'Showers' },
+            82: { icon: '⛈', text: 'Heavy Showers' },
+            95: { icon: '⛈', text: 'Thunderstorm' }
+        };
+
+        // Text-based weather icons for Pi compatibility
+        const weatherText = {
+            0: '☼',
+            1: '◑',
+            2: '◐',
+            3: '●',
+            45: '≡',
+            48: '≡',
+            51: '·',
+            53: '··',
+            55: '···',
+            61: '░',
+            63: '▒',
+            65: '▓',
+            80: '░',
+            81: '▒',
+            82: '▓',
+            95: '⚡'
+        };
+
+        const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        const fullDayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+        const weeklySchedule = [
+            { day: 0, text: 'Household Debrief' },           // Monday
+            { day: 2, text: 'C & K Date Night' },            // Wednesday
+            { day: 3, text: 'Rotary Night' },                // Thursday
+            { day: 6, text: 'Hour of Power Clean' },         // Sunday
+            { day: 6, text: 'Tahni Reading Night' },         // Sunday
+            { day: 6, text: 'C & K Date Day' }               // Sunday
+        ];
+
+        // Clock
+        function updateClock() {
+            const now = new Date();
+            const time = now.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit', hour12: false });
+            const date = now.toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long' });
+            document.getElementById('clockTime').textContent = time;
+            document.getElementById('clockDate').textContent = date;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // Wind direction to compass
+        function windDirToCompass(deg) {
+            const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+            return dirs[Math.round(deg / 45) % 8];
+        }
+
+        // UV index description
+        function uvDescription(uv) {
+            if (uv < 3) return { text: 'Low', class: '' };
+            if (uv < 6) return { text: 'Mod', class: '' };
+            if (uv < 8) return { text: 'High', class: 'weather-uv-high' };
+            if (uv < 11) return { text: 'V.High', class: 'weather-uv-high' };
+            return { text: 'Extreme', class: 'weather-uv-extreme' };
+        }
+
+        // Weather with expanded data and 6-day forecast
+        async function fetchWeather() {
+            try {
+                // Use backend proxy to avoid CORS/SSL issues on Pi
+                const response = await fetch('/api/weather');
+                const data = await response.json();
+
+                if (data.error) {
+                    console.error('Weather error:', data.error);
+                    return;
+                }
+
+                const current = data.current;
+                const daily = data.daily;
+
+                const currentWeather = weatherCodes[current.weather_code] || { icon: '?', text: 'Unknown' };
+
+                // Current conditions
+                document.getElementById('weatherIcon').textContent = currentWeather.icon;
+                document.getElementById('weatherTemp').textContent = Math.round(current.temperature_2m) + '°';
+                document.getElementById('weatherMinMax').textContent = Math.round(daily.temperature_2m_min[0]) + '° / ' + Math.round(daily.temperature_2m_max[0]) + '°';
+                document.getElementById('weatherFeels').textContent = 'Feels ' + Math.round(current.apparent_temperature) + '°';
+                document.getElementById('weatherCondition').textContent = currentWeather.text;
+
+                // Rain probability
+                const rainChance = daily.precipitation_probability_max[0];
+                if (rainChance > 0) {
+                    document.getElementById('weatherRain').textContent = `${rainChance}% rain`;
+                } else {
+                    document.getElementById('weatherRain').textContent = '';
+                }
+
+                // Wind
+                const windSpeed = Math.round(current.wind_speed_10m);
+                const windDir = windDirToCompass(current.wind_direction_10m);
+                document.getElementById('weatherWind').textContent = `${windSpeed} km/h ${windDir}`;
+
+                // Humidity
+                document.getElementById('weatherHumidity').textContent = `${Math.round(current.relative_humidity_2m)}%`;
+
+                // UV Index
+                const uvIndex = current.uv_index || 0;
+                const uvInfo = uvDescription(uvIndex);
+                const uvEl = document.getElementById('weatherUV');
+                uvEl.textContent = `${uvIndex.toFixed(1)} (${uvInfo.text})`;
+                uvEl.className = uvInfo.class;
+
+                // Cloud cover
+                document.getElementById('weatherCloud').textContent = `${Math.round(current.cloud_cover)}%`;
+
+                // Sunrise/Sunset
+                if (daily.sunrise && daily.sunrise[0]) {
+                    const sunrise = new Date(daily.sunrise[0]);
+                    document.getElementById('weatherSunrise').textContent = sunrise.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit', hour12: false });
+                }
+                if (daily.sunset && daily.sunset[0]) {
+                    const sunset = new Date(daily.sunset[0]);
+                    document.getElementById('weatherSunset').textContent = sunset.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit', hour12: false });
+                }
+
+                // 6-day forecast
+                const forecastContainer = document.getElementById('weatherForecast');
+                const shortDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                let forecastHtml = '';
+
+                const forecastDays = Math.min(6, (daily.weather_code || []).length - 1);
+                for (let i = 1; i <= forecastDays; i++) {
+                    const forecastDate = new Date();
+                    forecastDate.setDate(forecastDate.getDate() + i);
+                    const dayName = i === 1 ? 'Tmrw' : shortDays[forecastDate.getDay()];
+                    const weather = weatherCodes[daily.weather_code[i]] || { icon: '?', text: 'Unknown' };
+                    const minTemp = Math.round(daily.temperature_2m_min[i]);
+                    const maxTemp = Math.round(daily.temperature_2m_max[i]);
+                    const rainProb = daily.precipitation_probability_max[i] || 0;
+                    const uvMax = daily.uv_index_max ? daily.uv_index_max[i] : null;
+                    const windMax = daily.wind_speed_10m_max ? Math.round(daily.wind_speed_10m_max[i]) : null;
+
+                    let detailsHtml = '';
+                    if (rainProb > 0) {
+                        detailsHtml += `💧${rainProb}%`;
+                    }
+                    if (windMax && windMax > 20) {
+                        detailsHtml += ` 💨${windMax}`;
+                    }
+
+                    forecastHtml += `
+                        <div class="weather-day">
+                            <div class="weather-day-label">${dayName}</div>
+                            <div class="weather-day-condition">${weather.text}</div>
+                            <div class="weather-day-temp">${minTemp}°-${maxTemp}°</div>
+                            ${detailsHtml ? `<div class="weather-day-details">${detailsHtml}</div>` : ''}
+                        </div>
+                    `;
+                }
+
+                forecastContainer.innerHTML = forecastHtml;
+
+            } catch (error) {
+                console.error('Weather fetch error:', error);
+            }
+        }
+        fetchWeather();
+        setInterval(fetchWeather, 600000);
+
+        // Weekly Schedule - aligned grid
+        function renderSchedule() {
+            const container = document.getElementById('scheduleGrid');
+            if (!container) return;
+            
+            const today = new Date().getDay();
+            const todayIndex = today === 0 ? 6 : today - 1; // Convert to Mon=0
+            
+            let html = '';
+            for (let i = 0; i < 7; i++) {
+                const daySchedule = weeklySchedule.filter(item => item.day === i);
+                const isToday = i === todayIndex;
+                
+                html += `<div class="schedule-day">`;
+                if (daySchedule.length > 0) {
+                    html += daySchedule.map(item => 
+                        `<div class="schedule-item ${isToday ? 'today' : ''}">${item.text}</div>`
+                    ).join('');
+                }
+                html += `</div>`;
+            }
+            
+            container.innerHTML = html;
+        }
+        renderSchedule();
+
+        function getPersonClass(name) {
+            return name ? name.toLowerCase() : '';
+        }
+
+        function formatDaysSince(chore) {
+            // Handle the case where last action was a skip
+            if (chore.was_skipped) {
+                const skipDays = chore.days_since_skip;
+                let skipText = skipDays === 0 ? 'Skipped today' : skipDays === 1 ? 'Skipped yesterday' : `Skipped ${skipDays} days ago`;
+
+                // Also show last actual completion if available
+                if (chore.last_actual_by && chore.days_since_actual !== null) {
+                    const actualDays = chore.days_since_actual;
+                    const actualText = actualDays === 0 ? 'today' : actualDays === 1 ? '1 day ago' : `${actualDays} days ago`;
+                    return `${skipText} • Last done ${actualText} by ${chore.last_actual_by}`;
+                }
+                return skipText;
+            }
+
+            const days = chore.days_since_done;
+            const lastBy = chore.last_completed_by;
+
+            if (days === null || days === undefined) return 'Never done';
+            if (days < 0) return lastBy ? `Done today by ${lastBy}` : 'Done today';
+            if (days === 0) return lastBy ? `Done today by ${lastBy}` : 'Done today';
+            if (days === 1) return lastBy ? `1 day ago by ${lastBy}` : '1 day ago';
+            return lastBy ? `${days} days ago by ${lastBy}` : `${days} days ago`;
+        }
+
+        function formatSchedule(chore) {
+            if (chore.schedule_type === 'daily') return 'Daily';
+            if (chore.schedule_type === 'interval') return `Every ${chore.schedule_interval} days`;
+            if (chore.schedule_type === 'days') {
+                try {
+                    const days = typeof chore.schedule_days === 'string' ? JSON.parse(chore.schedule_days || '[]') : (chore.schedule_days || []);
+                    const shortDays = days.map(d => d.charAt(0).toUpperCase() + d.slice(1, 3));
+                    return shortDays.join(', ');
+                } catch (e) {
+                    return '';
+                }
+            }
+            return '';
+        }
+
+        function getStatusLabel(status, daysOverdue) {
+            switch (status) {
+                case 'overdue': return daysOverdue === 1 ? '1 day overdue' : `${daysOverdue} days overdue`;
+                case 'due_today': return 'Due today';
+                case 'completed_today': return 'Done';
+                case 'tomorrow': return 'Tomorrow';
+                default: return '';
+            }
+        }
+
+        function getStatusClass(status) {
+            switch (status) {
+                case 'overdue': return 'overdue';
+                case 'due_today': return 'due';
+                case 'completed_today': return 'done';
+                case 'tomorrow': return 'tomorrow';
+                default: return '';
+            }
+        }
+
+        function openChore(id, slug) {
+            window.location.href = `/complete/${id}/${slug}`;
+        }
+
+        function renderChoreCard(chore) {
+            const statusClass = getStatusClass(chore.status);
+            const isCompleted = chore.status === 'completed_today';
+            const streak = chore.streak || 0;
+            const slug = chore.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
+            return `
+                <div class="chore-card ${statusClass} ${isCompleted ? 'completed' : ''}" onclick="openChore(${chore.id}, '${slug}')">
+                    <div class="chore-header">
+                        <div class="chore-name">${chore.name}</div>
+                        <span class="chore-status ${statusClass}">${getStatusLabel(chore.status, chore.days_overdue)}</span>
+                    </div>
+                    <div class="chore-details">
+                        <div class="chore-assigned">
+                            <span class="person-badge ${getPersonClass(chore.current_person)}">
+                                <span class="person-dot"></span>
+                                ${chore.current_person || 'Unassigned'}
+                            </span>
+                            ${streak >= 3 ? `<span class="streak-badge">🔥 ${streak}</span>` : ''}
+                        </div>
+                        <div class="chore-meta">
+                            <span>${icons.clock} ${formatDaysSince(chore)}</span>
+                            <span>${icons.calendar} ${formatSchedule(chore)}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderCompletedItem(chore) {
+            return `
+                <div class="completed-item">
+                    <span class="chore-name">${chore.name}</span>
+                    <span class="person-badge ${getPersonClass(chore.last_completed_by)}">
+                        ${chore.last_completed_by || ''}
+                    </span>
+                </div>
+            `;
+        }
+
+        function renderSection(title, chores, cssClass = '') {
+            if (chores.length === 0) return '';
+            
+            return `
+                <div class="section ${cssClass}">
+                    <div class="section-header">
+                        <span class="section-title">${title}</span>
+                        <span class="section-count">${chores.length}</span>
+                    </div>
+                    <div class="chores-grid">
+                        ${chores.map(renderChoreCard).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderCompletedSection(chores) {
+            if (chores.length === 0) return '';
+
+            return `
+                <div class="section">
+                    <div class="section-header">
+                        <span class="section-title">Completed Today</span>
+                        <span class="section-count">${chores.length}</span>
+                    </div>
+                    <div class="completed-grid">
+                        ${chores.map(renderCompletedItem).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderAdhocCard(task) {
+            const isCompleted = task.completed === 1;
+            const slug = task.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
+            return `
+                <div class="chore-card adhoc ${isCompleted ? 'completed' : ''}" onclick="openAdhocTask(${task.id}, '${slug}')">
+                    <div class="chore-header">
+                        <div class="chore-name">${task.name}</div>
+                        <span class="chore-status ${isCompleted ? 'done' : 'due'}">${isCompleted ? 'Done' : 'To Do'}</span>
+                    </div>
+                    <div class="chore-details">
+                        ${task.added_by ? `
+                        <div class="chore-assigned">
+                            <span class="person-badge ${getPersonClass(task.added_by)}">
+                                <span class="person-dot"></span>
+                                Added by ${task.added_by}
+                            </span>
+                        </div>
+                        ` : ''}
+                        <div class="chore-meta">
+                            <span>${icons.clock} One-off task</span>
+                            ${task.description ? `<span>${task.description}</span>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderAdhocSection(tasks) {
+            const incomplete = tasks.filter(t => t.completed === 0);
+            if (incomplete.length === 0) return '';
+
+            return `
+                <div class="section adhoc">
+                    <div class="section-header">
+                        <span class="section-title">One-Off Tasks</span>
+                        <span class="section-count">${incomplete.length}</span>
+                    </div>
+                    <div class="chores-grid">
+                        ${incomplete.map(renderAdhocCard).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function openAdhocTask(id, slug) {
+            window.location.href = `/adhoc/${id}/${slug}`;
+        }
+
+        function renderTally(stats) {
+            const container = document.getElementById('tallyPeople');
+            if (!container || !stats) return;
+            
+            const people = ['Keiran', 'Ciara', 'Tahni'];
+            
+            container.innerHTML = people.map(person => {
+                const count = stats[person] || 0;
+                return `
+                    <div class="tally-person">
+                        <span class="tally-name ${person.toLowerCase()}">${person}</span>
+                        <span class="tally-count">${count}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderChoreCardForTomorrow(chore) {
+            // Render a chore card specifically for the "Due Tomorrow" section
+            // This shows it as a fresh task, not with today's completion status
+            const slug = chore.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
+            return `
+                <div class="chore-card tomorrow" onclick="openChore(${chore.id}, '${slug}')">
+                    <div class="chore-header">
+                        <div class="chore-name">${chore.name}</div>
+                        <span class="chore-status tomorrow">Tomorrow</span>
+                    </div>
+                    <div class="chore-details">
+                        <div class="chore-assigned">
+                            <span class="person-badge ${getPersonClass(chore.current_person)}">
+                                <span class="person-dot"></span>
+                                ${chore.current_person || 'Unassigned'}
+                            </span>
+                        </div>
+                        <div class="chore-meta">
+                            <span>${icons.calendar} ${formatSchedule(chore)}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderTomorrowSection(chores) {
+            if (chores.length === 0) return '';
+
+            return `
+                <div class="section tomorrow">
+                    <div class="section-header">
+                        <span class="section-title">Due Tomorrow</span>
+                        <span class="section-count">${chores.length}</span>
+                    </div>
+                    <div class="chores-grid">
+                        ${chores.map(renderChoreCardForTomorrow).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderChores(data) {
+            const sections = document.getElementById('choresSections');
+            if (!sections || !data) return;
+
+            const chores = data.chores || [];
+
+            const overdue = chores.filter(c => c.status === 'overdue');
+            const dueToday = chores.filter(c => c.status === 'due_today');
+            const completedToday = chores.filter(c => c.status === 'completed_today');
+
+            // Due tomorrow: chores with status 'tomorrow' OR chores that will be due again tomorrow
+            // Use a Set to avoid duplicates when a chore has both status=tomorrow and also_tomorrow=true
+            const tomorrowIds = new Set();
+            const dueTomorrow = chores.filter(c => {
+                if (c.status === 'tomorrow' || c.also_tomorrow) {
+                    if (!tomorrowIds.has(c.id)) {
+                        tomorrowIds.add(c.id);
+                        return true;
+                    }
+                }
+                return false;
+            });
+
+            let html = '';
+
+            if (overdue.length > 0) html += renderSection('Overdue', overdue, 'overdue');
+            // Ad-hoc tasks appear after overdue but before completed
+            if (adhocTasks.length > 0) html += renderAdhocSection(adhocTasks);
+            if (completedToday.length > 0) html += renderCompletedSection(completedToday);
+            if (dueToday.length > 0) html += renderSection('Due Today', dueToday);
+            if (dueTomorrow.length > 0) html += renderTomorrowSection(dueTomorrow);
+
+            if (html === '' && adhocTasks.filter(t => t.completed === 0).length === 0) {
+                html = '<div class="empty-state"><p>All caught up! No chores due.</p></div>';
+            }
+
+            sections.innerHTML = html;
+
+            if (data.monthly_stats) renderTally(data.monthly_stats);
+        }
+
+        // Meals
+        function renderMeals(mealsData) {
+            const container = document.getElementById('mealGrid');
+            if (!container) return;
+            
+            const today = new Date().getDay();
+            const todayIndex = today === 0 ? 6 : today - 1;
+            
+            if (!mealsData) mealsData = {};
+            
+            let html = '';
+            for (let i = 0; i < 7; i++) {
+                const isToday = i === todayIndex;
+                const dayMeals = mealsData[i] || { lunch: [], dinner: [] };
+                
+                const lunch = dayMeals.lunch && dayMeals.lunch[0] ? dayMeals.lunch[0].meal_name : '-';
+                const dinnerAll = dayMeals.dinner ? dayMeals.dinner.find(d => d.meal_variant === 'all') : null;
+                const dinnerCiara = dayMeals.dinner ? dayMeals.dinner.find(d => d.meal_variant === 'ciara') : null;
+                const dinnerKT = dayMeals.dinner ? dayMeals.dinner.find(d => d.meal_variant === 'keiran_tahni') : null;
+                const dinnerCK = dayMeals.dinner ? dayMeals.dinner.find(d => d.meal_variant === 'ciara_keiran') : null;
+                const dinnerTahni = dayMeals.dinner ? dayMeals.dinner.find(d => d.meal_variant === 'tahni') : null;
+                
+                let dinnerHtml = '';
+                if (dinnerAll) {
+                    dinnerHtml = `<div class="meal-name">${dinnerAll.meal_name}</div>`;
+                } else if (dinnerCK || dinnerTahni) {
+                    if (dinnerCK) {
+                        dinnerHtml += `<div class="meal-name">${dinnerCK.meal_name}</div><div class="meal-variant ck">C & K</div>`;
+                    }
+                    if (dinnerTahni) {
+                        dinnerHtml += `<div class="meal-name">${dinnerTahni.meal_name}</div><div class="meal-variant tahni">Tahni</div>`;
+                    }
+                } else if (dinnerCiara || dinnerKT) {
+                    if (dinnerCiara) {
+                        dinnerHtml += `<div class="meal-name">${dinnerCiara.meal_name}</div><div class="meal-variant ciara">Ciara</div>`;
+                    }
+                    if (dinnerKT) {
+                        dinnerHtml += `<div class="meal-name">${dinnerKT.meal_name}</div><div class="meal-variant kt">K & T</div>`;
+                    }
+                } else {
+                    dinnerHtml = '<div class="meal-name">-</div>';
+                }
+                
+                html += `
+                    <div class="meal-day ${isToday ? 'today' : ''}">
+                        <div class="meal-day-name">${dayNames[i]}</div>
+                        <div class="meal-type">
+                            <div class="meal-type-label">Lunch</div>
+                            <div class="meal-name">${lunch}</div>
+                        </div>
+                        <div class="meal-type">
+                            <div class="meal-type-label">Dinner</div>
+                            ${dinnerHtml}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            container.innerHTML = html;
+        }
+
+        async function fetchChores() {
+            try {
+                const response = await fetch('/api/chores');
+                const data = await response.json();
+                choresData = data.chores;
+                renderChores(data);
+            } catch (error) {
+                console.error('Error fetching chores:', error);
+            }
+        }
+
+        async function fetchAdhoc() {
+            try {
+                const response = await fetch('/api/adhoc');
+                const data = await response.json();
+                adhocTasks = data.tasks || [];
+                // Re-render chores to include adhoc section
+                if (choresData.length > 0) {
+                    renderChores({ chores: choresData });
+                }
+            } catch (error) {
+                console.error('Error fetching adhoc tasks:', error);
+            }
+        }
+
+        async function fetchMeals() {
+            try {
+                const response = await fetch('/api/meals');
+                const data = await response.json();
+                mealsData = data.meals;
+                renderMeals(mealsData);
+            } catch (error) {
+                console.error('Error fetching meals:', error);
+            }
+        }
+
+        // Full Month Calendar
+        let monthCalendarData = null;
+
+        async function fetchMonthCalendar() {
+            try {
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = now.getMonth() + 1; // 1-indexed
+
+                const response = await fetch(`/api/family-calendar/month/${year}/${month}`);
+                monthCalendarData = await response.json();
+
+                renderMonthCalendar();
+            } catch (error) {
+                console.error('Error fetching month calendar:', error);
+            }
+        }
+
+        function getMonthEventColorClass(participants) {
+            if (!participants || participants.length === 0) return 'month-event-guests';
+
+            const pSet = new Set(participants.map(p => p.toLowerCase()));
+
+            if (pSet.has('guests')) return 'month-event-guests';
+
+            if (pSet.size === 1) {
+                const person = [...pSet][0];
+                if (person === 'keiran') return 'month-event-keiran';
+                if (person === 'ciara') return 'month-event-ciara';
+                if (person === 'tahni') return 'month-event-tahni';
+            }
+
+            if (pSet.size === 2) {
+                if (pSet.has('ciara') && pSet.has('tahni')) return 'month-event-ciara-tahni';
+                if (pSet.has('ciara') && pSet.has('keiran')) return 'month-event-ciara-keiran';
+                if (pSet.has('keiran') && pSet.has('tahni')) return 'month-event-keiran-tahni';
+            }
+
+            if (pSet.size === 3) return 'month-event-everyone';
+
+            return 'month-event-guests';
+        }
+
+        function renderMonthCalendar() {
+            const grid = document.getElementById('monthCalendarGrid');
+            const titleEl = document.getElementById('monthCalendarTitle');
+            if (!grid || !monthCalendarData) return;
+
+            const data = monthCalendarData;
+            const today = data.today;
+            const firstDayWeekday = data.first_day_weekday; // 0=Monday
+            const daysInMonth = data.days_in_month;
+
+            // Update title
+            if (titleEl) {
+                titleEl.textContent = `${data.month_name} ${data.year}`;
+            }
+
+            // Calculate previous month info
+            const currentYear = data.year;
+            const currentMonth = data.month;
+            const prevMonthYear = currentMonth === 1 ? currentYear - 1 : currentYear;
+            const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
+            const daysInPrevMonth = new Date(prevMonthYear, prevMonth, 0).getDate();
+
+            // Build events by date lookup
+            const eventsByDate = {};
+            (data.events || []).forEach(event => {
+                const dateKey = event.date;
+                if (!eventsByDate[dateKey]) eventsByDate[dateKey] = [];
+                eventsByDate[dateKey].push(event);
+            });
+
+            let html = '';
+            let dayCounter = 1;
+            let nextMonthDay = 1;
+
+            // Always render 6 rows (42 cells)
+            const totalCells = 42;
+
+            for (let i = 0; i < totalCells; i++) {
+                let dayNum, dateStr, isOtherMonth = false, isWeekend = false, isPast = false;
+                let cellYear = currentYear, cellMonth = currentMonth;
+
+                const weekday = i % 7;
+                isWeekend = weekday === 5 || weekday === 6; // Saturday or Sunday
+
+                if (i < firstDayWeekday) {
+                    // Previous month
+                    dayNum = daysInPrevMonth - firstDayWeekday + i + 1;
+                    cellMonth = prevMonth;
+                    cellYear = prevMonthYear;
+                    isOtherMonth = true;
+                } else if (dayCounter <= daysInMonth) {
+                    // Current month
+                    dayNum = dayCounter;
+                    dayCounter++;
+                } else {
+                    // Next month
+                    dayNum = nextMonthDay;
+                    nextMonthDay++;
+                    cellMonth = currentMonth === 12 ? 1 : currentMonth + 1;
+                    cellYear = currentMonth === 12 ? currentYear + 1 : currentYear;
+                    isOtherMonth = true;
+                }
+
+                dateStr = `${cellYear}-${String(cellMonth).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+                const isToday = dateStr === today;
+
+                // Check if this day is in the past (for strike-through)
+                // Only apply to current month days, not other months
+                if (!isOtherMonth && !isToday) {
+                    isPast = dateStr < today;
+                }
+
+                const dayEvents = eventsByDate[dateStr] || [];
+                // Sort by time
+                dayEvents.sort((a, b) => {
+                    const timeA = a.start_time || '00:00';
+                    const timeB = b.start_time || '00:00';
+                    return timeA.localeCompare(timeB);
+                });
+
+                let cellClass = 'month-day-cell';
+                if (isOtherMonth) cellClass += ' other-month';
+                if (isToday) cellClass += ' today';
+                if (isWeekend && !isOtherMonth) cellClass += ' weekend';
+                if (isPast) cellClass += ' past';
+
+                html += `<div class="${cellClass}">`;
+                html += `<div class="month-day-number">${dayNum}</div>`;
+                html += `<div class="month-events-container">`;
+
+                // Show up to 2 events, then "more"
+                const maxEvents = 2;
+                const visibleEvents = dayEvents.slice(0, maxEvents);
+                const hiddenCount = dayEvents.length - maxEvents;
+
+                visibleEvents.forEach(event => {
+                    const colorClass = getMonthEventColorClass(event.participants);
+                    const title = event.title.length > 12 ? event.title.substring(0, 11) + '...' : event.title;
+                    html += `<div class="month-event-item ${colorClass}" title="${event.title}">${title}</div>`;
+                });
+
+                if (hiddenCount > 0) {
+                    html += `<div class="month-more-events">+${hiddenCount}</div>`;
+                }
+
+                html += `</div>`;
+                html += `</div>`;
+            }
+
+            grid.innerHTML = html;
+        }
+
+        // Check for midnight to refresh calendar (date change in Sydney timezone)
+        let lastCheckedDate = null;
+        function checkMidnightRefresh() {
+            const now = new Date();
+            const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+            if (lastCheckedDate === null) {
+                lastCheckedDate = todayStr;
+            } else if (todayStr !== lastCheckedDate) {
+                // Date has changed - refresh calendar to update strike-through and current day
+                lastCheckedDate = todayStr;
+                fetchMonthCalendar();
+            }
+        }
+        // Check every minute for midnight rollover
+        setInterval(checkMidnightRefresh, 60000);
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type} show`;
+            
+            try {
+                document.getElementById('completionSound').play();
+            } catch (e) {}
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        function connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
+            
+            ws.onclose = () => {
+                setTimeout(connectWebSocket, 3000);
+            };
+            
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+
+                if (data.type === 'refresh') {
+                    // Remote refresh requested - reload the page
+                    location.reload(true);
+                } else if (data.type === 'chore_completed') {
+                    showToast(`${data.completed_by} completed a chore!`);
+                } else if (data.type === 'chore_skipped') {
+                    showToast('Chore skipped');
+                } else if (data.type === 'meals_updated') {
+                    fetchMeals();
+                } else if (data.type === 'adhoc_created') {
+                    fetchAdhoc();
+                } else if (data.type === 'adhoc_completed') {
+                    showToast(`${data.completed_by} completed a task!`);
+                    fetchAdhoc();
+                } else if (data.type === 'adhoc_deleted' || data.type === 'adhoc_cleared') {
+                    fetchAdhoc();
+                } else if (data.type === 'calendar_updated') {
+                    fetchMonthCalendar();
+                }
+
+                fetchChores();
+            };
+        }
+
+        // Fuel prices
+        async function fetchFuel() {
+            try {
+                const response = await fetch('/api/fuel');
+                const data = await response.json();
+                renderFuel(data);
+            } catch (error) {
+                console.error('Error fetching fuel:', error);
+                document.getElementById('fuelGrid').innerHTML = '<span style="color: var(--text-muted)">Unable to load</span>';
+            }
+        }
+
+        function renderFuel(data) {
+            const container = document.getElementById('fuelGrid');
+            if (!container || !data.fuel) return;
+
+            const fuelTypes = ['E10', 'U91', 'P95', 'P98'];
+            let html = '';
+
+            // Common abbreviations for cleaner display
+            const abbreviations = {
+                '7-Eleven': '7-Eleven',
+                'Metro Petroleum': 'Metro',
+                'Metro ': 'Metro ',
+                'PEARL ENERGY': 'Pearl Energy',
+                'Speedway': 'Speedway',
+                'Enhance': 'Enhance',
+                'Medco': 'Medco'
+            };
+
+            function formatStationName(name) {
+                // Clean up common patterns
+                let formatted = name;
+                // Remove suburb duplicates like "Metro Sandgate" -> keep as is
+                // Shorten very long names
+                if (formatted.length > 22) {
+                    formatted = formatted.substring(0, 20) + '..';
+                }
+                return formatted;
+            }
+
+            for (const type of fuelTypes) {
+                const stations = data.fuel[type] || [];
+                html += `<div class="fuel-type">
+                    <div class="fuel-type-label">${type}</div>`;
+
+                if (stations.length === 0) {
+                    html += '<div class="fuel-station"><span style="color: var(--text-muted)">No data</span></div>';
+                } else {
+                    stations.forEach((station, idx) => {
+                        const name = formatStationName(station.name);
+                        html += `<div class="fuel-station" title="${station.name}">
+                            <span class="fuel-price ${idx === 0 ? 'fuel-best' : ''}">${station.price.toFixed(1)}c</span>
+                            <span class="fuel-name">${name}</span>
+                            <span class="fuel-dist">${station.distance.toFixed(1)}km</span>
+                        </div>`;
+                    });
+                }
+                html += '</div>';
+            }
+
+            container.innerHTML = html;
+        }
+
+        // Quote of the hour
+        async function fetchQuote() {
+            try {
+                const response = await fetch('/api/quote');
+                const data = await response.json();
+                if (data.quote) {
+                    document.getElementById('quoteText').textContent = data.quote;
+                    document.getElementById('quoteAuthor').textContent = data.author || 'Unknown';
+                    document.getElementById('quoteSection').classList.add('show');
+                }
+            } catch (error) {
+                console.error('Error fetching quote:', error);
+                // Hide quote section on error
+                document.getElementById('quoteSection').classList.remove('show');
+            }
+        }
+
+        // Initial load
+        fetchChores();
+        fetchAdhoc();
+        fetchMeals();
+        fetchMonthCalendar();
+        fetchFuel();
+        fetchQuote();
+        connectWebSocket();
+
+        // Refresh calendar every 10 minutes, fuel every 10 minutes, quote every hour
+        setInterval(fetchMonthCalendar, 600000);
+        setInterval(fetchFuel, 600000);  // 10 minutes (was 30)
+        setInterval(fetchQuote, 3600000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Huddle - Connect Display</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1d27;
+            color: #e0e0e0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .setup-container {
+            text-align: center;
+            max-width: 520px;
+            padding: 40px;
+        }
+        .logo { font-size: 48px; font-weight: 700; color: #4ecdc4; margin-bottom: 4px; }
+        .subtitle { color: #888; font-size: 16px; margin-bottom: 32px; }
+
+        /* Loading state */
+        .spinner {
+            width: 40px; height: 40px; border: 4px solid #2a2d3a;
+            border-top-color: #4ecdc4; border-radius: 50%;
+            animation: spin 0.8s linear infinite; margin: 40px auto;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Pairing code display */
+        .qr-container {
+            background: #fff; border-radius: 16px; padding: 16px;
+            display: inline-block; margin: 20px 0;
+        }
+        .pairing-code {
+            font-family: 'SF Mono', 'Fira Code', 'Courier New', monospace;
+            font-size: 56px; font-weight: 700; letter-spacing: 12px;
+            color: #fff; margin: 20px 0 8px; padding-left: 12px;
+        }
+        .pairing-instruction {
+            color: #999; font-size: 15px; line-height: 1.5; margin-bottom: 20px;
+        }
+        .pairing-instruction strong { color: #4ecdc4; }
+
+        /* Waiting indicator */
+        .waiting {
+            display: flex; align-items: center; justify-content: center;
+            gap: 10px; color: #888; font-size: 14px; margin: 16px 0;
+        }
+        .pulse-dot {
+            width: 10px; height: 10px; background: #4ecdc4;
+            border-radius: 50%; animation: pulse 1.5s ease-in-out infinite;
+        }
+        @keyframes pulse { 0%, 100% { opacity: 0.3; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.2); } }
+
+        .countdown { color: #666; font-size: 13px; margin-top: 4px; }
+
+        /* Paired state */
+        .paired-check {
+            width: 80px; height: 80px; border-radius: 50%; background: #4ecdc4;
+            display: flex; align-items: center; justify-content: center;
+            margin: 40px auto 16px; animation: scaleIn 0.4s ease-out;
+        }
+        .paired-check svg { width: 40px; height: 40px; }
+        @keyframes scaleIn { from { transform: scale(0); } to { transform: scale(1); } }
+        .paired-text { font-size: 24px; font-weight: 600; color: #4ecdc4; }
+
+        /* Error */
+        .error {
+            background: rgba(255, 107, 107, 0.15); border: 1px solid #ff6b6b;
+            border-radius: 8px; padding: 12px 16px; color: #ff6b6b;
+            margin-bottom: 24px; font-size: 14px;
+        }
+
+        /* Advanced section */
+        .advanced-toggle {
+            color: #666; font-size: 13px; cursor: pointer;
+            border: none; background: none; margin-top: 24px;
+            text-decoration: underline;
+        }
+        .advanced-toggle:hover { color: #999; }
+        .advanced-section { display: none; margin-top: 16px; }
+        .token-input-group { display: flex; gap: 8px; }
+        input[type="text"] {
+            flex: 1; padding: 10px 14px; background: #2a2d3a;
+            border: 1px solid #3a3d4a; border-radius: 8px;
+            color: #fff; font-size: 14px; font-family: monospace;
+        }
+        input[type="text"]::placeholder { color: #666; }
+        input[type="text"]:focus { outline: none; border-color: #4ecdc4; }
+        .btn-connect {
+            padding: 10px 20px; background: #4ecdc4; color: #1a1d27;
+            border: none; border-radius: 8px; font-weight: 600;
+            font-size: 14px; cursor: pointer;
+        }
+        .btn-connect:hover { background: #45b8b0; }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+    <div class="setup-container">
+        <div class="logo">Huddle</div>
+        <div class="subtitle">Your household, sorted.</div>
+
+        {% if error %}
+        <div class="error">{{ error }}</div>
+        {% endif %}
+
+        <!-- State: Loading -->
+        <div id="stateLoading">
+            <div class="spinner"></div>
+            <p style="color: #888;">Generating pairing code...</p>
+        </div>
+
+        <!-- State: Pairing code display -->
+        <div id="statePairing" class="hidden">
+            <p style="color:#ccc; font-size:18px; margin-bottom:4px;">Scan to pair this display</p>
+            <div class="qr-container" id="qrcode"></div>
+            <div class="pairing-code" id="codeDisplay">------</div>
+            <div class="pairing-instruction">
+                Scan the QR code with your phone, or enter the code at<br>
+                <strong id="pairUrl">huddle.rodgersgroup.au/pair</strong>
+            </div>
+            <div class="waiting">
+                <div class="pulse-dot"></div>
+                <span>Waiting for pairing...</span>
+            </div>
+            <div class="countdown" id="countdown">Expires in 10:00</div>
+        </div>
+
+        <!-- State: Paired -->
+        <div id="statePaired" class="hidden">
+            <div class="paired-check">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#1a1d27" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+            </div>
+            <div class="paired-text">Connected!</div>
+            <p style="color:#888; margin-top:8px;">Redirecting to dashboard...</p>
+        </div>
+
+        <!-- Advanced: manual token entry -->
+        <button class="advanced-toggle" id="advancedBtn" onclick="toggleAdvanced()">Already have a token?</button>
+        <div class="advanced-section" id="advancedSection">
+            <form onsubmit="connectWithToken(event)">
+                <div class="token-input-group">
+                    <input type="text" id="tokenInput" placeholder="Paste kiosk token" autocomplete="off" spellcheck="false">
+                    <button type="submit" class="btn-connect">Connect</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="/static/qrcode.min.js"></script>
+    <script>
+        // CSRF protection: auto-inject X-Requested-With on state-changing requests
+        (function() {
+            const _origFetch = window.fetch;
+            const CSRF_METHODS = new Set(['POST', 'PUT', 'DELETE', 'PATCH']);
+            window.fetch = function(input, init) {
+                if (init && CSRF_METHODS.has((init.method || 'GET').toUpperCase())) {
+                    init.headers = init.headers || {};
+                    if (init.headers instanceof Headers) {
+                        if (!init.headers.has('X-Requested-With')) init.headers.set('X-Requested-With', 'XMLHttpRequest');
+                    } else {
+                        if (!init.headers['X-Requested-With']) init.headers['X-Requested-With'] = 'XMLHttpRequest';
+                    }
+                }
+                return _origFetch.call(this, input, init);
+            };
+        })();
+
+        var currentCode = null;
+        var pollTimer = null;
+        var countdownTimer = null;
+        var expiresAt = null;
+        var requestingCode = false;
+
+        async function init() {
+            // If we got here with an error, the saved token is invalid — clear it
+            {% if error %}
+            try { localStorage.removeItem('huddle_kiosk_token'); } catch(e) {}
+            {% else %}
+            // Check for saved token from a previous pairing
+            try {
+                var savedToken = localStorage.getItem('huddle_kiosk_token');
+                if (savedToken) {
+                    window.location.href = '/kiosk?token=' + encodeURIComponent(savedToken);
+                    return;
+                }
+            } catch(e) {}
+            {% endif %}
+            // Check for legacy #token= hash
+            if (window.location.hash && window.location.hash.startsWith('#token=')) {
+                var token = window.location.hash.substring(7);
+                if (token) {
+                    window.location.href = '/kiosk?token=' + encodeURIComponent(token);
+                    return;
+                }
+            }
+            await requestNewCode();
+        }
+
+        async function requestNewCode() {
+            // Prevent concurrent requests (race between countdown and polling)
+            if (requestingCode) return;
+            requestingCode = true;
+
+            // Clear any existing timers first
+            if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+            if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+
+            showState('loading');
+            try {
+                var resp = await fetch('/api/kiosk/pairing-code', { method: 'POST' });
+                if (!resp.ok) {
+                    var err = await resp.json().catch(function() { return {}; });
+                    throw new Error(err.detail || 'Failed to generate code');
+                }
+                var data = await resp.json();
+                currentCode = data.code;
+                expiresAt = new Date(data.expires_at);
+                displayCode(currentCode);
+                startPolling();
+                startCountdown();
+                showState('pairing');
+            } catch (e) {
+                // Show error with retry button using safe DOM methods
+                var loadingEl = document.getElementById('stateLoading');
+                loadingEl.textContent = '';
+                var errDiv = document.createElement('div');
+                errDiv.className = 'error';
+                errDiv.textContent = e.message;
+                loadingEl.appendChild(errDiv);
+                var retryBtn = document.createElement('button');
+                retryBtn.className = 'btn-connect';
+                retryBtn.style.marginTop = '12px';
+                retryBtn.textContent = 'Try Again';
+                retryBtn.onclick = requestNewCode;
+                loadingEl.appendChild(retryBtn);
+            } finally {
+                requestingCode = false;
+            }
+        }
+
+        function displayCode(code) {
+            // Display code with spaces for readability
+            document.getElementById('codeDisplay').textContent = code.split('').join(' ');
+
+            // Build QR URL using current origin (works on LAN and via tunnel)
+            var qrUrl = window.location.origin + '/pair?code=' + code;
+
+            // Set the pair URL text
+            var host = window.location.hostname;
+            var port = window.location.port;
+            if (host === 'huddle.rodgersgroup.au') {
+                document.getElementById('pairUrl').textContent = 'huddle.rodgersgroup.au/pair';
+            } else {
+                document.getElementById('pairUrl').textContent = host + (port ? ':' + port : '') + '/pair';
+            }
+
+            // Generate QR code
+            var container = document.getElementById('qrcode');
+            container.textContent = '';
+            new QRCode(container, {
+                text: qrUrl,
+                width: 240,
+                height: 240,
+                colorDark: "#1a1d27",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.M,
+            });
+        }
+
+        function startPolling() {
+            if (pollTimer) clearInterval(pollTimer);
+            pollTimer = setInterval(async function() {
+                if (!currentCode) return;
+                try {
+                    var resp = await fetch('/api/kiosk/pairing-status?code=' + currentCode);
+                    if (!resp.ok) return;
+                    var data = await resp.json();
+                    if (data.status === 'paired' && data.token) {
+                        clearInterval(pollTimer);
+                        clearInterval(countdownTimer);
+                        showState('paired');
+                        setTimeout(function() {
+                            window.location.href = '/kiosk?token=' + encodeURIComponent(data.token);
+                        }, 1500);
+                    } else if (data.status === 'expired') {
+                        clearInterval(pollTimer);
+                        clearInterval(countdownTimer);
+                        requestNewCode();
+                    }
+                } catch (e) {
+                    // Silently retry on network errors
+                }
+            }, 3000);
+        }
+
+        function startCountdown() {
+            if (countdownTimer) clearInterval(countdownTimer);
+            updateCountdown();
+            countdownTimer = setInterval(function() {
+                var remaining = updateCountdown();
+                if (remaining <= 0) {
+                    clearInterval(countdownTimer);
+                    clearInterval(pollTimer);
+                    showExpired();
+                }
+            }, 1000);
+        }
+
+        function showExpired() {
+            // Auto-regenerate the code when it expires
+            document.getElementById('countdown').textContent = 'Code expired — refreshing...';
+            requestNewCode();
+        }
+
+        function updateCountdown() {
+            var now = new Date();
+            var diff = Math.max(0, Math.floor((expiresAt - now) / 1000));
+            var mins = Math.floor(diff / 60);
+            var secs = diff % 60;
+            document.getElementById('countdown').textContent =
+                'Expires in ' + mins + ':' + (secs < 10 ? '0' : '') + secs;
+            return diff;
+        }
+
+        function showState(state) {
+            document.getElementById('stateLoading').classList.toggle('hidden', state !== 'loading');
+            document.getElementById('statePairing').classList.toggle('hidden', state !== 'pairing');
+            document.getElementById('statePaired').classList.toggle('hidden', state !== 'paired');
+            document.getElementById('advancedBtn').classList.toggle('hidden', state === 'paired');
+            if (state === 'paired') {
+                document.getElementById('advancedSection').style.display = 'none';
+            }
+        }
+
+        function toggleAdvanced() {
+            var section = document.getElementById('advancedSection');
+            section.style.display = section.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function connectWithToken(e) {
+            e.preventDefault();
+            var token = document.getElementById('tokenInput').value.trim();
+            if (token) {
+                window.location.href = '/kiosk?token=' + encodeURIComponent(token);
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>

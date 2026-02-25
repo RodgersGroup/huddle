@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Huddle - Household Settings</title>
+    <link rel="icon" type="image/svg+xml" href="/static/icon.svg">
+    <link rel="apple-touch-icon" href="/static/icon-192.png">
+    <meta name="theme-color" content="#1a1a1a">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        :root {
+            --bg-primary: #1a1a1a;
+            --bg-card: #242424;
+            --bg-card-hover: #2a2a2a;
+            --bg-input: #2a2a2a;
+            --text-primary: #f5f5f5;
+            --text-secondary: #b0b0b0;
+            --text-muted: #707070;
+            --accent: #4ecdc4;
+            --accent-hover: #45b7b0;
+            --danger: #ff6b6b;
+            --border-radius: 16px;
+            --border-radius-sm: 10px;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 0 0 40px 0;
+        }
+        .header {
+            position: sticky;
+            top: 0;
+            background: var(--bg-primary);
+            padding: 16px 20px;
+            border-bottom: 1px solid #333;
+            z-index: 100;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 { font-size: 1.3rem; font-weight: 600; }
+        .header-back {
+            color: var(--accent);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        .content { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .section {
+            background: var(--bg-card);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+        .section-title {
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            margin-bottom: 14px;
+        }
+        .member-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid #333;
+        }
+        .member-row:last-child { border-bottom: none; }
+        .member-dot {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .member-info { flex: 1; }
+        .member-name { font-weight: 600; font-size: 0.95rem; }
+        .member-role {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: capitalize;
+        }
+        .member-email {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+        .invite-code-box {
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 1.6rem;
+            font-weight: 700;
+            letter-spacing: 3px;
+            text-align: center;
+            padding: 16px;
+            background: var(--bg-input);
+            border-radius: var(--border-radius-sm);
+            color: var(--accent);
+            margin-bottom: 12px;
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 10px 18px;
+            border: none;
+            border-radius: var(--border-radius-sm);
+            font-family: inherit;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-sm { padding: 8px 14px; font-size: 0.82rem; }
+        .btn-primary { background: var(--accent); color: #1a1a1a; }
+        .btn-primary:hover { background: var(--accent-hover); }
+        .btn-secondary { background: transparent; color: var(--text-primary); border: 1px solid #444; }
+        .btn-secondary:hover { background: var(--bg-card-hover); }
+        .btn-danger { background: rgba(255,107,107,0.15); color: var(--danger); }
+        .btn-danger:hover { background: rgba(255,107,107,0.25); }
+        .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+        .module-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 0;
+            border-bottom: 1px solid #333;
+        }
+        .module-row:last-child { border-bottom: none; }
+        .module-info { flex: 1; }
+        .module-name { font-weight: 600; font-size: 0.95rem; }
+        .module-desc { font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px; }
+        .toggle {
+            position: relative;
+            width: 48px;
+            height: 28px;
+            flex-shrink: 0;
+        }
+        .toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .toggle-slider {
+            position: absolute;
+            inset: 0;
+            background: #444;
+            border-radius: 14px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .toggle-slider::before {
+            content: '';
+            position: absolute;
+            height: 22px;
+            width: 22px;
+            left: 3px;
+            bottom: 3px;
+            background: white;
+            border-radius: 50%;
+            transition: 0.2s;
+        }
+        .toggle input:checked + .toggle-slider { background: var(--accent); }
+        .toggle input:checked + .toggle-slider::before { transform: translateX(20px); }
+        .kiosk-token-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #333;
+        }
+        .kiosk-token-row:last-child { border-bottom: none; }
+        .token-label { font-weight: 600; font-size: 0.9rem; }
+        .token-meta { font-size: 0.78rem; color: var(--text-muted); }
+        .msg {
+            padding: 10px 14px;
+            border-radius: var(--border-radius-sm);
+            margin-bottom: 12px;
+            font-size: 0.85rem;
+        }
+        .msg-success { background: rgba(78,205,196,0.15); color: var(--accent); }
+        .msg-error { background: rgba(255,107,107,0.15); color: #ff6b6b; }
+        .empty-state {
+            text-align: center;
+            color: var(--text-muted);
+            padding: 20px;
+            font-size: 0.9rem;
+        }
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid transparent;
+            border-top-color: currentColor;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .form-group {
+            margin-bottom: 14px;
+        }
+        .form-group label {
+            display: block;
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            margin-bottom: 5px;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 12px 14px;
+            background: var(--bg-input);
+            border: 1px solid #333;
+            border-radius: var(--border-radius-sm);
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.95rem;
+            outline: none;
+        }
+        .form-group input:focus { border-color: var(--accent); }
+        .copy-btn {
+            background: none;
+            border: none;
+            color: var(--accent);
+            cursor: pointer;
+            font-size: 0.82rem;
+            font-weight: 600;
+            padding: 4px 8px;
+        }
+        .copy-btn:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+<div class="header">
+    <a href="/mobile" class="header-back">&#8592; Back</a>
+    <h1>Household Settings</h1>
+    <div style="width: 50px;"></div>
+</div>
+
+<div class="content">
+    <!-- Household info -->
+    <div class="section">
+        <div class="section-title">Household</div>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+                <div style="font-size:1.1rem; font-weight:600;" id="householdName">Loading...</div>
+                <div style="font-size:0.82rem; color:var(--text-muted);" id="householdRole"></div>
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="showEditName()">Edit</button>
+        </div>
+        <div id="editNameForm" style="display:none; margin-top:12px;">
+            <div class="form-group" style="margin-bottom:8px;">
+                <input type="text" id="editNameInput" placeholder="Household name" maxlength="50">
+            </div>
+            <div class="btn-row">
+                <button class="btn btn-primary btn-sm" onclick="saveHouseholdName()">Save</button>
+                <button class="btn btn-secondary btn-sm" onclick="hideEditName()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Members -->
+    <div class="section">
+        <div class="section-title">Members</div>
+        <div id="membersList"></div>
+    </div>
+
+    <!-- Invite -->
+    <div class="section" id="inviteSection">
+        <div class="section-title">Invite Members</div>
+        <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:12px;">
+            Share this code with people you want to invite:
+        </p>
+        <div class="invite-code-box" id="inviteCodeDisplay">--------</div>
+        <div class="btn-row" style="justify-content:center;">
+            <button class="btn btn-secondary btn-sm" onclick="copyInviteCode()">Copy Code</button>
+            <button class="btn btn-secondary btn-sm" onclick="copyInviteLink()">Copy Link</button>
+            <button class="btn btn-secondary btn-sm" onclick="regenerateInvite()">New Code</button>
+        </div>
+        <div id="inviteMsg" style="margin-top:10px;"></div>
+    </div>
+
+    <!-- Modules -->
+    <div class="section">
+        <div class="section-title">Modules</div>
+        <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:12px;">
+            Choose which features are available for your household.
+        </p>
+        <div id="modulesList"></div>
+    </div>
+
+    <!-- Kiosk tokens -->
+    <div class="section" id="kioskSection">
+        <div class="section-title">Kiosk Displays</div>
+        <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:12px;">
+            Generate tokens for Raspberry Pi kiosk displays.
+        </p>
+        <div id="kioskTokensList"></div>
+        <div style="margin-top:12px;">
+            <div class="form-group" style="margin-bottom:8px;">
+                <input type="text" id="kioskLabel" placeholder="Label (e.g. Kitchen Pi)" maxlength="30">
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="createKioskToken()">Generate Token</button>
+        </div>
+        <div id="kioskMsg" style="margin-top:10px;"></div>
+    </div>
+
+    <!-- Danger zone -->
+    <div class="section" style="border: 1px solid rgba(255,107,107,0.3);">
+        <div class="section-title" style="color:var(--danger);">Account</div>
+        <button class="btn btn-danger btn-sm" onclick="logout()">Log out</button>
+    </div>
+</div>
+
+<script>
+    // CSRF protection: auto-inject X-Requested-With on state-changing requests
+    (function() {
+        const _origFetch = window.fetch;
+        const CSRF_METHODS = new Set(['POST', 'PUT', 'DELETE', 'PATCH']);
+        window.fetch = function(input, init) {
+            if (init && CSRF_METHODS.has((init.method || 'GET').toUpperCase())) {
+                init.headers = init.headers || {};
+                if (init.headers instanceof Headers) {
+                    if (!init.headers.has('X-Requested-With')) init.headers.set('X-Requested-With', 'XMLHttpRequest');
+                } else {
+                    if (!init.headers['X-Requested-With']) init.headers['X-Requested-With'] = 'XMLHttpRequest';
+                }
+            }
+            return _origFetch.call(this, input, init);
+        };
+    })();
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    let currentUser = null;
+    let householdData = null;
+    let inviteCode = '';
+
+    async function loadData() {
+        try {
+            const resp = await fetch('/api/auth/me');
+            if (!resp.ok) {
+                window.location = '/onboard';
+                return;
+            }
+            const data = await resp.json();
+            currentUser = data.user;
+            householdData = data.household;
+
+            document.getElementById('householdName').textContent = data.household?.name || 'Unknown';
+            document.getElementById('householdRole').textContent = `You are ${currentUser.display_name} (${currentUser.role})`;
+
+            // Render members
+            const membersList = document.getElementById('membersList');
+            if (data.members && data.members.length) {
+                membersList.innerHTML = data.members.map(m => `
+                    <div class="member-row">
+                        <div class="member-dot" style="background: ${m.color}"></div>
+                        <div class="member-info">
+                            <div class="member-name">${escapeHtml(m.display_name)}${m.user_id === currentUser.user_id ? ' (you)' : ''}</div>
+                            <div class="member-role">${escapeHtml(m.role)}</div>
+                            ${m.email ? `<div class="member-email">${escapeHtml(m.email)}</div>` : ''}
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                membersList.innerHTML = '<div class="empty-state">No members found.</div>';
+            }
+
+            // Only show admin sections for owners/admins
+            const isAdmin = currentUser.role === 'manager';
+            document.getElementById('inviteSection').style.display = isAdmin ? 'block' : 'none';
+            document.getElementById('kioskSection').style.display = isAdmin ? 'block' : 'none';
+
+        } catch (e) {
+            window.location = '/onboard';
+        }
+    }
+
+    async function loadInviteCode() {
+        try {
+            const resp = await fetch('/api/household/invite', {method: 'POST'});
+            // We need to GET it. Let's use /api/auth/me which doesn't have invite.
+            // Actually the invite code is returned from generate. Let's just load it from households.
+            // For now, generate a fresh one if admin
+            if (resp.ok) {
+                const data = await resp.json();
+                inviteCode = data.invite_code;
+                document.getElementById('inviteCodeDisplay').textContent = inviteCode;
+            }
+        } catch (e) {
+            // Silently fail
+        }
+    }
+
+    async function loadModules() {
+        try {
+            const resp = await fetch('/api/modules');
+            if (!resp.ok) return;
+            const data = await resp.json();
+
+            const el = document.getElementById('modulesList');
+            el.innerHTML = data.modules.map(m => `
+                <div class="module-row">
+                    <div class="module-info">
+                        <div class="module-name">${m.name}</div>
+                        <div class="module-desc">${m.description}</div>
+                    </div>
+                    <label class="toggle">
+                        <input type="checkbox" ${m.enabled ? 'checked' : ''}
+                               onchange="toggleModule('${m.key}', this.checked)">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            `).join('');
+        } catch (e) {
+            document.getElementById('modulesList').innerHTML = '<div class="empty-state">Failed to load modules.</div>';
+        }
+    }
+
+    async function loadKioskTokens() {
+        try {
+            const resp = await fetch('/api/household/kiosk-tokens');
+            if (!resp.ok) return;
+            const data = await resp.json();
+
+            const el = document.getElementById('kioskTokensList');
+            if (!data.kiosk_tokens || data.kiosk_tokens.length === 0) {
+                el.innerHTML = '<div class="empty-state">No kiosk tokens yet.</div>';
+                return;
+            }
+
+            el.innerHTML = data.kiosk_tokens.map(t => `
+                <div class="kiosk-token-row">
+                    <div>
+                        <div class="token-label">${t.label || 'Unnamed'}</div>
+                        <div class="token-meta">Created: ${new Date(t.created_at).toLocaleDateString()}</div>
+                        ${t.last_used_at ? `<div class="token-meta">Last used: ${new Date(t.last_used_at).toLocaleDateString()}</div>` : ''}
+                    </div>
+                    <button class="btn btn-danger btn-sm" onclick="revokeKioskToken(${t.id})">Revoke</button>
+                </div>
+            `).join('');
+        } catch (e) {
+            // Silently fail
+        }
+    }
+
+    async function toggleModule(key, enabled) {
+        try {
+            await fetch(`/api/modules/${key}`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({enabled})
+            });
+        } catch (e) {
+            // Revert toggle on error
+            loadModules();
+        }
+    }
+
+    function showEditName() {
+        document.getElementById('editNameForm').style.display = 'block';
+        const input = document.getElementById('editNameInput');
+        input.value = householdData?.name || '';
+        input.focus();
+    }
+
+    function hideEditName() {
+        document.getElementById('editNameForm').style.display = 'none';
+    }
+
+    async function saveHouseholdName() {
+        const name = document.getElementById('editNameInput').value.trim();
+        if (!name) return;
+
+        try {
+            await fetch('/api/settings/household_name', {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({value: name})
+            });
+            document.getElementById('householdName').textContent = name;
+            hideEditName();
+        } catch (e) {
+            alert('Failed to update name');
+        }
+    }
+
+    function copyInviteCode() {
+        navigator.clipboard.writeText(inviteCode).then(() => {
+            showInviteMsg('Code copied!', 'success');
+        });
+    }
+
+    function copyInviteLink() {
+        const url = `${window.location.origin}/onboard?invite=${inviteCode}`;
+        navigator.clipboard.writeText(url).then(() => {
+            showInviteMsg('Link copied!', 'success');
+        });
+    }
+
+    async function regenerateInvite() {
+        try {
+            const resp = await fetch('/api/household/invite', {method: 'POST'});
+            if (resp.ok) {
+                const data = await resp.json();
+                inviteCode = data.invite_code;
+                document.getElementById('inviteCodeDisplay').textContent = inviteCode;
+                showInviteMsg('New invite code generated.', 'success');
+            }
+        } catch (e) {
+            showInviteMsg('Failed to generate new code.', 'error');
+        }
+    }
+
+    function showInviteMsg(text, type) {
+        const el = document.getElementById('inviteMsg');
+        el.innerHTML = `<div class="msg msg-${type}">${text}</div>`;
+        setTimeout(() => { el.innerHTML = ''; }, 3000);
+    }
+
+    async function createKioskToken() {
+        const label = document.getElementById('kioskLabel').value.trim() || 'Kiosk';
+
+        try {
+            const resp = await fetch('/api/household/kiosk-token', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({label})
+            });
+            if (resp.ok) {
+                const data = await resp.json();
+                const token = data.kiosk_token.token;
+                const kioskUrl = `${window.location.origin}/?token=${token}`;
+
+                document.getElementById('kioskMsg').innerHTML = `
+                    <div class="msg msg-success">
+                        Token created! Kiosk URL:<br>
+                        <code style="word-break:break-all; font-size:0.78rem;">${kioskUrl}</code>
+                        <button class="copy-btn" onclick="navigator.clipboard.writeText('${kioskUrl}')">Copy</button>
+                    </div>
+                `;
+                document.getElementById('kioskLabel').value = '';
+                loadKioskTokens();
+            }
+        } catch (e) {
+            document.getElementById('kioskMsg').innerHTML = '<div class="msg msg-error">Failed to create token.</div>';
+        }
+    }
+
+    async function revokeKioskToken(tokenId) {
+        if (!confirm('Revoke this kiosk token? The kiosk display will stop working.')) return;
+
+        try {
+            await fetch(`/api/household/kiosk-token/${tokenId}`, {method: 'DELETE'});
+            loadKioskTokens();
+        } catch (e) {
+            alert('Failed to revoke token');
+        }
+    }
+
+    async function logout() {
+        await fetch('/api/auth/logout', {method: 'POST'});
+        window.location = '/onboard';
+    }
+
+    // Init
+    loadData().then(() => {
+        loadInviteCode();
+        loadModules();
+        loadKioskTokens();
+    });
+</script>
+</body>
+</html>

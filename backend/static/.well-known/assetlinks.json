@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "au.rodgersgroup.huddle",
+      "sha256_cert_fingerprints": [
+        "57:61:6B:66:26:FE:0F:A7:89:0E:46:7D:0E:73:4C:45:96:F8:B2:A9:AC:73:50:99:C8:DC:04:4B:79:D2:85:E4"
+      ]
+    }
+  }
+]

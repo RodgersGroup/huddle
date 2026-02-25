@@ -1,0 +1,30 @@
+[Unit]
+Description=Chores Kiosk Service
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=10
+
+[Service]
+Type=simple
+User=keiran
+WorkingDirectory=/home/keiran/chores-kiosk
+ExecStart=/home/keiran/chores-kiosk/venv/bin/python -m uvicorn app:app --host 0.0.0.0 --port 8001
+Restart=always
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+
+# Logging - output to journal (viewable with journalctl -u chores-kiosk)
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=chores-kiosk
+
+# Watchdog: systemd kills and restarts if no ping within 60s
+WatchdogSec=60
+
+# Restart on network failures too
+TimeoutStartSec=30
+TimeoutStopSec=10
+
+[Install]
+WantedBy=multi-user.target

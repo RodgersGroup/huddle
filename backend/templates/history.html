@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Huddle - History</title>
+    <link rel="icon" type="image/svg+xml" href="/static/icon.svg">
+    <link rel="apple-touch-icon" href="/static/icon-192.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #1a1a1a;
+            --bg-card: #242424;
+            --text-primary: #f5f5f5;
+            --text-secondary: #a0a0a0;
+            --text-muted: #666;
+            --accent-keiran: #4ecdc4;
+            --accent-ciara: #ff6b9d;
+            --accent-tahni: #4caf50;
+            --border-radius: 12px;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 24px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+        }
+
+        h1 {
+            font-family: 'Fraunces', serif;
+            font-weight: 600;
+            font-size: 2rem;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            background: var(--bg-card);
+            color: var(--text-primary);
+        }
+
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--bg-card);
+            padding: 16px 20px;
+            border-radius: var(--border-radius);
+        }
+
+        .history-item.skipped {
+            opacity: 0.6;
+        }
+
+        .history-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .history-chore {
+            font-weight: 500;
+        }
+
+        .history-by {
+            font-size: 0.9rem;
+        }
+
+        .history-by.keiran { color: var(--accent-keiran); }
+        .history-by.ciara { color: var(--accent-ciara); }
+        .history-by.tahni { color: var(--accent-tahni); }
+        .history-by.skipped { color: var(--text-muted); font-style: italic; }
+
+        .history-time {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            text-align: right;
+        }
+
+        .date-divider {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            padding: 16px 0 8px;
+            border-bottom: 1px solid #333;
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>History</h1>
+            <a href="/admin" class="btn">Back to Admin</a>
+        </header>
+
+        <div class="history-list" id="historyList">
+            <!-- Populated by JS -->
+        </div>
+    </div>
+
+    <script>
+        async function fetchHistory() {
+            try {
+                const response = await fetch('/api/history?limit=100');
+                const data = await response.json();
+                renderHistory(data.history);
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        function formatTime(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            const today = new Date();
+            const yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+
+            if (date.toDateString() === today.toDateString()) return 'Today';
+            if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
+            return date.toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long' });
+        }
+
+        function renderHistory(history) {
+            const container = document.getElementById('historyList');
+            let html = '';
+            let currentDate = '';
+
+            history.forEach(item => {
+                const itemDate = formatDate(item.completed_at);
+                
+                if (itemDate !== currentDate) {
+                    currentDate = itemDate;
+                    html += `<div class="date-divider">${itemDate}</div>`;
+                }
+
+                const isSkipped = item.completed_by === 'SKIPPED';
+                const personClass = isSkipped ? 'skipped' : item.completed_by.toLowerCase();
+
+                html += `
+                    <div class="history-item ${isSkipped ? 'skipped' : ''}">
+                        <div class="history-info">
+                            <div class="history-chore">${item.chore_name}</div>
+                            <div class="history-by ${personClass}">
+                                ${isSkipped ? 'Skipped' : item.completed_by}
+                            </div>
+                        </div>
+                        <div class="history-time">${formatTime(item.completed_at)}</div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html || '<p style="color: var(--text-muted); text-align: center; padding: 40px;">No history yet.</p>';
+        }
+
+        fetchHistory();
+    </script>
+</body>
+</html>

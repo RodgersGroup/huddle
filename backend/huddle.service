@@ -1,0 +1,18 @@
+[Unit]
+Description=Huddle Household Manager
+After=network.target
+
+[Service]
+Type=simple
+User=keiran
+WorkingDirectory=/home/keiran/huddle/backend
+ExecStart=/home/keiran/huddle/backend/venv/bin/python -m uvicorn app:app --host 0.0.0.0 --port 8001
+Restart=always
+RestartSec=5
+WatchdogSec=60
+StandardOutput=journal
+StandardError=journal
+Environment=ENVIRONMENT=production
+
+[Install]
+WantedBy=multi-user.target

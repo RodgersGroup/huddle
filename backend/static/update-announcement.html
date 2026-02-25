@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Huddle — February 2026 Update</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --teal: #4ecdc4;
+    --teal-dim: #3ba89f;
+    --teal-glow: rgba(78, 205, 196, 0.15);
+    --pink: #ff6b9d;
+    --gold: #fbbf24;
+    --purple: #a78bfa;
+    --green: #34d399;
+    --bg: #0f1117;
+    --bg-card: #181b24;
+    --bg-card-hover: #1e2230;
+    --text: #e8eaed;
+    --text-dim: #8b8fa3;
+    --border: rgba(78, 205, 196, 0.12);
+    --serif: 'DM Serif Display', Georgia, serif;
+    --sans: 'Outfit', system-ui, sans-serif;
+    --mono: 'JetBrains Mono', monospace;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  /* === HERO === */
+  .hero {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 80px 32px;
+    text-align: center;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -40%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 800px;
+    height: 800px;
+    background: radial-gradient(circle, rgba(78, 205, 196, 0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .hero::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--teal), transparent);
+    opacity: 0.3;
+  }
+
+  /* Floating grid lines */
+  .grid-lines {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.03;
+    background-image:
+      linear-gradient(rgba(78, 205, 196, 1) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(78, 205, 196, 1) 1px, transparent 1px);
+    background-size: 80px 80px;
+    mask-image: radial-gradient(ellipse 60% 60% at 50% 50%, black 20%, transparent 70%);
+  }
+
+  .version-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 20px;
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    color: var(--teal);
+    letter-spacing: 0.5px;
+    margin-bottom: 40px;
+    animation: fadeSlideUp 0.8s ease both;
+    background: rgba(78, 205, 196, 0.04);
+  }
+
+  .version-badge .dot {
+    width: 6px;
+    height: 6px;
+    background: var(--teal);
+    border-radius: 50%;
+    animation: pulse 2s ease infinite;
+  }
+
+  .hero-title {
+    font-family: var(--serif);
+    font-size: clamp(3rem, 8vw, 6.5rem);
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    margin-bottom: 24px;
+    animation: fadeSlideUp 0.8s 0.15s ease both;
+  }
+
+  .hero-title .accent {
+    color: var(--teal);
+    font-style: italic;
+  }
+
+  .hero-subtitle {
+    font-size: clamp(1.1rem, 2.5vw, 1.4rem);
+    color: var(--text-dim);
+    max-width: 560px;
+    font-weight: 300;
+    margin-bottom: 48px;
+    animation: fadeSlideUp 0.8s 0.3s ease both;
+  }
+
+  .stat-strip {
+    display: flex;
+    gap: 48px;
+    justify-content: center;
+    flex-wrap: wrap;
+    animation: fadeSlideUp 0.8s 0.45s ease both;
+  }
+
+  .stat {
+    text-align: center;
+  }
+
+  .stat-number {
+    font-family: var(--serif);
+    font-size: 2.8rem;
+    color: var(--teal);
+    line-height: 1;
+  }
+
+  .stat-label {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-top: 6px;
+  }
+
+  /* === FEATURES SECTION === */
+  .features-section {
+    padding: 100px 32px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .section-label {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--teal);
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    margin-bottom: 16px;
+  }
+
+  .section-title {
+    font-family: var(--serif);
+    font-size: clamp(2rem, 4vw, 3rem);
+    margin-bottom: 64px;
+    line-height: 1.15;
+  }
+
+  /* Feature grid - asymmetric bento */
+  .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 16px;
+  }
+
+  .feature-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 32px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .feature-card:hover {
+    background: var(--bg-card-hover);
+    border-color: rgba(78, 205, 196, 0.25);
+    transform: translateY(-2px);
+  }
+
+  .feature-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--card-accent, var(--teal));
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .feature-card:hover::before { opacity: 1; }
+
+  /* Bento layout sizes */
+  .card-wide { grid-column: span 8; }
+  .card-narrow { grid-column: span 4; }
+  .card-half { grid-column: span 6; }
+  .card-third { grid-column: span 4; }
+  .card-full { grid-column: span 12; }
+
+  @media (max-width: 768px) {
+    .card-wide, .card-narrow, .card-half, .card-third, .card-full {
+      grid-column: span 12;
+    }
+  }
+
+  .card-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    margin-bottom: 20px;
+    background: var(--card-accent-bg, var(--teal-glow));
+  }
+
+  .card-title {
+    font-family: var(--serif);
+    font-size: 1.35rem;
+    margin-bottom: 10px;
+    line-height: 1.25;
+  }
+
+  .card-desc {
+    color: var(--text-dim);
+    font-size: 0.92rem;
+    line-height: 1.6;
+    font-weight: 300;
+  }
+
+  .card-tag {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 100px;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    margin-top: 16px;
+    letter-spacing: 0.5px;
+  }
+
+  .tag-new { background: rgba(52, 211, 153, 0.12); color: #34d399; }
+  .tag-improved { background: rgba(78, 205, 196, 0.12); color: var(--teal); }
+  .tag-fixed { background: rgba(251, 191, 36, 0.12); color: #fbbf24; }
+
+  /* === HIGHLIGHTS STRIP === */
+  .highlights {
+    padding: 80px 32px;
+    background: linear-gradient(180deg, transparent, rgba(78, 205, 196, 0.02), transparent);
+    position: relative;
+  }
+
+  .highlights::before,
+  .highlights::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--teal), transparent);
+    opacity: 0.15;
+  }
+  .highlights::before { top: 0; }
+  .highlights::after { bottom: 0; }
+
+  .highlights-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .highlight-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 24px;
+    margin-top: 48px;
+  }
+
+  .highlight-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 20px 24px;
+    background: rgba(24, 27, 36, 0.6);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    transition: all 0.3s;
+  }
+
+  .highlight-item:hover {
+    border-color: rgba(78, 205, 196, 0.2);
+    background: rgba(24, 27, 36, 0.9);
+  }
+
+  .highlight-check {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: rgba(52, 211, 153, 0.12);
+    color: #34d399;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .highlight-text {
+    font-size: 0.92rem;
+    color: var(--text-dim);
+    font-weight: 400;
+  }
+
+  .highlight-text strong {
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  /* === CTA === */
+  .cta-section {
+    padding: 120px 32px;
+    text-align: center;
+    position: relative;
+  }
+
+  .cta-section::before {
+    content: '';
+    position: absolute;
+    bottom: 20%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(78, 205, 196, 0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .cta-title {
+    font-family: var(--serif);
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    margin-bottom: 20px;
+    line-height: 1.1;
+  }
+
+  .cta-sub {
+    font-size: 1.1rem;
+    color: var(--text-dim);
+    font-weight: 300;
+    margin-bottom: 40px;
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .cta-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 36px;
+    background: var(--teal);
+    color: #0f1117;
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 1rem;
+    border: none;
+    border-radius: 100px;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-decoration: none;
+    letter-spacing: 0.02em;
+  }
+
+  .cta-btn:hover {
+    background: #5ee0d6;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(78, 205, 196, 0.25);
+  }
+
+  .cta-btn svg {
+    width: 18px;
+    height: 18px;
+    transition: transform 0.3s;
+  }
+
+  .cta-btn:hover svg { transform: translateX(3px); }
+
+  /* === FOOTER === */
+  .footer {
+    padding: 40px 32px;
+    text-align: center;
+    border-top: 1px solid rgba(78, 205, 196, 0.08);
+  }
+
+  .footer-logo {
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+  }
+
+  .footer-logo span { color: var(--teal); }
+
+  .footer-sub {
+    font-size: 0.8rem;
+    color: #555;
+  }
+
+  /* === ANIMATIONS === */
+  @keyframes fadeSlideUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* Scroll-triggered reveals */
+  .reveal {
+    opacity: 0;
+    transform: translateY(32px);
+    transition: all 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* === SOCIAL PREVIEW CARD (for screenshots) === */
+  .social-card {
+    width: 1200px;
+    min-height: 628px;
+    background: var(--bg);
+    padding: 80px;
+    display: none; /* toggle to screenshot */
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Print / screenshot mode - add ?card=true */
+  body.card-mode .hero,
+  body.card-mode .features-section,
+  body.card-mode .highlights,
+  body.card-mode .cta-section,
+  body.card-mode .footer { display: none; }
+
+  body.card-mode .social-card { display: flex; }
+
+  body.card-mode {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: #000;
+  }
+</style>
+</head>
+<body>
+
+  <!-- === OG:IMAGE / SOCIAL CARD (1200x628) === -->
+  <div class="social-card" id="socialCard">
+    <div class="grid-lines"></div>
+    <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg, var(--teal), var(--pink), var(--purple), var(--teal));"></div>
+    <div style="position:relative;z-index:1;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:48px;">
+        <div style="width:48px;height:48px;background:linear-gradient(135deg, var(--teal), var(--teal-dim));border-radius:14px;display:flex;align-items:center;justify-content:center;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="26" height="26">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+        </div>
+        <span style="font-family:var(--sans);font-weight:700;font-size:1.5rem;"><span style="color:var(--teal);">H</span>uddle</span>
+        <span style="font-family:var(--mono);font-size:0.75rem;color:var(--text-dim);padding:4px 14px;border:1px solid var(--border);border-radius:100px;margin-left:8px;">FEBRUARY 2026</span>
+      </div>
+      <div style="font-family:var(--serif);font-size:4.2rem;line-height:1.08;margin-bottom:24px;letter-spacing:-0.02em;">
+        The Biggest Update<br><span style="color:var(--teal);font-style:italic;">Yet.</span>
+      </div>
+      <div style="font-size:1.2rem;color:var(--text-dim);font-weight:300;max-width:600px;margin-bottom:48px;">
+        20+ new features. Real-time sync. Freezer tracking. Recipe editing. Multi-kid routines. And so much more.
+      </div>
+      <div style="display:flex;gap:40px;">
+        <div>
+          <div style="font-family:var(--serif);font-size:2.5rem;color:var(--teal);">67</div>
+          <div style="font-size:0.75rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:1.5px;">Updates</div>
+        </div>
+        <div>
+          <div style="font-family:var(--serif);font-size:2.5rem;color:var(--pink);">12</div>
+          <div style="font-size:0.75rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:1.5px;">New Features</div>
+        </div>
+        <div>
+          <div style="font-family:var(--serif);font-size:2.5rem;color:var(--gold);">24</div>
+          <div style="font-size:0.75rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:1.5px;">Bug Fixes</div>
+        </div>
+      </div>
+    </div>
+    <div style="position:absolute;bottom:-100px;right:-100px;width:400px;height:400px;background:radial-gradient(circle, rgba(78,205,196,0.08), transparent 70%);"></div>
+  </div>
+
+  <!-- === FULL ANNOUNCEMENT PAGE === -->
+  <section class="hero">
+    <div class="grid-lines"></div>
+    <div class="version-badge">
+      <span class="dot"></span>
+      February 2026 Release
+    </div>
+    <h1 class="hero-title">
+      The Biggest Update<br><span class="accent">Yet.</span>
+    </h1>
+    <p class="hero-subtitle">
+      20+ new features, real-time sync, and a completely refreshed experience.
+      Huddle just got a whole lot better.
+    </p>
+    <div class="stat-strip">
+      <div class="stat">
+        <div class="stat-number">67</div>
+        <div class="stat-label">Updates Shipped</div>
+      </div>
+      <div class="stat">
+        <div class="stat-number">12</div>
+        <div class="stat-label">New Features</div>
+      </div>
+      <div class="stat">
+        <div class="stat-number">24</div>
+        <div class="stat-label">Bugs Squashed</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- === FEATURE GRID === -->
+  <section class="features-section">
+    <div class="section-label reveal">What's New</div>
+    <h2 class="section-title reveal">Features that <span style="color:var(--teal);">actually matter</span></h2>
+
+    <div class="feature-grid">
+      <!-- Freezer Inventory -->
+      <div class="feature-card card-wide reveal" style="--card-accent: var(--teal); --card-accent-bg: var(--teal-glow);">
+        <div class="card-icon">&#10052;&#65039;</div>
+        <div class="card-title">Freezer Inventory</div>
+        <div class="card-desc">
+          Track frozen meals, leftovers, and bulk items. See what's expiring, categorise by type,
+          and never wonder "what's actually in the freezer?" again. Lives right in your Supplies tab
+          alongside Shopping and Pantry.
+        </div>
+        <span class="card-tag tag-new">New</span>
+      </div>
+
+      <!-- Real-time Sync -->
+      <div class="feature-card card-narrow reveal" style="--card-accent: #34d399; --card-accent-bg: rgba(52,211,153,0.1);">
+        <div class="card-icon">&#9889;</div>
+        <div class="card-title">Instant Sync</div>
+        <div class="card-desc">
+          Changes now appear instantly across all devices. No more pull-to-refresh. Mark a chore done on your phone and the kiosk updates in real time.
+        </div>
+        <span class="card-tag tag-improved">Improved</span>
+      </div>
+
+      <!-- Recipe Editing -->
+      <div class="feature-card card-narrow reveal" style="--card-accent: #f97316; --card-accent-bg: rgba(249,115,22,0.1);">
+        <div class="card-icon">&#9997;&#65039;</div>
+        <div class="card-title">Edit Recipes</div>
+        <div class="card-desc">
+          Full recipe editing — update ingredients, steps, servings, and more. Ingredient quantities now auto-parse from freetext too.
+        </div>
+        <span class="card-tag tag-new">New</span>
+      </div>
+
+      <!-- Multi-kid -->
+      <div class="feature-card card-wide reveal" style="--card-accent: var(--pink); --card-accent-bg: rgba(255,107,157,0.1);">
+        <div class="card-icon">&#128106;</div>
+        <div class="card-title">Multi-Kid Routines &amp; Allowances</div>
+        <div class="card-desc">
+          Assign routines and record allowance transactions for multiple kids at once.
+          No more creating the same morning checklist one kid at a time — select everyone who needs it and save once.
+        </div>
+        <span class="card-tag tag-new">New</span>
+      </div>
+
+      <!-- Smart Shopping -->
+      <div class="feature-card card-third reveal" style="--card-accent: var(--gold); --card-accent-bg: rgba(251,191,36,0.1);">
+        <div class="card-icon">&#128722;</div>
+        <div class="card-title">Smart Shopping List</div>
+        <div class="card-desc">
+          Duplicate detection merges quantities automatically. Add "milk" when it's already there and it just bumps the count.
+        </div>
+        <span class="card-tag tag-new">New</span>
+      </div>
+
+      <!-- Household Switcher -->
+      <div class="feature-card card-third reveal" style="--card-accent: var(--purple); --card-accent-bg: rgba(167,139,250,0.1);">
+        <div class="card-icon">&#127968;</div>
+        <div class="card-title">Quick Switcher</div>
+        <div class="card-desc">
+          Tap the household badge to switch between homes instantly. Perfect for separated families or sharehouse managers.
+        </div>
+        <span class="card-tag tag-new">New</span>
+      </div>
+
+      <!-- Login UX -->
+      <div class="feature-card card-third reveal" style="--card-accent: #06b6d4; --card-accent-bg: rgba(6,182,212,0.1);">
+        <div class="card-icon">&#128274;</div>
+        <div class="card-title">Easier Login</div>
+        <div class="card-desc">
+          No more PINs. Members request access, managers approve via email. Device loads automatically.
+        </div>
+        <span class="card-tag tag-new">New</span>
+      </div>
+
+      <!-- Feedback -->
+      <div class="feature-card card-half reveal" style="--card-accent: #34d399; --card-accent-bg: rgba(52,211,153,0.1);">
+        <div class="card-icon">&#128172;</div>
+        <div class="card-title">Feedback You Can Track</div>
+        <div class="card-desc">
+          Filter to see your own submissions, get email notifications when your feedback is acknowledged or resolved, and reply directly to feedback threads.
+        </div>
+        <span class="card-tag tag-improved">Improved</span>
+      </div>
+
+      <!-- Pets & Kiosk -->
+      <div class="feature-card card-half reveal" style="--card-accent: #ec4899; --card-accent-bg: rgba(236,72,153,0.1);">
+        <div class="card-icon">&#128062;</div>
+        <div class="card-title">Pets &amp; Kiosk Refresh</div>
+        <div class="card-desc">
+          Pet care buttons now work on all screen sizes. The kiosk display got a fresh colour palette and improved layout consistency.
+        </div>
+        <span class="card-tag tag-fixed">Fixed</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- === ALSO IN THIS UPDATE === -->
+  <section class="highlights">
+    <div class="highlights-inner">
+      <div class="section-label reveal">Also in this update</div>
+      <h2 class="section-title reveal">And 30+ more improvements</h2>
+
+      <div class="highlight-list">
+        <div class="highlight-item reveal">
+          <div class="highlight-check">&#10003;</div>
+          <div class="highlight-text"><strong>Vehicle tracking</strong> — log mileage, services, and rego reminders</div>
+        </div>
+        <div class="highlight-item reveal">
+          <div class="highlight-check">&#10003;</div>
+          <div class="highlight-text"><strong>Parental controls</strong> — restrict module access for dependents</div>
+        </div>
+        <div class="highlight-item reveal">
+          <div class="highlight-check">&#10003;</div>
+          <div class="highlight-text"><strong>Calendar colours</strong> — dynamic per-person event colouring</div>
+        </div>
+        <div class="highlight-item reveal">
+          <div class="highlight-check">&#10003;</div>
+          <div class="highlight-text"><strong>Barcode scanning</strong> — scan items into your shopping list</div>
+        </div>
+        <div class="highlight-item reveal">
+          <div class="highlight-check">&#10003;</div>
+          <div class="highlight-text"><strong>Noticeboard</strong> — pin announcements, guest alerts, reminders</div>
+        </div>
+        <div class="highlight-item reveal">
+          <div class="highlight-check">&#10003;</div>
+          <div class="highlight-text"><strong>Assignments</strong> — homework tracker with due dates and priorities</div>
+        </div>
+        <div class="highlight-item reveal">
+          <div class="highlight-check">&#10003;</div>
+          <div class="highlight-text"><strong>Rewards &amp; stars</strong> — motivate kids with a points system</div>
+        </div>
+        <div class="highlight-item reveal">
+          <div class="highlight-check">&#10003;</div>
+          <div class="highlight-text"><strong>PWA install prompt</strong> — one-tap install on any device</div>
+        </div>
+        <div class="highlight-item reveal">
+          <div class="highlight-check">&#10003;</div>
+          <div class="highlight-text"><strong>Chore rotation fix</strong> — no more same person showing twice</div>
+        </div>
+        <div class="highlight-item reveal">
+          <div class="highlight-check">&#10003;</div>
+          <div class="highlight-text"><strong>Manager-approval access</strong> — members request access, managers approve via email</div>
+        </div>
+        <div class="highlight-item reveal">
+          <div class="highlight-check">&#10003;</div>
+          <div class="highlight-text"><strong>Recipe import</strong> — paste a URL, get structured ingredients</div>
+        </div>
+        <div class="highlight-item reveal">
+          <div class="highlight-check">&#10003;</div>
+          <div class="highlight-text"><strong>Settings redesign</strong> — clean iOS-style grouped layout</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- === CTA === -->
+  <section class="cta-section">
+    <h2 class="cta-title reveal">Ready to try it?</h2>
+    <p class="cta-sub reveal">
+      All updates are live now. Open Huddle and everything's already there.
+    </p>
+    <a href="https://huddle.rodgersgroup.au" class="cta-btn reveal">
+      Open Huddle
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+      </svg>
+    </a>
+  </section>
+
+  <footer class="footer">
+    <div class="footer-logo"><span>H</span>uddle</div>
+    <div class="footer-sub">Your household, organised.</div>
+  </footer>
+
+  <script>
+    // Scroll reveal
+    const observer = new IntersectionObserver(function(entries) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+    document.querySelectorAll('.reveal').forEach(function(el) {
+      observer.observe(el);
+    });
+
+    // Card mode for social media screenshot
+    if (new URLSearchParams(window.location.search).get('card') === 'true') {
+      document.body.classList.add('card-mode');
+    }
+  </script>
+</body>
+</html>

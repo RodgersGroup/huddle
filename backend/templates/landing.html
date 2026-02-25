@@ -1,0 +1,1472 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Huddle - Your household, sorted.</title>
+<meta name="description" content="Huddle is a household management app for Australian families and sharehouses. 20+ modules: chores, routines, meals, recipes, calendar, shopping, bills, self care, vehicles, and more. Free beta.">
+<meta property="og:title" content="Huddle - Your household, sorted.">
+<meta property="og:description" content="A household management app for Australian families and sharehouses. Free beta now open.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://huddle.rodgersgroup.au">
+<meta property="og:image" content="https://huddle.rodgersgroup.au/static/icon-512.png">
+<link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700;9..144,800&display=swap" rel="stylesheet">
+{% if GA4_MEASUREMENT_ID %}
+<script async src="https://www.googletagmanager.com/gtag/js?id={{ GA4_MEASUREMENT_ID }}"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','{{ GA4_MEASUREMENT_ID }}');</script>
+{% endif %}
+<style>
+:root {
+  --teal: #4ecdc4; --teal-dark: #3ab5ad; --teal-deeper: #2a9d8f;
+  --navy: #1a2332; --navy-mid: #232d3f; --navy-light: #2d3a4a;
+  --charcoal: #333; --slate: #8a95a8; --mist: #f0f5f4;
+  --white: #fff; --pink: #ff6b9d; --border: rgba(255,255,255,.08);
+}
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { font-family: 'DM Sans', -apple-system, sans-serif; color: #c8d0dc; background: var(--navy); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+
+/* ---- NAV ---- */
+.nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; backdrop-filter: blur(20px); background: rgba(26,35,50,.8); border-bottom: 1px solid var(--border); transition: background .3s; }
+.nav-logo { display: flex; align-items: center; gap: 6px; text-decoration: none; }
+.nav-logo svg { width: 32px; height: 32px; }
+.nav-logo span { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 800; letter-spacing: -.3px; }
+.nav-logo .nh { color: var(--teal); } .nav-logo .nu { color: #e8e8e8; }
+.nav-links { display: flex; align-items: center; gap: 28px; }
+.nav-links a { color: var(--slate); text-decoration: none; font-size: 14px; font-weight: 500; transition: color .2s; }
+.nav-links a:hover { color: var(--white); }
+.nav-cta { color: var(--slate) !important; font-weight: 600; font-size: 14px; padding: 10px 22px; border-radius: 10px; text-decoration: none; transition: all .2s; border: 1px solid rgba(255,255,255,.15); cursor: pointer; background: transparent !important; }
+.nav-cta:hover { color: var(--white) !important; border-color: rgba(255,255,255,.3); transform: translateY(-1px); }
+.nav-login { background: var(--teal) !important; color: var(--navy) !important; font-weight: 700; font-size: 14px; padding: 10px 22px; border-radius: 10px; text-decoration: none; transition: all .2s; border: none; cursor: pointer; }
+.nav-login:hover { background: var(--teal-dark) !important; transform: translateY(-1px); }
+
+/* ---- HERO ---- */
+.hero { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 120px 24px 80px; position: relative; overflow: hidden; }
+.hero::before { content: ''; position: absolute; top: -200px; right: -100px; width: 600px; height: 600px; border-radius: 50%; background: radial-gradient(circle, rgba(78,205,196,.1) 0%, transparent 70%); }
+.hero::after { content: ''; position: absolute; bottom: -100px; left: -50px; width: 400px; height: 400px; border-radius: 50%; background: radial-gradient(circle, rgba(255,107,157,.04) 0%, transparent 70%); }
+.hero-grid { position: absolute; inset: 0; background-image: radial-gradient(rgba(78,205,196,.04) 1px, transparent 1px); background-size: 40px 40px; }
+.hero-inner { max-width: 1100px; width: 100%; display: flex; align-items: center; gap: 64px; position: relative; z-index: 1; }
+.hero-text { flex: 1; }
+.hero-badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(78,205,196,.1); border: 1px solid rgba(78,205,196,.25); color: var(--teal); font-size: 13px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; padding: 8px 18px; border-radius: 24px; margin-bottom: 24px; }
+.hero-badge .pulse { width: 8px; height: 8px; background: var(--teal); border-radius: 50%; animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+.hero h1 { font-family: 'Fraunces', serif; font-size: clamp(40px, 6vw, 64px); font-weight: 800; color: var(--white); line-height: 1.05; letter-spacing: -2px; margin-bottom: 20px; }
+.hero h1 em { font-style: normal; color: var(--teal); }
+.hero-sub { font-size: 19px; line-height: 1.6; color: var(--slate); max-width: 480px; margin-bottom: 36px; }
+.hero-actions { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+.btn-primary { background: var(--teal); color: var(--navy); font-weight: 700; font-size: 16px; padding: 14px 32px; border-radius: 12px; text-decoration: none; transition: all .2s; display: inline-flex; align-items: center; gap: 8px; }
+.btn-primary:hover { background: var(--teal-dark); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(78,205,196,.25); }
+.btn-ghost { color: var(--slate); font-weight: 600; font-size: 15px; padding: 14px 24px; text-decoration: none; border: 1px solid rgba(255,255,255,.1); border-radius: 12px; transition: all .2s; }
+.btn-ghost:hover { border-color: rgba(255,255,255,.25); color: var(--white); }
+
+/* Phone mockup in hero */
+.hero-device { width: 300px; flex-shrink: 0; }
+.phone { width: 280px; background: #0d0f14; border-radius: 36px; padding: 12px; box-shadow: 0 24px 80px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.06); position: relative; }
+.phone-notch { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); width: 90px; height: 26px; background: #0d0f14; border-radius: 0 0 14px 14px; z-index: 2; }
+.phone-screen { background: #1a1d27; border-radius: 26px; overflow: hidden; padding: 42px 16px 20px; }
+.ph-day { font-size: 10px; color: rgba(255,255,255,.35); text-transform: uppercase; letter-spacing: .5px; }
+.ph-date { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 700; color: #fff; margin-bottom: 12px; }
+.ph-members { display: flex; gap: 6px; margin-bottom: 12px; }
+.ph-av { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #fff; }
+.ph-weather { background: #242830; border-radius: 10px; padding: 8px 12px; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; font-size: 11px; color: rgba(255,255,255,.5); }
+.ph-weather b { color: #fff; font-size: 13px; }
+.ph-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.ph-tile { background: #242830; border-radius: 10px; padding: 10px; }
+.ph-tile-icon { font-size: 15px; margin-bottom: 3px; }
+.ph-tile-name { font-size: 10.5px; font-weight: 700; color: #fff; }
+.ph-tile-sub { font-size: 8.5px; color: rgba(255,255,255,.35); line-height: 1.3; }
+
+/* ---- FEATURES ---- */
+.features { padding: 100px 24px; position: relative; }
+.features::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(78,205,196,.15), transparent); }
+.section-inner { max-width: 1100px; margin: 0 auto; }
+.section-label { font-size: 12px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--teal); margin-bottom: 12px; }
+.section-title { font-family: 'Fraunces', serif; font-size: clamp(28px, 4vw, 40px); font-weight: 700; color: var(--white); margin-bottom: 16px; letter-spacing: -1px; }
+.section-desc { color: var(--slate); font-size: 17px; max-width: 560px; margin-bottom: 48px; line-height: 1.6; }
+.feat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+.feat-card { background: var(--navy-mid); border: 1px solid var(--border); border-radius: 14px; padding: 28px; transition: all .3s; position: relative; overflow: hidden; }
+.feat-card:hover { border-color: rgba(78,205,196,.2); transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,.2); }
+.feat-card::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; border-radius: 4px 0 0 4px; }
+.feat-card:nth-child(1)::before { background: var(--teal); }
+.feat-card:nth-child(2)::before { background: #ff9800; }
+.feat-card:nth-child(3)::before { background: var(--pink); }
+.feat-card:nth-child(4)::before { background: #7e57c2; }
+.feat-card:nth-child(5)::before { background: #4caf50; }
+.feat-card:nth-child(6)::before { background: #3b82f6; }
+.feat-card:nth-child(7)::before { background: #f44336; }
+.feat-card:nth-child(8)::before { background: #00bcd4; }
+.feat-card:nth-child(9)::before { background: #9c27b0; }
+.feat-subsection { margin-top: 48px; }
+.feat-subsection .section-label { margin-bottom: 8px; }
+.feat-subsection .section-desc { margin-bottom: 24px; font-size: 15px; }
+.feat-icon { font-size: 28px; margin-bottom: 12px; }
+.feat-name { font-size: 18px; font-weight: 700; color: var(--white); margin-bottom: 6px; }
+.feat-desc { font-size: 14.5px; color: var(--slate); line-height: 1.6; }
+
+/* ---- HOUSEHOLDS ---- */
+.households { padding: 100px 24px; background: var(--navy-mid); position: relative; }
+.households::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(78,205,196,.15), transparent); }
+.households::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(78,205,196,.15), transparent); }
+.hh-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-top: 40px; }
+.hh-card { background: var(--navy); border: 1px solid var(--border); border-radius: 14px; padding: 28px; transition: all .3s; }
+.hh-card:hover { border-color: rgba(78,205,196,.2); transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,.2); }
+.hh-emoji { font-size: 32px; margin-bottom: 12px; }
+.hh-name { font-size: 18px; font-weight: 700; color: var(--white); margin-bottom: 8px; }
+.hh-desc { font-size: 14.5px; color: var(--slate); line-height: 1.6; }
+.hh-footer { margin-top: 40px; color: var(--slate); font-size: 15px; line-height: 1.7; max-width: 640px; }
+.hh-footer strong { color: var(--teal); font-weight: 600; }
+
+/* ---- SHAREHOUSE SPOTLIGHT ---- */
+.sharehouse { padding: 80px 24px 100px; position: relative; }
+.sharehouse::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(78,205,196,.15), transparent); }
+.sh-hero { display: flex; align-items: center; gap: 56px; margin-bottom: 56px; }
+.sh-hero-text { flex: 1; }
+.sh-hero-text .section-label { color: #ff9800; }
+.sh-hero-text .section-title { font-size: clamp(26px, 3.5vw, 36px); }
+.sh-hero-text .section-desc { margin-bottom: 24px; }
+.sh-hero-visual { width: 320px; flex-shrink: 0; }
+.sh-phone { width: 260px; margin: 0 auto; background: #0d0f14; border-radius: 32px; padding: 10px; box-shadow: 0 20px 60px rgba(0,0,0,.4), 0 0 0 1px rgba(255,255,255,.06); }
+.sh-phone-screen { background: #1a1d27; border-radius: 24px; padding: 36px 14px 18px; }
+.sh-poll { background: #242830; border-radius: 10px; padding: 12px; margin-bottom: 8px; }
+.sh-poll-q { font-size: 11px; font-weight: 700; color: #fff; margin-bottom: 8px; }
+.sh-poll-opt { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 10px; color: rgba(255,255,255,.6); }
+.sh-poll-opt:last-child { margin-bottom: 0; }
+.sh-poll-bar { flex: 1; height: 6px; background: rgba(255,255,255,.08); border-radius: 3px; overflow: hidden; }
+.sh-poll-fill { height: 100%; border-radius: 3px; }
+.sh-chore { display: flex; align-items: center; gap: 10px; background: #242830; border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; border-left: 3px solid; }
+.sh-chore-name { font-size: 10.5px; font-weight: 700; color: #fff; }
+.sh-chore-who { font-size: 9px; color: rgba(255,255,255,.4); }
+.sh-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+.sh-card { background: var(--navy-mid); border: 1px solid var(--border); border-radius: 14px; padding: 28px; position: relative; overflow: hidden; transition: all .3s; }
+.sh-card:hover { border-color: rgba(255,152,0,.2); transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,.2); }
+.sh-card::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: #ff9800; border-radius: 4px 0 0 4px; }
+.sh-card-icon { font-size: 24px; margin-bottom: 10px; }
+.sh-card-name { font-size: 16px; font-weight: 700; color: var(--white); margin-bottom: 6px; }
+.sh-card-desc { font-size: 14px; color: var(--slate); line-height: 1.6; }
+.sh-quote { margin-top: 48px; text-align: center; max-width: 600px; margin-left: auto; margin-right: auto; }
+.sh-quote p { font-size: 18px; font-style: italic; color: rgba(255,255,255,.6); line-height: 1.6; margin-bottom: 8px; }
+.sh-quote cite { font-size: 13px; color: var(--slate); font-style: normal; }
+@media (max-width: 768px) {
+  .sh-hero { flex-direction: column; text-align: center; }
+  .sh-hero-visual { width: 240px; order: -1; }
+  .sh-phone { width: 220px; }
+  .sh-hero-text .section-desc { margin-left: auto; margin-right: auto; }
+}
+
+/* ---- APP TOUR ---- */
+.app-tour { padding: 100px 24px; background: var(--navy-mid); position: relative; }
+.app-tour::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(78,205,196,.15), transparent); }
+.at-scroll { display: flex; gap: 24px; overflow-x: auto; padding: 8px 0 20px; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.at-scroll::-webkit-scrollbar { display: none; }
+.at-screen { min-width: 240px; scroll-snap-align: start; }
+.at-phone { background: #0d0f14; border-radius: 28px; padding: 8px; box-shadow: 0 16px 48px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.06); }
+.at-inner { background: #1a1d27; border-radius: 22px; padding: 32px 12px 16px; min-height: 320px; }
+.at-label { text-align: center; margin-top: 12px; font-size: 14px; font-weight: 600; color: var(--white); }
+.at-sublabel { text-align: center; font-size: 12px; color: var(--slate); margin-top: 2px; }
+.at-row { display: flex; gap: 6px; margin-bottom: 6px; }
+.at-item { flex: 1; background: #242830; border-radius: 8px; padding: 8px 10px; border-left: 3px solid; }
+.at-item b { display: block; font-size: 10px; color: #fff; margin-bottom: 1px; }
+.at-item span { font-size: 8.5px; color: rgba(255,255,255,.4); }
+.at-meal-day { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,.06); font-size: 10px; }
+.at-meal-day:last-child { border-bottom: none; }
+.at-meal-day .day { color: rgba(255,255,255,.4); width: 28px; flex-shrink: 0; }
+.at-meal-day .meal { color: #fff; font-weight: 600; }
+.at-cal-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 2px; }
+.at-cal-row { display: grid; grid-template-columns: repeat(7,1fr); gap: 2px; margin-bottom: 4px; text-align: center; font-size: 9px; color: rgba(255,255,255,.4); }
+.at-cal-row .today { background: var(--teal); color: #fff; border-radius: 50%; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; }
+.at-cal-row .has-event { position: relative; }
+.at-cal-row .has-event::after { content: ''; position: absolute; bottom: -2px; left: 50%; transform: translateX(-50%); width: 4px; height: 4px; border-radius: 50%; background: var(--teal); }
+.at-recipe { background: #242830; border-radius: 8px; padding: 10px; margin-bottom: 6px; }
+.at-recipe b { font-size: 10.5px; color: #fff; display: block; margin-bottom: 2px; }
+.at-recipe span { font-size: 9px; color: rgba(255,255,255,.4); }
+.at-recipe-tags { display: flex; gap: 4px; margin-top: 4px; }
+.at-recipe-tag { font-size: 8px; background: rgba(78,205,196,.15); color: var(--teal); padding: 2px 6px; border-radius: 4px; }
+.at-shop-item { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,.06); font-size: 10.5px; color: #fff; }
+.at-shop-item:last-child { border-bottom: none; }
+.at-shop-check { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.2); border-radius: 4px; flex-shrink: 0; }
+.at-shop-check.done { background: var(--teal); border-color: var(--teal); }
+.at-shop-item.purchased { text-decoration: line-through; color: rgba(255,255,255,.3); }
+
+/* ---- SPLIT FAMILIES SPOTLIGHT ---- */
+.split-fam { padding: 80px 24px 100px; background: var(--navy-mid); position: relative; }
+.split-fam::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(78,205,196,.15), transparent); }
+.sf-hero { display: flex; align-items: center; gap: 56px; margin-bottom: 56px; }
+.sf-hero-text { flex: 1; }
+.sf-hero-text .section-label { color: #9c27b0; }
+.sf-hero-visual { width: 320px; flex-shrink: 0; display: flex; gap: 12px; align-items: flex-start; }
+.sf-mini-phone { width: 140px; background: #0d0f14; border-radius: 20px; padding: 6px; box-shadow: 0 12px 36px rgba(0,0,0,.35); }
+.sf-mini-screen { background: #1a1d27; border-radius: 16px; padding: 24px 8px 12px; }
+.sf-house-label { font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: rgba(255,255,255,.35); margin-bottom: 6px; text-align: center; }
+.sf-mini-item { background: #242830; border-radius: 6px; padding: 6px 8px; margin-bottom: 4px; border-left: 2px solid; }
+.sf-mini-item b { font-size: 8.5px; color: #fff; display: block; }
+.sf-mini-item span { font-size: 7.5px; color: rgba(255,255,255,.35); }
+.sf-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+.sf-card { background: var(--navy); border: 1px solid var(--border); border-radius: 14px; padding: 28px; position: relative; overflow: hidden; transition: all .3s; }
+.sf-card:hover { border-color: rgba(156,39,176,.2); transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,.2); }
+.sf-card::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: #9c27b0; border-radius: 4px 0 0 4px; }
+.sf-card-icon { font-size: 24px; margin-bottom: 10px; }
+.sf-card-name { font-size: 16px; font-weight: 700; color: var(--white); margin-bottom: 6px; }
+.sf-card-desc { font-size: 14px; color: var(--slate); line-height: 1.6; }
+@media (max-width: 768px) {
+  .sf-hero { flex-direction: column; text-align: center; }
+  .sf-hero-visual { width: 280px; order: -1; justify-content: center; }
+}
+
+/* ---- FAMILY SPOTLIGHT ---- */
+.family-spot { padding: 80px 24px 100px; position: relative; }
+.family-spot::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(78,205,196,.15), transparent); }
+.fm-hero { display: flex; align-items: center; gap: 56px; margin-bottom: 56px; }
+.fm-hero-text { flex: 1; }
+.fm-hero-text .section-label { color: var(--pink); }
+.fm-hero-visual { width: 320px; flex-shrink: 0; }
+.fm-phone { width: 260px; margin: 0 auto; background: #0d0f14; border-radius: 32px; padding: 10px; box-shadow: 0 20px 60px rgba(0,0,0,.4), 0 0 0 1px rgba(255,255,255,.06); }
+.fm-phone-screen { background: #1a1d27; border-radius: 24px; padding: 36px 14px 18px; }
+.fm-routine-header { font-size: 10px; font-weight: 700; color: rgba(255,255,255,.4); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px; }
+.fm-routine-item { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,.06); font-size: 11px; color: #fff; }
+.fm-routine-item:last-child { border-bottom: none; }
+.fm-check { width: 16px; height: 16px; border-radius: 50%; border: 2px solid rgba(255,255,255,.15); flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+.fm-check.done { background: var(--teal); border-color: var(--teal); }
+.fm-check.done::after { content: '✓'; font-size: 9px; color: #fff; }
+.fm-routine-item.completed { color: rgba(255,255,255,.3); text-decoration: line-through; }
+.fm-stars-bar { display: flex; align-items: center; justify-content: space-between; background: #242830; border-radius: 10px; padding: 10px 12px; margin-top: 10px; }
+.fm-stars-label { font-size: 10px; color: rgba(255,255,255,.5); }
+.fm-stars-count { font-size: 14px; font-weight: 700; color: #ffd700; }
+.fm-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+.fm-card { background: var(--navy-mid); border: 1px solid var(--border); border-radius: 14px; padding: 28px; position: relative; overflow: hidden; transition: all .3s; }
+.fm-card:hover { border-color: rgba(255,107,157,.2); transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,.2); }
+.fm-card::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: var(--pink); border-radius: 4px 0 0 4px; }
+.fm-card-icon { font-size: 24px; margin-bottom: 10px; }
+.fm-card-name { font-size: 16px; font-weight: 700; color: var(--white); margin-bottom: 6px; }
+.fm-card-desc { font-size: 14px; color: var(--slate); line-height: 1.6; }
+@media (max-width: 768px) {
+  .fm-hero { flex-direction: column; text-align: center; }
+  .fm-hero-visual { width: 240px; order: -1; }
+  .fm-phone { width: 220px; }
+}
+
+/* ---- COMPARISON ---- */
+.compare { padding: 100px 24px; background: var(--navy-mid); position: relative; }
+.compare::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(78,205,196,.15), transparent); }
+.cmp-table { width: 100%; border-collapse: collapse; margin-top: 40px; font-size: 14px; }
+.cmp-table thead th { padding: 16px 12px; text-align: center; font-weight: 700; color: var(--white); font-size: 13px; border-bottom: 2px solid rgba(78,205,196,.2); }
+.cmp-table thead th:first-child { text-align: left; color: var(--slate); font-weight: 500; }
+.cmp-table thead th.cmp-highlight { color: var(--teal); font-size: 15px; position: relative; }
+.cmp-table tbody td { padding: 14px 12px; text-align: center; border-bottom: 1px solid var(--border); color: var(--slate); }
+.cmp-table tbody td:first-child { text-align: left; color: #c8d0dc; font-weight: 500; }
+.cmp-table tbody tr:last-child td { border-bottom: none; }
+.cmp-yes { color: var(--teal); font-weight: 700; }
+.cmp-no { color: rgba(255,255,255,.15); }
+.cmp-partial { color: #ff9800; }
+.cmp-table .cmp-col-highlight { background: rgba(78,205,196,.04); }
+@media (max-width: 768px) {
+  .cmp-table { font-size: 12px; }
+  .cmp-table thead th, .cmp-table tbody td { padding: 10px 6px; }
+  .cmp-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+}
+
+/* ---- PRIVACY ---- */
+.privacy { padding: 100px 24px; position: relative; }
+.privacy::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(78,205,196,.15), transparent); }
+.prv-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 40px; }
+.prv-card { background: var(--navy-mid); border: 1px solid var(--border); border-radius: 14px; padding: 28px; display: flex; gap: 16px; align-items: flex-start; transition: all .3s; }
+.prv-card:hover { border-color: rgba(78,205,196,.15); }
+.prv-icon { font-size: 28px; flex-shrink: 0; margin-top: 2px; }
+.prv-text h3 { font-size: 16px; font-weight: 700; color: var(--white); margin-bottom: 6px; }
+.prv-text p { font-size: 14px; color: var(--slate); line-height: 1.6; }
+.prv-badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(78,205,196,.08); border: 1px solid rgba(78,205,196,.15); border-radius: 10px; padding: 16px 24px; margin-top: 32px; font-size: 15px; color: var(--teal); font-weight: 600; }
+
+/* ---- MINI FAQ ---- */
+.mini-faq { padding: 100px 24px; background: var(--navy-mid); position: relative; }
+.mini-faq::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(78,205,196,.15), transparent); }
+.mfaq-list { max-width: 720px; margin: 40px auto 0; }
+.mfaq-item { border-bottom: 1px solid var(--border); }
+.mfaq-q { display: flex; align-items: center; justify-content: space-between; padding: 20px 0; cursor: pointer; font-size: 16px; font-weight: 600; color: var(--white); transition: color .2s; gap: 16px; }
+.mfaq-q:hover { color: var(--teal); }
+.mfaq-q::after { content: '+'; font-size: 22px; color: var(--teal); flex-shrink: 0; transition: transform .2s; font-weight: 400; }
+.mfaq-item.open .mfaq-q::after { content: '−'; }
+.mfaq-a { max-height: 0; overflow: hidden; transition: max-height .3s ease; }
+.mfaq-item.open .mfaq-a { max-height: 500px; }
+.mfaq-a p { padding: 0 0 20px; font-size: 15px; color: var(--slate); line-height: 1.7; }
+.mfaq-more { text-align: center; margin-top: 32px; }
+.mfaq-more a { color: var(--teal); text-decoration: none; font-weight: 600; font-size: 15px; transition: color .2s; }
+.mfaq-more a:hover { color: var(--teal-dark); }
+
+/* ---- PRICING ---- */
+.pricing { padding: 100px 24px; background: var(--navy); position: relative; }
+.pricing::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(78,205,196,.15), transparent); }
+.seg-tabs { display: flex; gap: 8px; max-width: 540px; margin: 40px auto 0; }
+.seg-tab { flex: 1; padding: 14px 12px; border-radius: 12px; border: 1px solid var(--border); background: transparent; color: var(--slate); cursor: pointer; text-align: center; transition: all .2s; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; }
+.seg-tab:hover { border-color: rgba(255,255,255,.2); color: var(--white); }
+.seg-tab.active { background: rgba(78,205,196,.1); border-color: var(--teal); color: var(--teal); }
+.seg-tab .seg-icon { font-size: 22px; display: block; margin-bottom: 4px; }
+.seg-tab .seg-desc { font-size: 11px; font-weight: 400; color: var(--slate); display: block; margin-top: 2px; }
+.seg-tab.active .seg-desc { color: var(--teal); opacity: .8; }
+.tier-panels { max-width: 960px; margin: 32px auto 0; }
+.tier-panel { display: none; }
+.tier-panel.active { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; }
+.tier-card { background: var(--navy-mid); border: 1px solid var(--border); border-radius: 16px; padding: 28px 24px; position: relative; transition: border-color .2s; display: flex; flex-direction: column; }
+.tier-card:hover { border-color: rgba(78,205,196,.3); }
+.tier-card.featured { border-color: var(--teal); }
+.tier-card.featured::before { content: 'Most Popular'; position: absolute; top: -11px; left: 50%; transform: translateX(-50%); background: var(--teal); color: var(--navy); font-size: 11px; font-weight: 700; padding: 3px 14px; border-radius: 20px; text-transform: uppercase; letter-spacing: .5px; }
+.tier-name { font-size: 20px; font-weight: 700; color: var(--white); margin-bottom: 4px; }
+.tier-price { font-family: 'Fraunces', serif; font-size: 36px; font-weight: 700; color: var(--white); margin: 12px 0 4px; }
+.tier-price small { font-size: 16px; font-weight: 400; color: var(--slate); }
+.tier-annual { font-size: 13px; color: var(--teal); margin-bottom: 16px; }
+.tier-members { font-size: 13px; color: var(--slate); margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+.tier-features { list-style: none; padding: 0; margin: 0 0 20px; flex: 1; }
+.tier-features li { font-size: 14px; color: #b0b8c8; padding: 5px 0 5px 20px; position: relative; }
+.tier-features li::before { content: '✓'; position: absolute; left: 0; color: var(--teal); font-weight: 700; font-size: 13px; }
+.tier-features li.extra { color: var(--white); font-weight: 500; }
+.tier-cta { display: block; width: 100%; padding: 12px; border-radius: 10px; text-align: center; font-weight: 700; font-size: 14px; text-decoration: none; transition: all .2s; border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; }
+.tier-cta.primary { background: var(--teal); color: var(--navy); }
+.tier-cta.primary:hover { background: var(--teal-dark); }
+.tier-cta.outline { background: transparent; color: var(--teal); border: 1px solid var(--teal); }
+.tier-cta.outline:hover { background: rgba(78,205,196,.1); }
+.pricing-note { max-width: 640px; margin: 32px auto 0; text-align: center; font-size: 14px; color: var(--slate); line-height: 1.6; }
+@media(max-width:640px) {
+  .seg-tabs { flex-direction: column; gap: 8px; }
+  .seg-tab { display: flex; align-items: center; gap: 10px; text-align: left; padding: 12px 16px; }
+  .seg-tab .seg-icon { font-size: 20px; margin-bottom: 0; }
+  .seg-tab .seg-desc { display: inline; margin-top: 0; margin-left: 4px; }
+  .tier-panel.active { grid-template-columns: 1fr; }
+}
+
+/* ---- HOW IT WORKS ---- */
+.how { padding: 100px 24px; }
+.steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 32px; margin-top: 48px; }
+.step { text-align: center; }
+.step-num { width: 48px; height: 48px; border-radius: 50%; background: rgba(78,205,196,.1); border: 2px solid rgba(78,205,196,.25); color: var(--teal); font-family: 'Fraunces', serif; font-size: 20px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px; }
+.step-title { font-size: 17px; font-weight: 700; color: var(--white); margin-bottom: 8px; }
+.step-desc { font-size: 14.5px; color: var(--slate); line-height: 1.6; }
+
+/* ---- BETA CTA ---- */
+.beta-cta { padding: 100px 24px; text-align: center; position: relative; }
+.beta-cta::before { content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 600px; height: 600px; border-radius: 50%; background: radial-gradient(circle, rgba(78,205,196,.06) 0%, transparent 70%); }
+.beta-card { max-width: 640px; margin: 0 auto; background: var(--navy-mid); border: 1px solid rgba(78,205,196,.15); border-radius: 20px; padding: 48px 40px; position: relative; z-index: 1; }
+.beta-card h2 { font-family: 'Fraunces', serif; font-size: 32px; font-weight: 700; color: var(--white); margin-bottom: 12px; letter-spacing: -1px; }
+.beta-card p { color: var(--slate); font-size: 16px; line-height: 1.6; margin-bottom: 8px; }
+.beta-card .btn-primary { margin-top: 24px; font-size: 18px; padding: 16px 40px; }
+.beta-perks { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 24px 0 8px; text-align: left; }
+.perk { display: flex; align-items: flex-start; gap: 8px; font-size: 14px; color: #c8d0dc; }
+.perk::before { content: '✓'; color: var(--teal); font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+
+/* ---- KIOSK SECTION ---- */
+.kiosk-section { padding: 80px 24px; }
+.kiosk-inner { max-width: 1100px; margin: 0 auto; display: flex; align-items: center; gap: 48px; }
+.kiosk-text { flex: 1; }
+.kiosk-vis { width: 340px; flex-shrink: 0; background: var(--navy-mid); border: 1px solid var(--border); border-radius: 14px; padding: 24px; }
+.kiosk-screen { background: #1a1d27; border-radius: 8px; padding: 16px; font-size: 12px; }
+.ks-header { display: flex; justify-content: space-between; margin-bottom: 12px; color: rgba(255,255,255,.5); font-size: 11px; }
+.ks-header b { color: #fff; font-size: 13px; }
+.ks-row { display: flex; gap: 8px; margin-bottom: 8px; }
+.ks-card { flex: 1; background: #242830; border-radius: 6px; padding: 8px; border-left: 3px solid; font-size: 10px; }
+.ks-card b { color: #fff; display: block; margin-bottom: 2px; }
+.ks-card span { color: rgba(255,255,255,.4); }
+.optional-badge { display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--teal); background: rgba(78,205,196,.1); padding: 4px 10px; border-radius: 6px; margin-bottom: 12px; }
+
+/* ---- FOOTER ---- */
+.footer { padding: 60px 24px 40px; border-top: 1px solid var(--border); }
+.footer-inner { max-width: 1100px; margin: 0 auto; display: flex; justify-content: space-between; align-items: flex-start; gap: 40px; flex-wrap: wrap; }
+.footer-brand { max-width: 280px; }
+.footer-brand .nav-logo { margin-bottom: 12px; }
+.footer-brand p { font-size: 13px; color: var(--slate); line-height: 1.6; }
+.footer-col h4 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,.4); margin-bottom: 12px; }
+.footer-col a { display: block; color: var(--slate); text-decoration: none; font-size: 14px; padding: 4px 0; transition: color .2s; }
+.footer-col a:hover { color: var(--teal); }
+.footer-bottom { max-width: 1100px; margin: 32px auto 0; padding-top: 24px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; font-size: 13px; color: rgba(255,255,255,.25); flex-wrap: wrap; gap: 8px; }
+
+/* ---- RESPONSIVE ---- */
+@media (max-width: 768px) {
+  .hero-inner { flex-direction: column; text-align: center; }
+  .hero-sub { margin-left: auto; margin-right: auto; }
+  .hero-actions { justify-content: center; }
+  .hero-device { width: 240px; order: -1; }
+  .phone { width: 220px; }
+  .ph-date { font-size: 18px; }
+  .nav-links a:not(.nav-cta):not(.nav-login) { display: none; }
+  .kiosk-inner { flex-direction: column; }
+  .kiosk-vis { width: 100%; max-width: 380px; }
+  .beta-perks { grid-template-columns: 1fr; }
+  .footer-inner { flex-direction: column; }
+  .footer-bottom { flex-direction: column; text-align: center; }
+}
+
+/* ---- ANIMATIONS ---- */
+@keyframes fadeUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+.hero-text { animation: fadeUp .8s ease-out; }
+.hero-device { animation: fadeUp .8s ease-out .2s both; }
+.feat-card { animation: fadeUp .6s ease-out both; }
+.feat-card:nth-child(1) { animation-delay: .1s; }
+.feat-card:nth-child(2) { animation-delay: .15s; }
+.feat-card:nth-child(3) { animation-delay: .2s; }
+.feat-card:nth-child(4) { animation-delay: .25s; }
+.feat-card:nth-child(5) { animation-delay: .3s; }
+.feat-card:nth-child(6) { animation-delay: .35s; }
+.feat-card:nth-child(7) { animation-delay: .4s; }
+.feat-card:nth-child(8) { animation-delay: .45s; }
+.feat-card:nth-child(9) { animation-delay: .5s; }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <a href="/" class="nav-logo">
+    <svg viewBox="0 0 512 512" width="32" height="32"><defs><linearGradient id="bg" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#56D4C4"/><stop offset="100%" stop-color="#36B2A2"/></linearGradient><mask id="c"><rect width="512" height="512" fill="white"/><rect x="172" y="184" width="38" height="156" rx="8" fill="black"/><rect x="302" y="184" width="38" height="156" rx="8" fill="black"/><path d="M194 268 L256 228 L318 268 L318 284 L256 244 L194 284 Z" fill="black"/><circle cx="214" cy="372" r="17" fill="black"/><circle cx="256" cy="372" r="17" fill="black"/><circle cx="298" cy="372" r="17" fill="black"/></mask></defs><rect x="24" y="24" width="464" height="464" rx="104" ry="104" fill="url(#bg)"/><path d="M256 96 L392 212 C400 218 404 230 404 242 L404 392 C404 408 392 420 376 420 L136 420 C120 420 108 408 108 392 L108 242 C108 230 112 218 120 212 Z" fill="white" mask="url(#c)"/></svg>
+    <span><span class="nh">H</span><span class="nu">uddle</span></span>
+  </a>
+  <div class="nav-links">
+    <a href="#features">Features</a>
+    <a href="#sharehouses">Sharehouses</a>
+    <a href="#how">How It Works</a>
+    <a href="#pricing">Pricing</a>
+    <a href="/faq">FAQ</a>
+    <a href="/onboard" class="nav-cta">Try the Beta</a>
+    <a href="/onboard" class="nav-login">Log in</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-inner">
+    <div class="hero-text">
+      <div class="hero-badge"><span class="pulse"></span> Free Beta Now Open</div>
+      <h1>Your household,<br><em>sorted.</em></h1>
+      <p class="hero-sub">Huddle is a household management app for Australian families and sharehouses. Chores, routines, meals, recipes, calendars, shopping, and bills. All in one place, on everyone's phone.</p>
+      <div class="hero-actions">
+        <a href="/onboard" class="btn-primary">Try the Beta Free →</a>
+        <a href="#features" class="btn-ghost">See Features</a>
+      </div>
+    </div>
+    <div class="hero-device">
+      <div class="phone">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+          <div class="ph-day">Friday</div>
+          <div class="ph-date">13 February</div>
+          <div class="ph-members">
+            <div class="ph-av" style="background:#ff6b9d">J</div>
+            <div class="ph-av" style="background:#4ecdc4">M</div>
+            <div class="ph-av" style="background:#9c27b0">L</div>
+            <div class="ph-av" style="background:#4caf50">S</div>
+          </div>
+          <div class="ph-weather"><span>☀️</span> <b>28°</b> Mostly Sunny</div>
+          <div class="ph-tiles">
+            <div class="ph-tile"><div class="ph-tile-icon">🧹</div><div class="ph-tile-name">Chores</div><div class="ph-tile-sub">2 due · 1 overdue</div></div>
+            <div class="ph-tile"><div class="ph-tile-icon">📅</div><div class="ph-tile-name">Calendar</div><div class="ph-tile-sub">Tennis at 4pm</div></div>
+            <div class="ph-tile"><div class="ph-tile-icon">🍽️</div><div class="ph-tile-name">Meals</div><div class="ph-tile-sub">Tacos tonight</div></div>
+            <div class="ph-tile"><div class="ph-tile-icon">🛒</div><div class="ph-tile-name">Shopping</div><div class="ph-tile-sub">6 items</div></div>
+            <div class="ph-tile"><div class="ph-tile-icon">📖</div><div class="ph-tile-name">Recipes</div><div class="ph-tile-sub">14 saved</div></div>
+            <div class="ph-tile"><div class="ph-tile-icon">💰</div><div class="ph-tile-name">Bills</div><div class="ph-tile-sub">Power due Fri</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features" id="features">
+  <div class="section-inner">
+    <div class="section-label">Features</div>
+    <h2 class="section-title">Everything your household needs</h2>
+    <p class="section-desc">Huddle replaces sticky notes, group chats, shared spreadsheets, and good intentions. Pick the modules that suit your household.</p>
+    <div class="feat-grid">
+      <div class="feat-card">
+        <div class="feat-icon">🧹</div>
+        <div class="feat-name">Chores and Streaks</div>
+        <div class="feat-desc">Fair rotation with load balancing. Track streaks, see who's done what, and get automatic reminders. No more arguments about whose turn it is.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">☀️</div>
+        <div class="feat-name">Routines</div>
+        <div class="feat-desc">Morning and bedtime checklists that reset daily. Kids check items off as they go. Parents can see progress from their own phone.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🍽️</div>
+        <div class="feat-name">Meal Planner</div>
+        <div class="feat-desc">Plan the week's meals with split-meal support for fussy eaters or dietary needs. Link recipes directly to your plan.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">📖</div>
+        <div class="feat-name">Recipes</div>
+        <div class="feat-desc">Save recipes manually or import from any website. Edit anytime, filter by meal type, and send ingredients to the shopping list scaled to your serving size.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">📅</div>
+        <div class="feat-name">Household Calendar</div>
+        <div class="feat-desc">One calendar for the events that matter to your home. Bin night, school pickup, family dinner. No clutter from everyone's work meetings.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🛒</div>
+        <div class="feat-name">Shopping, Pantry &amp; Freezer</div>
+        <div class="feat-desc">Shared shopping list with smart duplicate detection. Track pantry stock with low-stock alerts. Freezer inventory so you never forget what's frozen.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">💰</div>
+        <div class="feat-name">Bill Tracker</div>
+        <div class="feat-desc">Track bills with due dates, amounts, and recurring reminders. Never miss a payment again.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">✅</div>
+        <div class="feat-name">Tasks</div>
+        <div class="feat-desc">Quick tasks for yourself or request something from another household member. Instant branded notifications keep everyone accountable.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🗳️</div>
+        <div class="feat-name">Polls</div>
+        <div class="feat-desc">Put household decisions to a vote. "What should we have for dinner?" "Should we get a cleaner?" Everyone gets a say.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">📋</div>
+        <div class="feat-name">Noticeboard</div>
+        <div class="feat-desc">Post notices, complaints, going-out alerts, and guest announcements. Pin important ones to the top. Everyone stays informed.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🎓</div>
+        <div class="feat-name">Assignments</div>
+        <div class="feat-desc">Track homework and assignments with due dates and priorities. Kids see what's due, parents see what's overdue.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🏠</div>
+        <div class="feat-name">Tenancy</div>
+        <div class="feat-desc">Lease details, bond tracking, and move-in/move-out checklists. Everything a renter or homeowner needs in one place.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">💊</div>
+        <div class="feat-name">Self Care</div>
+        <div class="feat-desc">Medication tracking, personal care reminders, and life admin. ADHD-friendly "last done" tracking so you never wonder if you took your meds.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🚗</div>
+        <div class="feat-name">Vehicles</div>
+        <div class="feat-desc">Vehicle profiles with rego and insurance reminders, service history, and maintenance scheduling. Never miss a renewal.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">💸</div>
+        <div class="feat-name">Expenses</div>
+        <div class="feat-desc">Split expenses between housemates, track balances, and settle debts. See who owes what at a glance.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">📜</div>
+        <div class="feat-name">House Rules</div>
+        <div class="feat-desc">Shared household agreements that everyone acknowledges. Set expectations for noise, guests, cleaning, and common areas.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🔔</div>
+        <div class="feat-name">Smart Notifications</div>
+        <div class="feat-desc">Branded push notifications for everything that matters — chore completions, shopping list updates, bill payments, new events, and assignments. Morning digests, meal reminders, and weekly summaries keep everyone on track without the nagging.</div>
+      </div>
+    </div>
+
+    <div class="feat-subsection">
+      <div class="section-label">Family Features</div>
+      <p class="section-desc">Designed for households with kids and teenagers. Automatically suggested during setup when your household includes dependents.</p>
+      <div class="feat-grid">
+        <div class="feat-card">
+          <div class="feat-icon">⭐</div>
+          <div class="feat-name">Rewards and Stars</div>
+          <div class="feat-desc">Kids earn stars for completing chores and routines. Redeem them for parent-approved rewards from a household shop you set up.</div>
+        </div>
+        <div class="feat-card">
+          <div class="feat-icon">🪙</div>
+          <div class="feat-name">Allowances</div>
+          <div class="feat-desc">Pocket money with automatic weekly credits, savings goals, and transaction history. Teach kids money management.</div>
+        </div>
+        <div class="feat-card">
+          <div class="feat-icon">🐾</div>
+          <div class="feat-name">Pets</div>
+          <div class="feat-desc">Pet care schedules with fair rotation. Feeding, walking, grooming, vet appointments, and medication tracking.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- APP TOUR -->
+<section class="app-tour" id="tour">
+  <div class="section-inner">
+    <div class="section-label">See It in Action</div>
+    <h2 class="section-title">A quick look inside</h2>
+    <p class="section-desc">Swipe through to see what Huddle actually looks like on your phone.</p>
+    <div class="at-scroll">
+
+      <div class="at-screen">
+        <div class="at-phone">
+          <div class="at-inner">
+            <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Today's Chores</div>
+            <div class="at-row">
+              <div class="at-item" style="border-color:#ff6b9d"><b>Unpack dishwasher</b><span>Jess · overdue</span></div>
+            </div>
+            <div class="at-row">
+              <div class="at-item" style="border-color:#4ecdc4"><b>Vacuum lounge</b><span>Marco · due today</span></div>
+            </div>
+            <div class="at-row">
+              <div class="at-item" style="border-color:#9c27b0"><b>Take bins out</b><span>Luca · tomorrow</span></div>
+            </div>
+            <div class="at-row">
+              <div class="at-item" style="border-color:#4caf50"><b>Clean bathroom</b><span>Sam · Wednesday</span></div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:center;gap:4px;margin-top:10px;font-size:9px;color:rgba(255,255,255,.35)">
+              <span style="color:#ffd700">🔥</span> Marco: 12-day streak
+            </div>
+          </div>
+        </div>
+        <div class="at-label">Chores</div>
+        <div class="at-sublabel">Fair rotation with streaks</div>
+      </div>
+
+      <div class="at-screen">
+        <div class="at-phone">
+          <div class="at-inner">
+            <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">This Week's Meals</div>
+            <div class="at-meal-day"><span class="day">Mon</span><span class="meal">Spaghetti Bolognese</span></div>
+            <div class="at-meal-day"><span class="day">Tue</span><span class="meal">Chicken Stir-fry</span></div>
+            <div class="at-meal-day"><span class="day">Wed</span><span class="meal">Fish Tacos</span></div>
+            <div class="at-meal-day"><span class="day">Thu</span><span class="meal">Leftover Night</span></div>
+            <div class="at-meal-day"><span class="day">Fri</span><span class="meal">Homemade Pizza</span></div>
+            <div class="at-meal-day"><span class="day">Sat</span><span class="meal">BBQ</span></div>
+            <div class="at-meal-day"><span class="day">Sun</span><span class="meal">Roast Lamb</span></div>
+          </div>
+        </div>
+        <div class="at-label">Meal Planner</div>
+        <div class="at-sublabel">Plan the week in minutes</div>
+      </div>
+
+      <div class="at-screen">
+        <div class="at-phone">
+          <div class="at-inner">
+            <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Recipes</div>
+            <div class="at-recipe">
+              <b>Chicken Parmigiana</b>
+              <span>45 min · 4 servings</span>
+              <div class="at-recipe-tags"><span class="at-recipe-tag">Dinner</span><span class="at-recipe-tag">Chicken</span></div>
+            </div>
+            <div class="at-recipe">
+              <b>Fish Tacos</b>
+              <span>25 min · 4 servings</span>
+              <div class="at-recipe-tags"><span class="at-recipe-tag">Quick</span><span class="at-recipe-tag">Seafood</span></div>
+            </div>
+            <div class="at-recipe">
+              <b>Banana Bread</b>
+              <span>60 min · 8 servings</span>
+              <div class="at-recipe-tags"><span class="at-recipe-tag">Baking</span><span class="at-recipe-tag">Snack</span></div>
+            </div>
+            <div style="text-align:center;font-size:9px;color:var(--teal);margin-top:8px">+ Import from URL</div>
+          </div>
+        </div>
+        <div class="at-label">Recipes</div>
+        <div class="at-sublabel">Save, import, and cook</div>
+      </div>
+
+      <div class="at-screen">
+        <div class="at-phone">
+          <div class="at-inner">
+            <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Shopping List</div>
+            <div class="at-shop-item"><div class="at-shop-check"></div> Chicken breast x2</div>
+            <div class="at-shop-item"><div class="at-shop-check"></div> Tortillas</div>
+            <div class="at-shop-item"><div class="at-shop-check"></div> Avocado x3</div>
+            <div class="at-shop-item"><div class="at-shop-check"></div> Sour cream</div>
+            <div class="at-shop-item"><div class="at-shop-check"></div> Lime x4</div>
+            <div class="at-shop-item purchased"><div class="at-shop-check done"></div> Milk 2L</div>
+            <div class="at-shop-item purchased"><div class="at-shop-check done"></div> Bread</div>
+            <div style="text-align:center;font-size:9px;color:rgba(255,255,255,.3);margin-top:8px">Added by Jess, Marco, Sam</div>
+          </div>
+        </div>
+        <div class="at-label">Shopping</div>
+        <div class="at-sublabel">Shared list, check off at shops</div>
+      </div>
+
+      <div class="at-screen">
+        <div class="at-phone">
+          <div class="at-inner">
+            <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Bills</div>
+            <div class="at-row">
+              <div class="at-item" style="border-color:#ff6b6b"><b>Electricity</b><span>$187.40 · overdue</span></div>
+            </div>
+            <div class="at-row">
+              <div class="at-item" style="border-color:#ff9800"><b>Internet</b><span>$89.00 · due Fri</span></div>
+            </div>
+            <div class="at-row">
+              <div class="at-item" style="border-color:#4caf50"><b>Water</b><span>$62.15 · 12 days</span></div>
+            </div>
+            <div class="at-row">
+              <div class="at-item" style="border-color:#4caf50"><b>Contents Insurance</b><span>$44.00 · 28 days</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="at-label">Bills</div>
+        <div class="at-sublabel">Track, remind, never miss</div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- HOUSEHOLD TYPES -->
+<section class="households" id="households">
+  <div class="section-inner">
+    <div class="section-label">Built for Every Household</div>
+    <h2 class="section-title">Not just for nuclear families</h2>
+    <p class="section-desc">Huddle works for any group of people sharing a living space. Choose a preset during setup and Huddle enables the right features for your situation.</p>
+    <div class="hh-grid">
+      <div class="hh-card">
+        <div class="hh-emoji">👨‍👩‍👧‍👦</div>
+        <div class="hh-name">Families</div>
+        <div class="hh-desc">Two parents, kids, the whole package. Chore rosters with fair rotation, morning and bedtime routines, rewards and allowances to teach responsibility, and a shared calendar everyone can see.</div>
+      </div>
+      <div class="hh-card">
+        <div class="hh-emoji">🏠</div>
+        <div class="hh-name">Split Families</div>
+        <div class="hh-desc">Kids across two homes. Each household runs its own Huddle with its own routines, chores, and meal plans. Kids can be members of both, keeping consistency between houses.</div>
+      </div>
+      <div class="hh-card">
+        <div class="hh-emoji">🛋️</div>
+        <div class="hh-name">Sharehouses</div>
+        <div class="hh-desc">Fair chore rotation so nobody gets stuck with the bins every week. Split bills, shared shopping lists, and polls for group decisions. No more passive-aggressive group chat messages.</div>
+      </div>
+      <div class="hh-card">
+        <div class="hh-emoji">💑</div>
+        <div class="hh-name">Couples</div>
+        <div class="hh-desc">Meal planning, shared calendars, shopping lists, and a simple way to split household tasks without the mental load falling on one person.</div>
+      </div>
+      <div class="hh-card">
+        <div class="hh-emoji">👵</div>
+        <div class="hh-name">Multi-Generational</div>
+        <div class="hh-desc">Grandparents, parents, and kids under one roof. Everyone sees what needs doing today. The kiosk display in the kitchen keeps everyone in the loop, no phone required.</div>
+      </div>
+      <div class="hh-card">
+        <div class="hh-emoji">👤</div>
+        <div class="hh-name">Solo &amp; Couples</div>
+        <div class="hh-desc">Living alone or as a couple? Huddle works as a personal household manager too. Stay on top of bills, meals, and chores — and add people later when your situation changes.</div>
+      </div>
+    </div>
+    <p class="hh-footer">During setup, you choose a preset — <strong>Family</strong>, <strong>Sharehouse</strong>, <strong>Couple</strong>, or <strong>Just the Basics</strong> — and Huddle enables the right modules. You can always change what's turned on later.</p>
+  </div>
+</section>
+
+<!-- SHAREHOUSE SPOTLIGHT -->
+<section class="sharehouse" id="sharehouses">
+  <div class="section-inner">
+    <div class="sh-hero">
+      <div class="sh-hero-text">
+        <div class="section-label">Sharehouse Spotlight</div>
+        <h2 class="section-title">Built for the way sharehouses actually work</h2>
+        <p class="section-desc">Living with housemates shouldn't need a spreadsheet, a whiteboard, and a group chat that nobody reads. Huddle replaces all of it with one app that keeps things fair without making it weird.</p>
+        <a href="/onboard" class="btn-primary" style="font-size:15px;padding:12px 28px;">Set Up Your Sharehouse →</a>
+      </div>
+      <div class="sh-hero-visual">
+        <div class="sh-phone">
+          <div class="sh-phone-screen">
+            <div class="sh-poll">
+              <div class="sh-poll-q">Should we get a cleaner?</div>
+              <div class="sh-poll-opt"><span>Yes</span><div class="sh-poll-bar"><div class="sh-poll-fill" style="width:66%;background:#4ecdc4"></div></div><span>3</span></div>
+              <div class="sh-poll-opt"><span>No</span><div class="sh-poll-bar"><div class="sh-poll-fill" style="width:22%;background:#ff6b9d"></div></div><span>1</span></div>
+              <div class="sh-poll-opt"><span>Maybe</span><div class="sh-poll-bar"><div class="sh-poll-fill" style="width:11%;background:#ff9800"></div></div><span>0</span></div>
+            </div>
+            <div class="sh-chore" style="border-color:#ff6b9d"><div><div class="sh-chore-name">Clean bathroom</div><div class="sh-chore-who">Alex · due today</div></div></div>
+            <div class="sh-chore" style="border-color:#4ecdc4"><div><div class="sh-chore-name">Take bins out</div><div class="sh-chore-who">Sam · tomorrow</div></div></div>
+            <div class="sh-chore" style="border-color:#9c27b0"><div><div class="sh-chore-name">Mop kitchen</div><div class="sh-chore-who">Jordan · Wednesday</div></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sh-grid">
+      <div class="sh-card">
+        <div class="sh-card-icon">⚖️</div>
+        <div class="sh-card-name">Fair rotation, no arguments</div>
+        <div class="sh-card-desc">Chores rotate automatically between housemates. Huddle tracks who did what and when, so nobody gets stuck with the bins every single week. Load balancing keeps things even.</div>
+      </div>
+      <div class="sh-card">
+        <div class="sh-card-icon">💸</div>
+        <div class="sh-card-name">Bills everyone can see</div>
+        <div class="sh-card-desc">Track power, internet, water, and rent with due dates and reminders. Everyone knows what's owed and when. No more chasing housemates for their share.</div>
+      </div>
+      <div class="sh-card">
+        <div class="sh-card-icon">🛒</div>
+        <div class="sh-card-name">Shared shopping list</div>
+        <div class="sh-card-desc">One list everyone can add to from their phone. See who added what. Check items off at the shops. No more buying three cartons of milk because nobody checked.</div>
+      </div>
+      <div class="sh-card">
+        <div class="sh-card-icon">🗳️</div>
+        <div class="sh-card-name">Put it to a vote</div>
+        <div class="sh-card-desc">Group decisions made easy. "Should we get a cleaner?" "New couch — leather or fabric?" Create a poll, everyone votes on their phone, done. No more endless group chat debates.</div>
+      </div>
+      <div class="sh-card">
+        <div class="sh-card-icon">🍳</div>
+        <div class="sh-card-name">Meal coordination</div>
+        <div class="sh-card-desc">Plan shared dinners without the awkward "who's cooking tonight" text. Or just use it for your own nights. Import recipes and send ingredients straight to the shopping list.</div>
+      </div>
+      <div class="sh-card">
+        <div class="sh-card-icon">📱</div>
+        <div class="sh-card-name">Everyone gets the app</div>
+        <div class="sh-card-desc">One person sets up the household, shares an invite code, and everyone joins in under a minute. Works on any phone. Branded Huddle notifications for chores, shopping, bills, and events mean nobody can claim they "didn't see it".</div>
+      </div>
+    </div>
+
+    <div class="sh-quote">
+      <p>"We tried a whiteboard. We tried a shared Google Sheet. We tried a group chat with pinned messages. Nothing stuck until Huddle."</p>
+      <cite>— Every sharehouse, eventually</cite>
+    </div>
+  </div>
+</section>
+
+<!-- SPLIT FAMILIES SPOTLIGHT -->
+<section class="split-fam" id="split-families">
+  <div class="section-inner">
+    <div class="sf-hero">
+      <div class="sf-hero-text">
+        <div class="section-label">Split Families</div>
+        <h2 class="section-title">Two homes, one app, zero confusion</h2>
+        <p class="section-desc">When kids live across two homes, keeping routines consistent is hard enough without juggling different systems. Each parent runs their own Huddle household. Kids are members of both and switch between them with one tap.</p>
+        <a href="/onboard" class="btn-primary" style="font-size:15px;padding:12px 28px;">Get Started Free →</a>
+      </div>
+      <div class="sf-hero-visual">
+        <div class="sf-mini-phone">
+          <div class="sf-mini-screen">
+            <div class="sf-house-label">Mum's House</div>
+            <div class="sf-mini-item" style="border-color:#ff6b9d"><b>Make bed</b><span>Riley · daily</span></div>
+            <div class="sf-mini-item" style="border-color:#4ecdc4"><b>Feed Biscuit</b><span>Riley · morning</span></div>
+            <div class="sf-mini-item" style="border-color:#9c27b0"><b>Pack lunch</b><span>Riley · school days</span></div>
+          </div>
+        </div>
+        <div class="sf-mini-phone">
+          <div class="sf-mini-screen">
+            <div class="sf-house-label">Dad's Place</div>
+            <div class="sf-mini-item" style="border-color:#3b82f6"><b>Make bed</b><span>Riley · daily</span></div>
+            <div class="sf-mini-item" style="border-color:#ff9800"><b>Set the table</b><span>Riley · dinner</span></div>
+            <div class="sf-mini-item" style="border-color:#4caf50"><b>Tidy room</b><span>Riley · Sunday</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sf-grid">
+      <div class="sf-card">
+        <div class="sf-card-icon">🏡</div>
+        <div class="sf-card-name">Independent households</div>
+        <div class="sf-card-desc">Each home is a separate Huddle household with its own chores, routines, meals, and settings. Neither parent needs access to the other's house.</div>
+      </div>
+      <div class="sf-card">
+        <div class="sf-card-icon">👧</div>
+        <div class="sf-card-name">Kids in both</div>
+        <div class="sf-card-desc">Children can be members of both households. They switch between them from their phone. Their name, colour, and role are set independently in each house.</div>
+      </div>
+      <div class="sf-card">
+        <div class="sf-card-icon">🔄</div>
+        <div class="sf-card-name">One-tap switching</div>
+        <div class="sf-card-desc">Kids switch households with a single tap. All data reloads instantly — chores, routines, meals, calendar. No logging in and out.</div>
+      </div>
+      <div class="sf-card">
+        <div class="sf-card-icon">📋</div>
+        <div class="sf-card-name">Consistent routines</div>
+        <div class="sf-card-desc">Set up the same morning and bedtime routines at both houses, or different ones. Kids always know what's expected no matter where they are this week.</div>
+      </div>
+      <div class="sf-card">
+        <div class="sf-card-icon">🔒</div>
+        <div class="sf-card-name">Completely private</div>
+        <div class="sf-card-desc">Parents cannot see each other's households. No shared data, no crossover, no awkward visibility. Each home is its own bubble.</div>
+      </div>
+      <div class="sf-card">
+        <div class="sf-card-icon">⭐</div>
+        <div class="sf-card-name">Stars carry meaning</div>
+        <div class="sf-card-desc">Each house has its own rewards and stars. Kids earn and spend separately at each home, so parents stay in control of their own reward system.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAMILY SPOTLIGHT -->
+<section class="family-spot" id="families">
+  <div class="section-inner">
+    <div class="fm-hero">
+      <div class="fm-hero-text">
+        <div class="section-label">For Families</div>
+        <h2 class="section-title">Teach responsibility without the nagging</h2>
+        <p class="section-desc">Huddle gives kids and teenagers ownership over their daily tasks. Morning routines, chore streaks, stars, and allowances — built to make household participation feel like progress, not punishment.</p>
+        <a href="/onboard" class="btn-primary" style="font-size:15px;padding:12px 28px;">Start Your Family Huddle →</a>
+      </div>
+      <div class="fm-hero-visual">
+        <div class="fm-phone">
+          <div class="fm-phone-screen">
+            <div class="fm-routine-header">Morning Routine — Luca</div>
+            <div class="fm-routine-item completed"><span class="fm-check done"></span> Make bed</div>
+            <div class="fm-routine-item completed"><span class="fm-check done"></span> Get dressed</div>
+            <div class="fm-routine-item completed"><span class="fm-check done"></span> Eat breakfast</div>
+            <div class="fm-routine-item"><span class="fm-check"></span> Brush teeth</div>
+            <div class="fm-routine-item"><span class="fm-check"></span> Pack school bag</div>
+            <div class="fm-routine-item"><span class="fm-check"></span> Shoes on by 8:15</div>
+            <div class="fm-stars-bar">
+              <span class="fm-stars-label">Stars earned today</span>
+              <span class="fm-stars-count">⭐ 3</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="fm-grid">
+      <div class="fm-card">
+        <div class="fm-card-icon">☀️</div>
+        <div class="fm-card-name">Morning and bedtime routines</div>
+        <div class="fm-card-desc">Step-by-step checklists that reset daily. Kids check items off as they go. Parents can see progress from their own phone without asking "have you brushed your teeth?"</div>
+      </div>
+      <div class="fm-card">
+        <div class="fm-card-icon">⭐</div>
+        <div class="fm-card-name">Rewards and stars</div>
+        <div class="fm-card-desc">Kids earn stars for completing chores and routines. Redeem them in a household shop you set up — screen time, pocket money, a family outing. You decide what things cost.</div>
+      </div>
+      <div class="fm-card">
+        <div class="fm-card-icon">🪙</div>
+        <div class="fm-card-name">Allowances</div>
+        <div class="fm-card-desc">Weekly pocket money with automatic credits, savings goals, and a transaction history. Kids learn to save, spend, and plan. Parents approve purchases.</div>
+      </div>
+      <div class="fm-card">
+        <div class="fm-card-icon">🔥</div>
+        <div class="fm-card-name">Chore streaks</div>
+        <div class="fm-card-desc">Consecutive completions build streaks with milestone celebrations at 5, 10, 15, 20, 25, and 30 days. Confetti, celebrations, and branded Huddle notifications make it genuinely fun.</div>
+      </div>
+      <div class="fm-card">
+        <div class="fm-card-icon">🐾</div>
+        <div class="fm-card-name">Pet care schedules</div>
+        <div class="fm-card-desc">Fair rotation for feeding, walking, and grooming. Track vet appointments and medication. Everyone shares the responsibility — not just whoever the pet follows around.</div>
+      </div>
+      <div class="fm-card">
+        <div class="fm-card-icon">👁️</div>
+        <div class="fm-card-name">Age-appropriate access</div>
+        <div class="fm-card-desc">Dependents see their own chores, routines, and stars but can't change household settings or manage other members. Managers (parents) control everything.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- COMPARISON -->
+<section class="compare" id="compare">
+  <div class="section-inner">
+    <div class="section-label">Why Huddle?</div>
+    <h2 class="section-title">Huddle vs the alternatives</h2>
+    <p class="section-desc">You've probably tried some of these already. Here's how Huddle stacks up.</p>
+    <div class="cmp-scroll">
+      <table class="cmp-table">
+        <thead>
+          <tr>
+            <th></th>
+            <th class="cmp-highlight cmp-col-highlight">Huddle</th>
+            <th>OurHome</th>
+            <th>Cozi</th>
+            <th>Splitwise</th>
+            <th>Group&nbsp;Chat&nbsp;+&nbsp;Spreadsheet</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Chore rotation</td>
+            <td class="cmp-col-highlight"><span class="cmp-yes">✓</span></td>
+            <td><span class="cmp-yes">✓</span></td>
+            <td><span class="cmp-no">✗</span></td>
+            <td><span class="cmp-no">✗</span></td>
+            <td><span class="cmp-partial">~</span></td>
+          </tr>
+          <tr>
+            <td>Shopping list</td>
+            <td class="cmp-col-highlight"><span class="cmp-yes">✓</span></td>
+            <td><span class="cmp-yes">✓</span></td>
+            <td><span class="cmp-yes">✓</span></td>
+            <td><span class="cmp-no">✗</span></td>
+            <td><span class="cmp-partial">~</span></td>
+          </tr>
+          <tr>
+            <td>Shared calendar</td>
+            <td class="cmp-col-highlight"><span class="cmp-yes">✓</span></td>
+            <td><span class="cmp-yes">✓</span></td>
+            <td><span class="cmp-yes">✓</span></td>
+            <td><span class="cmp-no">✗</span></td>
+            <td><span class="cmp-partial">~</span></td>
+          </tr>
+          <tr>
+            <td>Meal planning</td>
+            <td class="cmp-col-highlight"><span class="cmp-yes">✓</span></td>
+            <td><span class="cmp-no">✗</span></td>
+            <td><span class="cmp-yes">✓</span></td>
+            <td><span class="cmp-no">✗</span></td>
+            <td><span class="cmp-no">✗</span></td>
+          </tr>
+          <tr>
+            <td>Recipe import from URL</td>
+            <td class="cmp-col-highlight"><span class="cmp-yes">✓</span></td>
+            <td><span class="cmp-no">✗</span></td>
+            <td><span class="cmp-no">✗</span></td>
+            <td><span class="cmp-no">✗</span></td>
+            <td><span class="cmp-no">✗</span></td>
+          </tr>
+          <tr>
+            <td>Bill tracking</td>
+            <td class="cmp-col-highlight"><span class="cmp-yes">✓</span></td>
+            <td><span class="cmp-no">✗</span></td>
+            <td><span class="cmp-no">✗</span></td>
+            <td><span class="cmp-yes">✓</span></td>
+            <td><span class="cmp-partial">~</span></td>
+          </tr>
+          <tr>
+            <td>Expense splitting</td>
+            <td class="cmp-col-highlight"><span class="cmp-yes">✓</span></td>
+            <td><span class="cmp-no">✗</span></td>
+            <td><span class="cmp-no">✗</span></td>
+            <td><span class="cmp-yes">✓</span></td>
+            <td><span class="cmp-no">✗</span></td>
+          </tr>
+          <tr>
+            <td>Kids rewards + routines</td>
+            <td class="cmp-col-highlight"><span class="cmp-yes">✓</span></td>
+            <td><span class="cmp-yes">✓</span></td>
+            <td><span class="cmp-no">✗</span></td>
+            <td><span class="cmp-no">✗</span></td>
+            <td><span class="cmp-no">✗</span></td>
+          </tr>
+          <tr>
+            <td>Pantry inventory</td>
+            <td class="cmp-col-highlight"><span class="cmp-yes">✓</span></td>
+            <td><span class="cmp-no">✗</span></td>
+            <td><span class="cmp-no">✗</span></td>
+            <td><span class="cmp-no">✗</span></td>
+            <td><span class="cmp-no">✗</span></td>
+          </tr>
+          <tr>
+            <td>Kiosk dashboard display</td>
+            <td class="cmp-col-highlight"><span class="cmp-yes">✓</span></td>
+            <td><span class="cmp-no">✗</span></td>
+            <td><span class="cmp-no">✗</span></td>
+            <td><span class="cmp-no">✗</span></td>
+            <td><span class="cmp-no">✗</span></td>
+          </tr>
+          <tr>
+            <td>All-in-one app</td>
+            <td class="cmp-col-highlight"><span class="cmp-yes">✓</span></td>
+            <td><span class="cmp-partial">~</span></td>
+            <td><span class="cmp-partial">~</span></td>
+            <td><span class="cmp-no">✗</span></td>
+            <td><span class="cmp-no">✗</span></td>
+          </tr>
+<tr>
+            <td>Australian-hosted data</td>
+            <td class="cmp-col-highlight"><span class="cmp-yes">✓</span></td>
+            <td><span class="cmp-no">✗</span></td>
+            <td><span class="cmp-no">✗</span></td>
+            <td><span class="cmp-no">✗</span></td>
+            <td><span class="cmp-partial">~</span></td>
+          </tr>
+          <tr>
+            <td>Free tier available</td>
+            <td class="cmp-col-highlight"><span class="cmp-yes">✓</span></td>
+            <td><span class="cmp-yes">✓</span></td>
+            <td><span class="cmp-partial">~</span></td>
+            <td><span class="cmp-yes">✓</span></td>
+            <td><span class="cmp-yes">✓</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- PRIVACY & AUSTRALIAN-MADE -->
+<section class="privacy" id="privacy">
+  <div class="section-inner">
+    <div class="section-label">Privacy & Security</div>
+    <h2 class="section-title">Your data stays in Australia</h2>
+    <p class="section-desc">Huddle is built and hosted entirely in Australia. Your household data is not a product — it's private, and it stays that way.</p>
+    <div class="prv-grid">
+      <div class="prv-card">
+        <div class="prv-icon">🇦🇺</div>
+        <div class="prv-text">
+          <h3>Australian infrastructure</h3>
+          <p>Your data is stored on Australian-owned servers, not on AWS, Google Cloud, or Azure. It never leaves the country.</p>
+        </div>
+      </div>
+      <div class="prv-card">
+        <div class="prv-icon">🚫</div>
+        <div class="prv-text">
+          <h3>No ads, ever</h3>
+          <p>We never sell, share, or mine your data for advertising. No trackers, no analytics packages selling your behaviour to third parties.</p>
+        </div>
+      </div>
+      <div class="prv-card">
+        <div class="prv-icon">🔐</div>
+        <div class="prv-text">
+          <h3>Passwordless login</h3>
+          <p>No passwords to leak or forget. Huddle uses magic link email authentication — a unique, time-limited link sent to your inbox.</p>
+        </div>
+      </div>
+      <div class="prv-card">
+        <div class="prv-icon">💾</div>
+        <div class="prv-text">
+          <h3>Backed up every 6 hours</h3>
+          <p>Your data is backed up automatically throughout the day. In the unlikely event of a problem, we can restore quickly.</p>
+        </div>
+      </div>
+      <div class="prv-card">
+        <div class="prv-icon">🏠</div>
+        <div class="prv-text">
+          <h3>Household isolation</h3>
+          <p>Every API call, every WebSocket message, every database query is scoped to your household. Other households cannot see your data.</p>
+        </div>
+      </div>
+      <div class="prv-card">
+        <div class="prv-icon">📜</div>
+        <div class="prv-text">
+          <h3>Transparent policies</h3>
+          <p>Our <a href="/privacy-policy" style="color:var(--teal)">Privacy Policy</a> and <a href="/terms-of-service" style="color:var(--teal)">Terms of Service</a> are written in plain English, not legalese. Read them in 5 minutes.</p>
+        </div>
+      </div>
+    </div>
+    <div class="prv-badge">
+      <span>🛡️</span> Designed, built, and hosted in Newcastle, Australia
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how" id="how">
+  <div class="section-inner">
+    <div class="section-label">How It Works</div>
+    <h2 class="section-title">Up and running in 5 minutes</h2>
+    <p class="section-desc">No downloads, no app store, no complicated setup. Just open the link and go.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-title">Open the link</div>
+        <div class="step-desc">Visit huddle.rodgersgroup.au in your phone's browser. Enter your email to receive a login link.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-title">Create your household</div>
+        <div class="step-desc">Name your household, add your people, and choose a preset. Huddle enables the right features for you.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-title">Install the app</div>
+        <div class="step-desc">Tap "Add to Home Screen" and Huddle appears on your phone like any other app. Allow notifications to get branded reminders for chores, meals, events, and more.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-title">Invite your household</div>
+        <div class="step-desc">Share the household code with your members. They enter the code, pick their name, and you approve them from your email. No PINs or passwords needed.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MINI FAQ -->
+<section class="mini-faq" id="questions">
+  <div class="section-inner">
+    <div class="section-label">Common Questions</div>
+    <h2 class="section-title">Quick answers</h2>
+    <div class="mfaq-list">
+      <div class="mfaq-item">
+        <div class="mfaq-q" onclick="this.parentElement.classList.toggle('open')">Is Huddle really free?</div>
+        <div class="mfaq-a"><p>Yes. During the beta, every feature is unlocked at no cost. When paid plans launch later, you'll get at least 30 days notice and a loyalty discount. A free tier with core modules will always exist for every household type.</p></div>
+      </div>
+      <div class="mfaq-item">
+        <div class="mfaq-q" onclick="this.parentElement.classList.toggle('open')">Do I need to download it from the App Store?</div>
+        <div class="mfaq-a"><p>No. Huddle is a web app that installs directly from your browser. Visit the link, tap "Add to Home Screen", and it works like any other app. No App Store or Google Play required.</p></div>
+      </div>
+      <div class="mfaq-item">
+        <div class="mfaq-q" onclick="this.parentElement.classList.toggle('open')">How many people can be in a household?</div>
+        <div class="mfaq-a"><p>It depends on your plan — from 1 (Solo &amp; Couples free) to 8+ (Home+ or Share+). During the beta, there's no limit. Each person gets their own profile, colour, and role. See <a href="#pricing" style="color:var(--teal)">Pricing</a> for details.</p></div>
+      </div>
+      <div class="mfaq-item">
+        <div class="mfaq-q" onclick="this.parentElement.classList.toggle('open')">Can kids use it without an email address?</div>
+        <div class="mfaq-a"><p>Yes. Only the person setting up the household needs an email. Children and dependents can join by entering the household code on their device — a manager just approves them via email. No passwords or PINs required.</p></div>
+      </div>
+      <div class="mfaq-item">
+        <div class="mfaq-q" onclick="this.parentElement.classList.toggle('open')">How do other members log in?</div>
+        <div class="mfaq-a"><p>Members tap "Request access", enter your household code, pick their name (or type a new one), and you get an email to approve. Their device loads automatically once approved. Managers log in via magic link email.</p></div>
+      </div>
+      <div class="mfaq-item">
+        <div class="mfaq-q" onclick="this.parentElement.classList.toggle('open')">What happens to my data?</div>
+        <div class="mfaq-a"><p>Your data is stored on Australian servers, backed up every 6 hours, and never sold or shared. Read our <a href="/privacy-policy" style="color:var(--teal)">Privacy Policy</a> for the full details — it's written in plain English.</p></div>
+      </div>
+    </div>
+    <div class="mfaq-more"><a href="/faq">See all frequently asked questions →</a></div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section class="pricing" id="pricing">
+  <div class="section-inner">
+    <div class="section-label">Plans</div>
+    <h2 class="section-title">Pick your household type, then pick your plan</h2>
+    <p class="section-desc" style="max-width:560px;margin:0 auto">Every plan includes the kiosk display. Switch anytime — your data comes with you.</p>
+
+    <div class="seg-tabs">
+      <button class="seg-tab" onclick="showSegment('solo')" id="tab-solo">
+        <span class="seg-icon">&#128100;</span> Solo &amp; Couples
+        <span class="seg-desc">Living alone or as a couple</span>
+      </button>
+      <button class="seg-tab active" onclick="showSegment('household')" id="tab-household">
+        <span class="seg-icon">&#128104;&#8205;&#128105;&#8205;&#128103;&#8205;&#128102;</span> Household
+        <span class="seg-desc">Families and couples with kids</span>
+      </button>
+      <button class="seg-tab" onclick="showSegment('sharehouse')" id="tab-sharehouse">
+        <span class="seg-icon">&#127968;</span> Sharehouse
+        <span class="seg-desc">Flatmates and uni students</span>
+      </button>
+    </div>
+
+    <div class="tier-panels">
+      <!-- Solo & Couples -->
+      <div class="tier-panel" id="panel-solo">
+        <div class="tier-card">
+          <div class="tier-name">Free</div>
+          <div class="tier-price">$0</div>
+          <div class="tier-annual">&nbsp;</div>
+          <div class="tier-members">1 member</div>
+          <ul class="tier-features">
+            <li>Chores with fair rotation (5)</li>
+            <li>Shared calendar</li>
+            <li>Tasks and to-dos</li>
+            <li>Shopping list (15 items)</li>
+            <li>Weather and notifications</li>
+            <li>Self care tracking</li>
+            <li>Kiosk display</li>
+          </ul>
+          <a href="/onboard" class="tier-cta outline">Start Free</a>
+        </div>
+        <div class="tier-card">
+          <div class="tier-name">Solo+</div>
+          <div class="tier-price">$2.99<small>/mo</small></div>
+          <div class="tier-annual">$26/yr — save 28%</div>
+          <div class="tier-members">1 member</div>
+          <ul class="tier-features">
+            <li>Everything in Free</li>
+            <li class="extra">Unlimited chores and shopping</li>
+            <li class="extra">Meal planner</li>
+            <li class="extra">Recipes (5 saved)</li>
+            <li class="extra">Bill tracking</li>
+            <li class="extra">Pantry inventory</li>
+            <li class="extra">Polls and voting</li>
+            <li class="extra">Fuel prices</li>
+            <li class="extra">Vehicles</li>
+          </ul>
+          <a href="/onboard" class="tier-cta outline">Get Started</a>
+        </div>
+        <div class="tier-card featured">
+          <div class="tier-name">Duo+</div>
+          <div class="tier-price">$4.99<small>/mo</small></div>
+          <div class="tier-annual">$44/yr — save 27%</div>
+          <div class="tier-members">2 members</div>
+          <ul class="tier-features">
+            <li>Everything in Solo+</li>
+            <li class="extra">Add a second person</li>
+            <li class="extra">Unlimited recipes</li>
+            <li class="extra">Noticeboard</li>
+          </ul>
+          <a href="/onboard" class="tier-cta primary">Get Started</a>
+        </div>
+      </div>
+
+      <!-- Household -->
+      <div class="tier-panel active" id="panel-household">
+        <div class="tier-card">
+          <div class="tier-name">Free</div>
+          <div class="tier-price">$0</div>
+          <div class="tier-annual">&nbsp;</div>
+          <div class="tier-members">Up to 3 members</div>
+          <ul class="tier-features">
+            <li>Chores with fair rotation (5)</li>
+            <li>Shared calendar</li>
+            <li>Tasks and to-dos</li>
+            <li>Shopping list (15 items)</li>
+            <li>Weather and notifications</li>
+            <li>Self care tracking</li>
+            <li>Kiosk display</li>
+          </ul>
+          <a href="/onboard" class="tier-cta outline">Start Free</a>
+        </div>
+        <div class="tier-card featured">
+          <div class="tier-name">Home</div>
+          <div class="tier-price">$7.99<small>/mo</small></div>
+          <div class="tier-annual">$69/yr — save 28%</div>
+          <div class="tier-members">Up to 4 members</div>
+          <ul class="tier-features">
+            <li>Everything in Free</li>
+            <li class="extra">Unlimited chores</li>
+            <li class="extra">Bill tracking</li>
+            <li class="extra">Pantry inventory</li>
+            <li class="extra">Polls and voting</li>
+            <li class="extra">Unlimited shopping</li>
+            <li class="extra">Fuel prices</li>
+            <li class="extra">Pets and vehicles</li>
+          </ul>
+          <a href="/onboard" class="tier-cta primary">Get Started</a>
+        </div>
+        <div class="tier-card">
+          <div class="tier-name">Home+</div>
+          <div class="tier-price">$14.99<small>/mo</small></div>
+          <div class="tier-annual">$129/yr — save 28%</div>
+          <div class="tier-members">Up to 8 members <span style="font-size:11px;color:var(--slate)">(+$2.99/mo each after)</span></div>
+          <ul class="tier-features">
+            <li>Everything in Home</li>
+            <li class="extra">Meal planner</li>
+            <li class="extra">Recipes</li>
+            <li class="extra">Routines (morning/bedtime)</li>
+            <li class="extra">Expense splitting</li>
+            <li class="extra">Rewards and stars</li>
+            <li class="extra">Allowances</li>
+            <li class="extra">Assignments</li>
+            <li class="extra">Priority support</li>
+          </ul>
+          <a href="/onboard" class="tier-cta outline">Get Started</a>
+        </div>
+      </div>
+
+      <!-- Sharehouse -->
+      <div class="tier-panel" id="panel-sharehouse">
+        <div class="tier-card">
+          <div class="tier-name">Free</div>
+          <div class="tier-price">$0</div>
+          <div class="tier-annual">&nbsp;</div>
+          <div class="tier-members">Up to 3 members</div>
+          <ul class="tier-features">
+            <li>Chores with fair rotation (5)</li>
+            <li>Shared calendar</li>
+            <li>Tasks and to-dos</li>
+            <li>Shopping list (15 items)</li>
+            <li>Weather and notifications</li>
+            <li>Self care tracking</li>
+            <li>Kiosk display</li>
+          </ul>
+          <a href="/onboard" class="tier-cta outline">Start Free</a>
+        </div>
+        <div class="tier-card featured">
+          <div class="tier-name">Share</div>
+          <div class="tier-price">$4.99<small>/mo</small></div>
+          <div class="tier-annual">$44/yr — save 27%</div>
+          <div class="tier-members">Up to 8 members</div>
+          <ul class="tier-features">
+            <li>Everything in Free</li>
+            <li class="extra">Unlimited chores</li>
+            <li class="extra">Bill tracking</li>
+            <li class="extra">Pantry inventory</li>
+            <li class="extra">Polls and voting</li>
+            <li class="extra">Unlimited shopping</li>
+            <li class="extra">Fuel prices</li>
+            <li class="extra">House rules</li>
+            <li class="extra">Tenancy management</li>
+          </ul>
+          <a href="/onboard" class="tier-cta primary">Get Started</a>
+        </div>
+        <div class="tier-card">
+          <div class="tier-name">Share+</div>
+          <div class="tier-price">$9.99<small>/mo</small></div>
+          <div class="tier-annual">$89/yr — save 26%</div>
+          <div class="tier-members">Up to 8 members <span style="font-size:11px;color:var(--slate)">(+$2.99/mo each after)</span></div>
+          <ul class="tier-features">
+            <li>Everything in Share</li>
+            <li class="extra">Meal planner</li>
+            <li class="extra">Recipes</li>
+            <li class="extra">Expense splitting and IOUs</li>
+            <li class="extra">Move in/out management</li>
+            <li class="extra">Bond tracking</li>
+            <li class="extra">Priority support</li>
+          </ul>
+          <a href="/onboard" class="tier-cta outline">Get Started</a>
+        </div>
+      </div>
+    </div>
+
+    <p class="pricing-note">All features are unlocked free during the beta. No credit card required. When paid plans launch, beta testers get a loyalty discount and at least 30 days notice.</p>
+  </div>
+</section>
+
+<script>
+function showSegment(seg) {
+  document.querySelectorAll('.seg-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tier-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + seg).classList.add('active');
+  document.getElementById('panel-' + seg).classList.add('active');
+}
+</script>
+
+<!-- BETA CTA -->
+<section class="beta-cta" id="beta">
+  <div class="beta-card">
+    <h2>Join the free beta</h2>
+    <p>Every feature unlocked. No cost. No credit card. All we ask is that you try it and tell us what you think.</p>
+    <div class="beta-perks">
+      <div class="perk">Full access to all modules</div>
+      <div class="perk">No feature gates or limits</div>
+      <div class="perk">Loyalty discount when paid plans launch</div>
+      <div class="perk">Your feedback shapes the product</div>
+    </div>
+    <a href="/onboard" class="btn-primary">Try Huddle Free →</a>
+  </div>
+</section>
+
+<!-- KIOSK -->
+<section class="kiosk-section">
+  <div class="kiosk-inner">
+    <div class="kiosk-text">
+      <div class="optional-badge">Optional Add-On</div>
+      <h2 class="section-title">A smart display for your kitchen</h2>
+      <p class="section-desc" style="margin-bottom:20px">Mount a screen in your kitchen and get an always-on household dashboard. Today's chores, meals, calendar events, and weather at a glance. Pair with a QR code from your phone — no login needed on the display.</p>
+      <p style="color:var(--slate);font-size:15px;margin-bottom:8px">The app works perfectly without it. The display is an optional extra for households that want a central hub everyone can see.</p>
+      <p style="color:var(--slate);font-size:14px">Smart Display Kit <strong style="color:var(--teal)">$369</strong> (BYO monitor) · Recommended monitors from <strong style="color:var(--teal)">~$200</strong> (BenQ GW2490T) to <strong style="color:var(--teal)">~$260</strong> (Dell P2425H) with portrait pivot</p>
+    </div>
+    <div class="kiosk-vis">
+      <div class="kiosk-screen">
+        <div class="ks-header"><span>12 Banksia Lane</span> <b>2:34 PM</b></div>
+        <div class="ks-row">
+          <div class="ks-card" style="border-color:#ff6b9d"><b>Unpack dishwasher</b><span>Jess · overdue</span></div>
+          <div class="ks-card" style="border-color:#4ecdc4"><b>Take bins out</b><span>Marco · due</span></div>
+        </div>
+        <div class="ks-row">
+          <div class="ks-card" style="border-color:#7e57c2"><b>Tennis 4pm</b><span>Marco</span></div>
+          <div class="ks-card" style="border-color:#4caf50"><b>Tonight: Tacos</b><span>Sam cooking</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <a href="/" class="nav-logo">
+        <svg viewBox="0 0 512 512" width="28" height="28"><defs><linearGradient id="bg2" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#56D4C4"/><stop offset="100%" stop-color="#36B2A2"/></linearGradient><mask id="c2"><rect width="512" height="512" fill="white"/><rect x="172" y="184" width="38" height="156" rx="8" fill="black"/><rect x="302" y="184" width="38" height="156" rx="8" fill="black"/><path d="M194 268 L256 228 L318 268 L318 284 L256 244 L194 284 Z" fill="black"/><circle cx="214" cy="372" r="17" fill="black"/><circle cx="256" cy="372" r="17" fill="black"/><circle cx="298" cy="372" r="17" fill="black"/></mask></defs><rect x="24" y="24" width="464" height="464" rx="104" ry="104" fill="url(#bg2)"/><path d="M256 96 L392 212 C400 218 404 230 404 242 L404 392 C404 408 392 420 376 420 L136 420 C120 420 108 408 108 392 L108 242 C108 230 112 218 120 212 Z" fill="white" mask="url(#c2)"/></svg>
+        <span><span class="nh">H</span><span class="nu">uddle</span></span>
+      </a>
+      <p>Household management for Australian families and sharehouses. Designed and built in Australia.</p>
+    </div>
+    <div class="footer-col">
+      <h4>Product</h4>
+      <a href="#features">Features</a>
+      <a href="#how">How It Works</a>
+      <a href="/faq">FAQ</a>
+      <a href="/getting-started">Getting Started</a>
+    </div>
+    <div class="footer-col">
+      <h4>Legal</h4>
+      <a href="/privacy-policy">Privacy Policy</a>
+      <a href="/terms-of-service">Terms of Service</a>
+      <a href="/beta-agreement">Beta Agreement</a>
+      <a href="/pds">Product Disclosure</a>
+    </div>
+    <div class="footer-col">
+      <h4>Contact</h4>
+      <a href="mailto:huddle@rodgersgroup.au">huddle@rodgersgroup.au</a>
+      <a href="/onboard">Try the Beta</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>&copy; 2026 Rodgers Group</span>
+    <span>Made with care in Newcastle, Australia</span>
+  </div>
+</footer>
+
+</body>
+</html>

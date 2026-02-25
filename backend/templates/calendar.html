@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Huddle - Calendar</title>
+    <link rel="icon" type="image/svg+xml" href="/static/icon.svg">
+    <link rel="apple-touch-icon" href="/static/icon-192.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Fraunces:opsz,wght@9..144,400;9..144,600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #1a1a1a;
+            --bg-card: #242424;
+            --bg-card-hover: #2a2a2a;
+            --text-primary: #f5f5f5;
+            --text-secondary: #a0a0a0;
+            --text-muted: #666;
+            --border-radius: 12px;
+            --shadow: 0 4px 24px rgba(0,0,0,0.3);
+
+            /* Participant Colors - set dynamically via JS from /api/people */
+            --color-today: #00bcd4;         /* Accent for today indicator - updated dynamically */
+            --color-everyone: #7e57c2;      /* Deep Purple - default */
+            --color-guests: #ff9800;        /* Orange */
+            --color-one-off: #2196f3;       /* Blue - distinct for one-off events */
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            height: 100vh;
+            padding: 12px 16px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            max-width: 100%;
+            min-height: 0;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #333;
+            flex-shrink: 0;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .month-title {
+            font-family: 'Fraunces', serif;
+            font-size: 2.2rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+        }
+
+        .year {
+            font-size: 1.4rem;
+            color: var(--text-secondary);
+            font-weight: 400;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .clock-section {
+            text-align: center;
+        }
+
+        .clock-time {
+            font-family: 'Fraunces', serif;
+            font-size: 2rem;
+            font-weight: 600;
+            line-height: 1;
+        }
+
+        .clock-date {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        .back-link {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-decoration: none;
+        }
+
+        .back-link:hover {
+            color: var(--text-secondary);
+        }
+
+        /* Legend */
+        .legend {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+            padding: 8px 12px;
+            background: var(--bg-card);
+            border-radius: 8px;
+            flex-shrink: 0;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+        }
+
+        .legend-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        /* Calendar Grid */
+        .calendar-container {
+            background: var(--bg-card);
+            border-radius: var(--border-radius);
+            padding: 10px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        .weekday-header {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+            flex-shrink: 0;
+        }
+
+        .weekday-name {
+            text-align: center;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 6px 4px;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            grid-template-rows: repeat(6, 1fr);
+            gap: 4px;
+            flex: 1;
+            min-height: 0;
+            max-height: 100%;
+        }
+
+        .day-cell {
+            background: var(--bg-primary);
+            border-radius: 8px;
+            padding: 6px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            min-width: 0;
+            overflow: hidden;
+            aspect-ratio: 1;
+        }
+
+        .day-cell.other-month {
+            opacity: 0.3;
+        }
+
+        /* Enhanced current day indicator */
+        .day-cell.today {
+            background: rgba(0, 188, 212, 0.12);
+            border: 2px solid var(--color-today);
+            box-shadow: 0 0 12px rgba(0, 188, 212, 0.4), inset 0 0 20px rgba(0, 188, 212, 0.05);
+        }
+
+        .day-cell.weekend {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        /* Past day strike-through - diagonal line across the cell */
+        .day-cell.past::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(
+                to bottom right,
+                transparent calc(50% - 1px),
+                rgba(100, 100, 100, 0.35) calc(50% - 1px),
+                rgba(100, 100, 100, 0.35) calc(50% + 1px),
+                transparent calc(50% + 1px)
+            );
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        /* Dim past day content slightly */
+        .day-cell.past .day-number {
+            opacity: 0.6;
+        }
+
+        .day-cell.past .events-container {
+            opacity: 0.5;
+        }
+
+        .day-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 4px;
+        }
+
+        .day-number {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            line-height: 1;
+        }
+
+        /* Enhanced today's date number */
+        .day-cell.today .day-number {
+            background: var(--color-today);
+            color: #000;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            font-weight: 700;
+            box-shadow: 0 2px 8px rgba(0, 188, 212, 0.4);
+        }
+
+        .day-cell.other-month .day-number {
+            color: var(--text-muted);
+        }
+
+        .event-count {
+            font-size: 0.6rem;
+            color: var(--text-muted);
+            background: rgba(255,255,255,0.1);
+            padding: 2px 5px;
+            border-radius: 8px;
+        }
+
+        .event-item {
+            font-size: 0.75rem;
+            padding: 4px 6px;
+            border-radius: 4px;
+            line-height: 1.2;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            cursor: default;
+            flex-shrink: 0;
+        }
+
+        .event-item.timed {
+            display: flex;
+            gap: 4px;
+        }
+
+        .event-time {
+            font-weight: 600;
+            opacity: 0.8;
+            flex-shrink: 0;
+        }
+
+        .event-title {
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .events-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            overflow: hidden;
+            min-height: 0;
+        }
+
+        .event-item.multi-start {
+            border-radius: 4px 0 0 4px;
+            margin-right: -6px;
+        }
+
+        .event-item.multi-end {
+            border-radius: 0 4px 4px 0;
+            margin-left: -6px;
+        }
+
+        .event-item.multi-middle {
+            border-radius: 0;
+            margin-left: -6px;
+            margin-right: -6px;
+        }
+
+        .more-events {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            padding: 2px 4px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        /* Color classes for events - base styles; dynamic classes injected by JS from /api/people */
+        .event-everyone { background: rgba(126, 87, 194, 0.25); color: #fff; border-left: 3px solid var(--color-everyone); }
+        .event-guests { background: rgba(255, 152, 0, 0.25); color: #fff; border-left: 3px solid var(--color-guests); }
+        .event-one-off { background: rgba(33, 150, 243, 0.25); color: #fff; border-left: 3px solid var(--color-one-off); }
+
+        /* Portrait kiosk optimization */
+        @media (orientation: portrait) {
+            .month-title {
+                font-size: 2rem;
+            }
+
+            .day-number {
+                font-size: 1.1rem;
+            }
+
+            .event-item {
+                font-size: 0.8rem;
+                padding: 5px 7px;
+            }
+
+            .weekday-name {
+                font-size: 0.9rem;
+                padding: 8px 4px;
+            }
+        }
+
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            bottom: 32px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--bg-card);
+            color: var(--text-primary);
+            padding: 16px 24px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            z-index: 1000;
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-left">
+                <div>
+                    <span class="month-title" id="monthTitle">Loading...</span>
+                    <span class="year" id="yearTitle"></span>
+                </div>
+                <a href="/" class="back-link">Back to Chores</a>
+            </div>
+            <div class="header-right">
+                <div class="clock-section">
+                    <div class="clock-time" id="clockTime">00:00</div>
+                    <div class="clock-date" id="clockDate">Loading...</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="legend" id="legend">
+            <!-- Populated dynamically by loadLegend() from /api/people -->
+        </div>
+
+        <div class="calendar-container">
+            <div class="weekday-header">
+                <div class="weekday-name">Mon</div>
+                <div class="weekday-name">Tue</div>
+                <div class="weekday-name">Wed</div>
+                <div class="weekday-name">Thu</div>
+                <div class="weekday-name">Fri</div>
+                <div class="weekday-name">Sat</div>
+                <div class="weekday-name">Sun</div>
+            </div>
+            <div class="calendar-grid" id="calendarGrid">
+                <!-- Calendar cells rendered by JS -->
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        let currentYear, currentMonth;
+        let familyEvents = [];
+        let ws = null;
+
+        // Clock
+        function updateClock() {
+            const now = new Date();
+            const time = now.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit', hour12: false });
+            const date = now.toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long' });
+            document.getElementById('clockTime').textContent = time;
+            document.getElementById('clockDate').textContent = date;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // Initialize to current month
+        function initCalendar() {
+            const now = new Date();
+            currentYear = now.getFullYear();
+            currentMonth = now.getMonth() + 1; // 1-indexed
+            loadCalendar();
+        }
+
+        // Load calendar data
+        async function loadCalendar() {
+            try {
+                // Fetch family calendar events
+                const familyResponse = await fetch(`/api/family-calendar/month/${currentYear}/${currentMonth}`);
+                const familyData = await familyResponse.json();
+
+                // Update header
+                document.getElementById('monthTitle').textContent = familyData.month_name;
+                document.getElementById('yearTitle').textContent = familyData.year;
+
+                familyEvents = familyData.events || [];
+
+                renderCalendar(familyData);
+            } catch (error) {
+                console.error('Error loading calendar:', error);
+            }
+        }
+
+        // People data cache - populated from /api/people
+        let peopleData = null;
+        let dynamicStyleSheet = null;
+
+        // Convert hex color to rgba string
+        function hexToRgba(hex, alpha) {
+            const r = parseInt(hex.slice(1, 3), 16);
+            const g = parseInt(hex.slice(3, 5), 16);
+            const b = parseInt(hex.slice(5, 7), 16);
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+
+        // Load people data and inject dynamic CSS classes + legend
+        async function loadPeopleStyles() {
+            try {
+                const resp = await fetch('/api/people');
+                peopleData = await resp.json();
+
+                // Build dynamic CSS for event color classes and CSS variables
+                let css = ':root {\n';
+
+                // Set --color-today to the first person's color
+                if (peopleData.people.length > 0) {
+                    css += `  --color-today: ${peopleData.people[0].color};\n`;
+                }
+
+                // Set everyone and guests colors from API
+                css += `  --color-everyone: ${peopleData.everyone_color};\n`;
+                css += '}\n';
+
+                // Individual person event classes
+                for (const p of peopleData.people) {
+                    css += `.event-${p.key} { background: ${hexToRgba(p.color, 0.25)}; color: #fff; border-left: 3px solid ${p.color}; }\n`;
+                }
+
+                // Combo event classes
+                for (const c of peopleData.combos) {
+                    css += `.event-${c.key} { background: ${hexToRgba(c.color, 0.25)}; color: #fff; border-left: 3px solid ${c.color}; }\n`;
+                }
+
+                // Inject dynamic stylesheet
+                if (dynamicStyleSheet) dynamicStyleSheet.remove();
+                dynamicStyleSheet = document.createElement('style');
+                dynamicStyleSheet.textContent = css;
+                document.head.appendChild(dynamicStyleSheet);
+
+                // Populate legend
+                loadLegend();
+
+            } catch(e) { console.error('Failed to load people styles:', e); }
+        }
+
+        // Populate the legend from /api/people data
+        function loadLegend() {
+            const legend = document.getElementById('legend');
+            if (!legend || !peopleData) return;
+            let html = '';
+            for (const p of peopleData.people) {
+                html += `<div class="legend-item"><div class="legend-dot" style="background: ${p.color}"></div><span>${p.name}</span></div>`;
+            }
+            for (const c of peopleData.combos) {
+                html += `<div class="legend-item"><div class="legend-dot" style="background: ${c.color}"></div><span>${c.label}</span></div>`;
+            }
+            html += `<div class="legend-item"><div class="legend-dot" style="background: ${peopleData.everyone_color}"></div><span>Everyone</span></div>`;
+            html += `<div class="legend-item"><div class="legend-dot" style="background: #ff9800"></div><span>Guests</span></div>`;
+            html += `<div class="legend-item" style="margin-left: auto; opacity: 0.7;"><span style="font-size: 0.65rem; color: var(--text-muted);">Past days have diagonal strike-through</span></div>`;
+            legend.innerHTML = html;
+        }
+
+        // Get color class from participants - dynamic based on /api/people data
+        function getColorClass(participants) {
+            if (!participants || participants.length === 0) return 'event-guests';
+
+            const pSet = new Set(participants.map(p => p.toLowerCase()));
+
+            if (pSet.has('guests')) return 'event-guests';
+
+            // Single person
+            if (pSet.size === 1) {
+                const person = [...pSet][0];
+                if (peopleData) {
+                    const found = peopleData.people.find(p => p.key === person);
+                    if (found) return 'event-' + found.key;
+                }
+                return 'event-guests';
+            }
+
+            // Check if everyone (all known people)
+            if (peopleData && pSet.size >= peopleData.people.length) {
+                const allMatch = peopleData.people.every(p => pSet.has(p.key));
+                if (allMatch) return 'event-everyone';
+            }
+
+            // Combo of 2 people
+            if (pSet.size === 2 && peopleData) {
+                const comboKey = [...pSet].sort().join('_');
+                const found = peopleData.combos.find(c => c.key === comboKey);
+                if (found) return 'event-' + found.key;
+            }
+
+            return 'event-guests';
+        }
+
+        // Render the calendar grid
+        function renderCalendar(data) {
+            const grid = document.getElementById('calendarGrid');
+            const today = data.today;
+            const firstDayWeekday = data.first_day_weekday; // 0=Monday
+            const daysInMonth = data.days_in_month;
+
+            // Calculate previous month days to show
+            const prevMonthYear = currentMonth === 1 ? currentYear - 1 : currentYear;
+            const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
+            const daysInPrevMonth = new Date(prevMonthYear, prevMonth, 0).getDate();
+
+            // Build events by date lookup
+            const eventsByDate = {};
+
+            // Add family events
+            familyEvents.forEach(event => {
+                const dateKey = event.date;
+                if (!eventsByDate[dateKey]) eventsByDate[dateKey] = [];
+                eventsByDate[dateKey].push(event);
+            });
+
+            let html = '';
+            let dayCounter = 1;
+            let nextMonthDay = 1;
+
+            // Always render 6 rows (42 cells) for consistent grid
+            const totalCells = 42;
+
+            for (let i = 0; i < totalCells; i++) {
+                let dayNum, dateStr, isOtherMonth = false, isWeekend = false, isPast = false;
+                let cellYear = currentYear, cellMonth = currentMonth;
+
+                const weekday = i % 7;
+                isWeekend = weekday === 5 || weekday === 6; // Saturday or Sunday
+
+                if (i < firstDayWeekday) {
+                    // Previous month
+                    dayNum = daysInPrevMonth - firstDayWeekday + i + 1;
+                    cellMonth = prevMonth;
+                    cellYear = prevMonthYear;
+                    isOtherMonth = true;
+                } else if (dayCounter <= daysInMonth) {
+                    // Current month
+                    dayNum = dayCounter;
+                    dayCounter++;
+                } else {
+                    // Next month
+                    dayNum = nextMonthDay;
+                    nextMonthDay++;
+                    cellMonth = currentMonth === 12 ? 1 : currentMonth + 1;
+                    cellYear = currentMonth === 12 ? currentYear + 1 : currentYear;
+                    isOtherMonth = true;
+                }
+
+                dateStr = `${cellYear}-${String(cellMonth).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+                const isToday = dateStr === today;
+
+                // Check if this day is in the past (for strike-through)
+                // Only apply to current month days, not other months
+                if (!isOtherMonth && !isToday) {
+                    isPast = dateStr < today;
+                }
+
+                const dayEvents = eventsByDate[dateStr] || [];
+                // Sort by time
+                dayEvents.sort((a, b) => {
+                    const timeA = a.start_time || '00:00';
+                    const timeB = b.start_time || '00:00';
+                    return timeA.localeCompare(timeB);
+                });
+
+                let cellClass = 'day-cell';
+                if (isOtherMonth) cellClass += ' other-month';
+                if (isToday) cellClass += ' today';
+                if (isWeekend && !isOtherMonth) cellClass += ' weekend';
+                if (isPast) cellClass += ' past';
+
+                html += `<div class="${cellClass}">`;
+                html += `<div class="day-header">`;
+                html += `<div class="day-number">${dayNum}</div>`;
+                if (dayEvents.length > 3) {
+                    html += `<div class="event-count">${dayEvents.length}</div>`;
+                }
+                html += `</div>`;
+
+                html += `<div class="events-container">`;
+
+                // Show up to 4 events, then "more"
+                const maxEvents = 4;
+                const visibleEvents = dayEvents.slice(0, maxEvents);
+                const hiddenCount = dayEvents.length - maxEvents;
+
+                visibleEvents.forEach(event => {
+                    let eventClass = 'event-item ' + getColorClass(event.participants);
+
+                    // Multi-day styling
+                    if (event.is_multi_day) {
+                        if (event.is_start) eventClass += ' multi-start';
+                        else if (event.is_end) eventClass += ' multi-end';
+                        else eventClass += ' multi-middle';
+                    }
+
+                    const timeDisplay = event.start_time && !event.all_day
+                        ? `<span class="event-time">${event.start_time}</span>` : '';
+
+                    if (timeDisplay) {
+                        html += `<div class="${eventClass} timed" title="${event.title}">`;
+                        html += timeDisplay;
+                        html += `<span class="event-title">${event.title}</span>`;
+                    } else {
+                        html += `<div class="${eventClass}" title="${event.title}">`;
+                        html += `<span class="event-title">${event.title}</span>`;
+                    }
+                    html += `</div>`;
+                });
+
+                if (hiddenCount > 0) {
+                    html += `<div class="more-events">+${hiddenCount} more</div>`;
+                }
+
+                html += `</div>`;
+                html += `</div>`;
+            }
+
+            grid.innerHTML = html;
+        }
+
+        // Check for month rollover
+        function checkMonthRollover() {
+            const now = new Date();
+            const nowYear = now.getFullYear();
+            const nowMonth = now.getMonth() + 1;
+
+            if (nowYear !== currentYear || nowMonth !== currentMonth) {
+                currentYear = nowYear;
+                currentMonth = nowMonth;
+                loadCalendar();
+            }
+        }
+
+        // WebSocket for real-time updates
+        function connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
+
+            ws.onclose = () => {
+                setTimeout(connectWebSocket, 3000);
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (data.type === 'calendar_updated' || data.type === 'refresh') {
+                    loadCalendar();
+                }
+            };
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        // Initialize - load people styles first, then calendar
+        (async () => {
+            await loadPeopleStyles();
+            initCalendar();
+        })();
+        connectWebSocket();
+
+        // Check for month rollover every minute
+        setInterval(checkMonthRollover, 60000);
+
+        // Refresh calendar every 10 minutes
+        setInterval(loadCalendar, 600000);
+
+        // Midnight refresh for Sydney timezone - auto-update strike-through and current day
+        let lastCheckedDate = null;
+        function checkMidnightRefresh() {
+            const now = new Date();
+            const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+            if (lastCheckedDate === null) {
+                lastCheckedDate = todayStr;
+            } else if (todayStr !== lastCheckedDate) {
+                // Date has changed - refresh calendar to update strike-through and current day indicator
+                lastCheckedDate = todayStr;
+                console.log('Midnight refresh: date changed to', todayStr);
+                loadCalendar();
+            }
+        }
+        // Check every minute for midnight rollover
+        setInterval(checkMidnightRefresh, 60000);
+    </script>
+</body>
+</html>

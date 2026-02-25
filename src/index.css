@@ -1,0 +1,46 @@
+@import "tailwindcss";
+
+@theme {
+  /* Huddle brand colors */
+  --color-teal: #4ecdc4;
+  --color-teal-dark: #38b2ac;
+  --color-teal-surface: #0d3332;
+  --color-pink: #ff6b9d;
+  --color-green: #4caf50;
+  --color-purple: #7e57c2;
+  --color-orange: #ff9800;
+  --color-blue: #2196f3;
+  --color-red: #ef4444;
+  --color-streak: #ff9800;
+
+  /* Light theme surfaces */
+  --color-surface: #f7f7f8;
+  --color-card: #ffffff;
+  --color-card-hover: #fafafa;
+  --color-card-border: #f0f0f0;
+  --color-input-bg: #ffffff;
+  --color-input-border: #e8e8e8;
+  --color-divider: #f0f0f0;
+
+  /* Light theme text */
+  --color-text-primary: #1a1a2e;
+  --color-text-secondary: #666666;
+  --color-text-muted: #6e6e6e;
+  --color-text-faint: #6e6e6e;
+
+  /* Status colors */
+  --color-overdue: #c81e1e;
+  --color-overdue-bg: #fef2f2;
+  --color-due: #2563eb;
+  --color-due-bg: #eff6ff;
+  --color-completed: #15803d;
+  --color-completed-bg: #f0fdf4;
+  --color-tomorrow: #6b6b74;
+  --color-tomorrow-bg: #f4f4f5;
+
+  /* Pill */
+  --color-pill-bg: #f4f4f5;
+  --color-pill-text: #666666;
+  --color-pill-active-bg: #1a1a2e;
+  --color-pill-active-text: #ffffff;
+}

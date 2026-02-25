@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Huddle - Status</title>
+    <link rel="icon" type="image/svg+xml" href="/static/icon.svg">
+    <link rel="apple-touch-icon" href="/static/icon-192.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg-primary: #1a1a1a;
+            --bg-card: #242424;
+            --bg-input: #2a2a2a;
+            --text-primary: #f5f5f5;
+            --text-secondary: #a0a0a0;
+            --text-muted: #666;
+            --accent: #4ecdc4;
+            --accent-hover: #3dbdb5;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --success: #22c55e;
+            --info: #3b82f6;
+            --border-radius: 12px;
+            --border-radius-sm: 8px;
+        }
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 24px;
+        }
+        .container { max-width: 960px; margin: 0 auto; }
+        .page-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+        .page-header img { border-radius: 10px; }
+        .page-header h1 { font-size: 1.6rem; font-weight: 600; }
+        /* Huddle logo text */
+        .huddle-logo { font-weight: 800; color: #e8e8e8; }
+        .huddle-h { color: #4ecdc4; }
+        .page-header .back-link {
+            margin-left: auto;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+        .page-header .back-link:hover { color: var(--accent); }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 24px;
+            background: var(--bg-card);
+            padding: 4px;
+            border-radius: var(--border-radius);
+        }
+        .tab {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-radius: var(--border-radius-sm);
+            font-family: inherit;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        .tab:hover { color: var(--text-primary); }
+        .tab.active { background: var(--accent); color: #1a1a1a; font-weight: 600; }
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+
+        /* Health cards */
+        .health-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+        .health-card {
+            background: var(--bg-card);
+            border-radius: var(--border-radius);
+            padding: 16px;
+            text-align: center;
+        }
+        .health-card .label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 6px;
+        }
+        .health-card .value {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+        .health-card .value.ok { color: var(--success); }
+        .health-card .value.warn { color: var(--warning); }
+        .health-card .value.error { color: var(--danger); }
+
+        /* Error log */
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .error-count {
+            background: var(--danger);
+            color: white;
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+        .error-count.zero { background: var(--success); }
+
+        .errors-card {
+            background: var(--bg-card);
+            border-radius: var(--border-radius);
+            padding: 16px;
+            overflow-x: auto;
+        }
+        .error-row {
+            display: flex;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid #2a2a2a;
+            font-size: 0.85rem;
+            align-items: flex-start;
+        }
+        .error-row:last-child { border-bottom: none; }
+        .error-row .ts {
+            color: var(--text-muted);
+            white-space: nowrap;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            flex-shrink: 0;
+        }
+        .error-row .src {
+            color: var(--text-secondary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .error-row .msg { color: var(--text-primary); word-break: break-word; flex: 1; }
+        .error-row.rectified { opacity: 0.5; }
+        .error-row.rectified .msg { text-decoration: line-through; }
+        .rectified-tick {
+            color: var(--success);
+            font-weight: 700;
+            font-size: 0.9rem;
+            flex-shrink: 0;
+            title: 'Fixed';
+        }
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            flex-shrink: 0;
+        }
+        .badge-error { background: #ef444430; color: var(--danger); }
+        .badge-critical { background: #ef444450; color: #ff6b6b; }
+
+        .no-errors {
+            text-align: center;
+            color: var(--text-muted);
+            padding: 32px 16px;
+        }
+        .no-errors .icon { font-size: 2rem; margin-bottom: 8px; }
+
+        /* Changelog */
+        .date-group { margin-bottom: 24px; }
+        .date-label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 10px;
+            padding-left: 4px;
+        }
+        .commit {
+            background: var(--bg-card);
+            border-radius: var(--border-radius-sm);
+            padding: 14px 16px;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+        .commit-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            white-space: nowrap;
+            margin-top: 2px;
+            flex-shrink: 0;
+        }
+        .commit-badge.fix { background: #ef444430; color: var(--danger); }
+        .commit-badge.feature { background: #22c55e30; color: var(--success); }
+        .commit-badge.update { background: #3b82f630; color: var(--info); }
+        .commit-badge.remove { background: #f59e0b30; color: var(--warning); }
+        .commit-badge.refactor { background: #a855f730; color: #c084fc; }
+        .commit-badge.change { background: #64748b30; color: #94a3b8; }
+        .commit-body { flex: 1; min-width: 0; }
+        .commit-subject { font-size: 0.9rem; font-weight: 500; line-height: 1.4; }
+        .commit-meta {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .commit-hash { color: var(--accent); cursor: pointer; }
+        .commit-hash:hover { text-decoration: underline; }
+        .commit-details {
+            margin-top: 8px;
+            padding-left: 0;
+            list-style: none;
+        }
+        .commit-details li {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            padding: 2px 0 2px 16px;
+            position: relative;
+        }
+        .commit-details li::before {
+            content: '\2022';
+            color: var(--text-muted);
+            position: absolute;
+            left: 0;
+        }
+
+        /* Uptime */
+        .uptime-status-banner {
+            background: var(--bg-card);
+            border-radius: var(--border-radius);
+            padding: 24px;
+            text-align: center;
+            margin-bottom: 16px;
+        }
+        .uptime-status-dot {
+            display: inline-block;
+            width: 14px; height: 14px;
+            border-radius: 50%;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+        .uptime-status-dot.up { background: var(--success); box-shadow: 0 0 8px #22c55e80; }
+        .uptime-status-dot.down { background: var(--danger); box-shadow: 0 0 8px #ef444480; animation: pulse-dot 1.5s infinite; }
+        @keyframes pulse-dot { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .uptime-status-text {
+            font-size: 1.3rem;
+            font-weight: 700;
+            vertical-align: middle;
+        }
+        .uptime-status-text.up { color: var(--success); }
+        .uptime-status-text.down { color: var(--danger); }
+        .uptime-status-sub {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-top: 6px;
+        }
+        .uptime-bars {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .uptime-bar-card {
+            background: var(--bg-card);
+            border-radius: var(--border-radius);
+            padding: 16px;
+            text-align: center;
+        }
+        .uptime-bar-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 8px;
+        }
+        .uptime-bar-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+        .uptime-bar-value.good { color: var(--success); }
+        .uptime-bar-value.warn { color: var(--warning); }
+        .uptime-bar-value.bad { color: var(--danger); }
+        .uptime-bar-unit { font-size: 0.9rem; font-weight: 400; color: var(--text-secondary); }
+        .uptime-incidents-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin: 20px 0 12px;
+        }
+        .incident-card {
+            background: var(--bg-card);
+            border-radius: var(--border-radius-sm);
+            padding: 14px 16px;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .incident-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .incident-dot.down { background: var(--danger); }
+        .incident-dot.up { background: var(--success); }
+        .incident-body { flex: 1; }
+        .incident-time {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .incident-duration {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-left: auto;
+            flex-shrink: 0;
+        }
+        .uptime-link {
+            text-align: center;
+            margin-top: 16px;
+        }
+        .uptime-link a {
+            color: var(--accent);
+            text-decoration: none;
+            font-size: 0.85rem;
+        }
+        .uptime-link a:hover { text-decoration: underline; }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            color: var(--text-muted);
+            padding: 48px 16px;
+        }
+        .spinner {
+            width: 24px; height: 24px;
+            border: 3px solid #333;
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            margin: 0 auto 12px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        @media (max-width: 600px) {
+            body { padding: 16px; }
+            .health-grid { grid-template-columns: repeat(2, 1fr); }
+            .error-row .src { display: none; }
+            .commit { flex-direction: column; gap: 6px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="page-header">
+            <img src="/static/icon.svg" width="36" height="36" alt="">
+            <h1><span class="huddle-logo"><span class="huddle-h">H</span>uddle</span> Status</h1>
+            <a href="/mobile" class="back-link">Back to <span class="huddle-logo"><span class="huddle-h">H</span>uddle</span></a>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" data-tab="status">Status</button>
+            <button class="tab" data-tab="changelog">Changelog</button>
+        </div>
+
+        <div class="tab-panel active" id="tab-status">
+            <div id="uptimeContent"></div>
+            <div class="loading" id="statusLoading">
+                <div class="spinner"></div>
+                Loading status...
+            </div>
+            <div id="statusContent" style="display:none;">
+                <div class="health-grid" id="healthGrid"></div>
+                <div class="section-title">
+                    Error Log <span class="error-count" id="errorCount">0</span>
+                </div>
+                <div class="errors-card" id="errorsCard"></div>
+            </div>
+        </div>
+
+        <div class="tab-panel" id="tab-changelog">
+            <div class="loading" id="changelogLoading">
+                <div class="spinner"></div>
+                Loading changelog...
+            </div>
+            <div id="changelogContent" style="display:none;"></div>
+        </div>
+    </div>
+
+    <script>
+    // Tab switching
+    document.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            tab.classList.add('active');
+            document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+        });
+    });
+
+    // Safe DOM helpers — all dynamic text uses textContent, never innerHTML with untrusted data
+    function el(tag, attrs, children) {
+        const node = document.createElement(tag);
+        if (attrs) Object.entries(attrs).forEach(([k, v]) => {
+            if (k === 'className') node.className = v;
+            else if (k === 'textContent') node.textContent = v;
+            else if (k.startsWith('on')) node.addEventListener(k.slice(2), v);
+            else node.setAttribute(k, v);
+        });
+        if (children) children.forEach(c => { if (c) node.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); });
+        return node;
+    }
+
+    async function loadStatus() {
+        try {
+            const resp = await fetch('/api/status', { credentials: 'include' });
+            if (!resp.ok) throw new Error('Unauthorized');
+            const data = await resp.json();
+            renderHealth(data.health);
+            renderErrors(data.errors);
+            renderChangelog(data.changelog);
+        } catch (e) {
+            document.getElementById('statusLoading').textContent = 'Failed to load status. Are you logged in?';
+            document.getElementById('changelogLoading').textContent = 'Failed to load changelog.';
+        }
+    }
+
+    function renderHealth(h) {
+        const grid = document.getElementById('healthGrid');
+        const cards = [
+            { label: 'Server Time', value: h.server_time || '-', cls: '' },
+            { label: 'Uptime', value: h.uptime || '-', cls: '' },
+            { label: 'Database', value: h.database === 'ok' ? 'Healthy' : 'Error',
+              cls: h.database === 'ok' ? 'ok' : 'error' },
+            { label: 'DB Size', value: h.db_size || '-', cls: '' },
+            { label: 'Disk Used', value: h.disk_used || '-',
+              cls: parseFloat(h.disk_used) > 85 ? 'warn' : '' },
+            { label: 'Disk Free', value: h.disk_free || '-', cls: '' },
+            { label: 'Memory', value: h.mem_used_pct ? h.mem_used_pct + ' used' : '-',
+              cls: parseInt(h.mem_used_pct) > 80 ? 'warn' : '' },
+            { label: 'Python', value: h.python || '-', cls: '' },
+        ];
+        grid.replaceChildren(...cards.map(c =>
+            el('div', { className: 'health-card' }, [
+                el('div', { className: 'label', textContent: c.label }),
+                el('div', { className: 'value ' + c.cls, textContent: c.value }),
+            ])
+        ));
+        document.getElementById('statusLoading').style.display = 'none';
+        document.getElementById('statusContent').style.display = 'block';
+    }
+
+    function renderErrors(errors) {
+        const countEl = document.getElementById('errorCount');
+        countEl.textContent = errors.length;
+        if (errors.length === 0) countEl.classList.add('zero');
+
+        const card = document.getElementById('errorsCard');
+        if (errors.length === 0) {
+            card.replaceChildren(
+                el('div', { className: 'no-errors' }, [
+                    el('div', { className: 'icon', textContent: '\u2713' }),
+                    el('div', { textContent: 'No errors in the log. All systems running smoothly.' }),
+                ])
+            );
+            return;
+        }
+        card.replaceChildren(...errors.map(e => {
+            var children = [
+                el('span', { className: 'ts', textContent: e.timestamp }),
+                el('span', { className: 'badge badge-' + e.level.toLowerCase(), textContent: e.level }),
+                el('span', { className: 'src', textContent: e.source }),
+                el('span', { className: 'msg', textContent: e.message }),
+            ];
+            if (e.rectified) {
+                children.push(el('span', { className: 'rectified-tick', textContent: '\u2713 Fixed' }));
+            }
+            return el('div', { className: 'error-row' + (e.rectified ? ' rectified' : '') }, children);
+        }));
+    }
+
+    function renderChangelog(commits) {
+        document.getElementById('changelogLoading').style.display = 'none';
+        const container = document.getElementById('changelogContent');
+        container.style.display = 'block';
+
+        if (!commits.length) {
+            container.replaceChildren(el('p', {
+                textContent: 'No commits found.',
+                style: 'color:var(--text-muted);text-align:center;padding:32px;'
+            }));
+            return;
+        }
+
+        // Group by date
+        const groups = {};
+        commits.forEach(c => {
+            if (!groups[c.date_group]) groups[c.date_group] = [];
+            groups[c.date_group].push(c);
+        });
+
+        const fragments = [];
+        for (const [date, items] of Object.entries(groups)) {
+            const dateObj = new Date(date + 'T00:00:00');
+            const label = dateObj.toLocaleDateString('en-AU', {
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+            });
+
+            const commitEls = items.map(c => {
+                const hashSpan = el('span', {
+                    className: 'commit-hash',
+                    textContent: c.hash,
+                    title: 'Click to copy full hash',
+                    onclick: () => navigator.clipboard.writeText(c.hash_full).catch(() => {}),
+                });
+                const metaDiv = el('div', { className: 'commit-meta' }, [
+                    hashSpan,
+                    document.createTextNode(' \u00b7 ' + c.date),
+                ]);
+                const bodyChildren = [];
+                // Summary is always the heading (falls back to subject if no summary)
+                bodyChildren.push(el('div', { className: 'commit-subject', textContent: c.summary || c.subject }));
+                bodyChildren.push(metaDiv);
+                // Build dot points from description lines
+                if (c.description) {
+                    var lines = c.description.split('\n')
+                        .map(function(l) { return l.replace(/^[-*]\s*/, '').trim(); })
+                        .filter(function(l) { return l.length > 0; });
+                    if (lines.length > 0) {
+                        var ul = el('ul', { className: 'commit-details' });
+                        lines.forEach(function(line) {
+                            ul.appendChild(el('li', { textContent: line }));
+                        });
+                        bodyChildren.push(ul);
+                    }
+                }
+                return el('div', { className: 'commit' }, [
+                    el('span', { className: 'commit-badge ' + c.category, textContent: c.category }),
+                    el('div', { className: 'commit-body' }, bodyChildren),
+                ]);
+            });
+
+            fragments.push(el('div', { className: 'date-group' }, [
+                el('div', { className: 'date-label', textContent: label }),
+                ...commitEls,
+            ]));
+        }
+        container.replaceChildren(...fragments);
+    }
+
+    async function loadUptime() {
+        try {
+            const resp = await fetch('https://stats.uptimerobot.com/api/getMonitorList/5YCGBesWba');
+            if (!resp.ok) throw new Error('Failed to fetch');
+            const data = await resp.json();
+            renderUptime(data);
+        } catch (e) {
+            // Silently fail — status page still works without uptime data
+        }
+    }
+
+    function renderUptime(data) {
+        const container = document.getElementById('uptimeContent');
+
+        const pspMonitors = data.psp ? data.psp.monitors : [];
+        const monitor = pspMonitors.length > 0 ? pspMonitors[0] : null;
+        const stats = data.statistics || {};
+        const isUp = stats.counts ? stats.counts.up > 0 : false;
+
+        // Status banner
+        const statusClass = isUp ? 'up' : 'down';
+        const statusText = isUp ? 'All Systems Operational' : 'Service Disruption Detected';
+        const banner = el('div', { className: 'uptime-status-banner' }, [
+            el('div', {}, [
+                el('span', { className: 'uptime-status-dot ' + statusClass }),
+                el('span', { className: 'uptime-status-text ' + statusClass, textContent: statusText }),
+            ]),
+            el('div', { className: 'uptime-status-sub', textContent: monitor ? monitor.name : 'huddle.rodgersgroup.au' }),
+        ]);
+
+        // Uptime percentage bars from statistics.uptime.l1/l7/l30/l90
+        const uptime = stats.uptime || {};
+        const periods = [
+            { label: '24 Hours', key: 'l1' },
+            { label: '7 Days', key: 'l7' },
+            { label: '30 Days', key: 'l30' },
+            { label: '90 Days', key: 'l90' },
+        ];
+
+        const barCards = periods.map(p => {
+            let value = '-';
+            let cls = '';
+            if (uptime[p.key] && uptime[p.key].ratio) {
+                const pct = parseFloat(uptime[p.key].ratio);
+                value = pct.toFixed(2);
+                cls = pct >= 99 ? 'good' : pct >= 95 ? 'warn' : 'bad';
+            }
+            return el('div', { className: 'uptime-bar-card' }, [
+                el('div', { className: 'uptime-bar-label', textContent: p.label }),
+                el('div', { className: 'uptime-bar-value ' + cls }, [
+                    document.createTextNode(value),
+                    el('span', { className: 'uptime-bar-unit', textContent: '%' }),
+                ]),
+            ]);
+        });
+        const barsGrid = el('div', { className: 'uptime-bars' }, barCards);
+
+        // Last incident
+        const incidentEls = [];
+        const lastDowntime = monitor ? monitor.lastDowntime : null;
+        if (lastDowntime && lastDowntime.date) {
+            incidentEls.push(el('div', { className: 'uptime-incidents-title', textContent: 'Last Incident' }));
+            const startDate = new Date(lastDowntime.date + ' UTC');
+            const duration = lastDowntime.duration || 0;
+            let durText = '';
+            if (duration >= 3600) durText = Math.floor(duration / 3600) + 'h ' + Math.floor((duration % 3600) / 60) + 'm';
+            else if (duration >= 60) durText = Math.floor(duration / 60) + 'm ' + (duration % 60) + 's';
+            else durText = duration + 's';
+
+            incidentEls.push(el('div', { className: 'incident-card' }, [
+                el('span', { className: 'incident-dot down' }),
+                el('div', { className: 'incident-body' }, [
+                    el('div', { className: 'incident-time', textContent: startDate.toLocaleString('en-AU', { dateStyle: 'medium', timeStyle: 'short' }) }),
+                    el('div', { className: 'incident-time', textContent: lastDowntime.reason || 'Downtime detected' }),
+                ]),
+                el('span', { className: 'incident-duration', textContent: durText }),
+            ]));
+        }
+
+        // Link to full page
+        const link = el('div', { className: 'uptime-link' }, [
+            el('a', { href: 'https://stats.uptimerobot.com/5YCGBesWba', target: '_blank', textContent: 'View full status page on UptimeRobot \u2192' }),
+        ]);
+
+        container.replaceChildren(banner, barsGrid, ...incidentEls, link);
+    }
+
+    loadStatus();
+    loadUptime();
+    </script>
+</body>
+</html>
