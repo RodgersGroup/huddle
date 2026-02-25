@@ -27,6 +27,10 @@ FUEL_CACHE_FILE = str(BASE_DIR / "fuel_display.txt")
 def parse_fuel_cache_file():
     """Parse cached fuel data from fuel_display.txt as fallback."""
     try:
+        if not Path(FUEL_CACHE_FILE).exists():
+            logger.debug("Fuel cache file not found, skipping: %s", FUEL_CACHE_FILE)
+            return None
+
         with open(FUEL_CACHE_FILE, 'r') as f:
             content = f.read()
 
