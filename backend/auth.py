@@ -674,18 +674,20 @@ async def get_me(user: TenantContext = Depends(get_current_user)):
                 (user.user_id,),
             ).fetchall()
 
+            # Get current user's email directly from users table
+            current_user_row = conn.execute(
+                "SELECT email FROM users WHERE id = ?", (user.user_id,)
+            ).fetchone()
+            current_user_email = current_user_row["email"] if current_user_row else None
+
         # Check if current user is superadmin
-        current_user_email = None
-        for m in members:
-            if m["user_id"] == user.user_id:
-                current_user_email = m["email"]
-                break
         from config import SUPERADMIN_EMAILS
         is_superadmin = current_user_email in SUPERADMIN_EMAILS
 
         result_user = {
             "user_id": user.user_id,
             "display_name": user.display_name,
+            "email": current_user_email,
             "role": user.role,
             "avatar_url": get_avatar_url(user.user_id),
             "is_superadmin": is_superadmin,
