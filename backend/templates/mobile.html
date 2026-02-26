@@ -5961,10 +5961,52 @@
     </div>
 
     <script>
-        // CSRF protection + response error logging wrapper
+        // Client error reporter — sends errors to /api/client-errors for tracking
         (function() {
-            const _origFetch = window.fetch;
-            const CSRF_METHODS = new Set(['POST', 'PUT', 'DELETE', 'PATCH']);
+            var _reportQueue = [];
+            var _reportTimer = null;
+            var _origFetch = window.fetch;
+
+            window._reportError = function(error) {
+                _reportQueue.push({
+                    message: error.message || String(error),
+                    source: error.source || '',
+                    lineno: error.lineno || 0,
+                    colno: error.colno || 0,
+                    stack: error.stack || '',
+                    url: location.pathname,
+                    user: (typeof currentUser !== 'undefined' && currentUser) || 'unknown',
+                    timestamp: new Date().toISOString(),
+                    userAgent: navigator.userAgent
+                });
+                // Debounce: flush after 2s of no new errors (batch related errors)
+                clearTimeout(_reportTimer);
+                _reportTimer = setTimeout(_flushErrors, 2000);
+            };
+
+            function _flushErrors() {
+                if (_reportQueue.length === 0) return;
+                var batch = _reportQueue.splice(0, 20);
+                _origFetch.call(window, '/api/client-errors', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                    body: JSON.stringify({ errors: batch })
+                }).catch(function() {}); // don't recurse on failure
+            }
+
+            // Catch unhandled JS errors
+            window.addEventListener('error', function(e) {
+                window._reportError({ message: e.message, source: e.filename, lineno: e.lineno, colno: e.colno, stack: e.error && e.error.stack });
+            });
+
+            // Catch unhandled promise rejections
+            window.addEventListener('unhandledrejection', function(e) {
+                var reason = e.reason || {};
+                window._reportError({ message: 'Unhandled rejection: ' + (reason.message || String(reason)), stack: reason.stack, source: 'promise' });
+            });
+
+            // CSRF protection + API error reporting wrapper
+            var CSRF_METHODS = new Set(['POST', 'PUT', 'DELETE', 'PATCH']);
             window.fetch = function(input, init) {
                 if (init && CSRF_METHODS.has((init.method || 'GET').toUpperCase())) {
                     init.headers = init.headers || {};
@@ -5974,11 +6016,19 @@
                         if (!init.headers['X-Requested-With']) init.headers['X-Requested-With'] = 'XMLHttpRequest';
                     }
                 }
+                var url = typeof input === 'string' ? input : (input && input.url) || '';
+                var method = (init && init.method) || 'GET';
                 return _origFetch.call(this, input, init).then(function(resp) {
-                    if (!resp.ok && resp.url && resp.url.includes('/api/')) {
+                    if (!resp.ok && url.includes('/api/') && !url.includes('/api/client-errors')) {
                         console.warn('API error:', resp.status, resp.url);
+                        window._reportError({ message: 'API ' + method + ' ' + resp.status + ': ' + url, source: 'fetch' });
                     }
                     return resp;
+                }).catch(function(err) {
+                    if (url.includes('/api/') && !url.includes('/api/client-errors')) {
+                        window._reportError({ message: 'API ' + method + ' network error: ' + url + ' — ' + err.message, source: 'fetch', stack: err.stack });
+                    }
+                    throw err;
                 });
             };
         })();
@@ -7891,8 +7941,6 @@
             var overdue = filtered.filter(function(c) { return c.status === 'overdue'; });
             var dueToday = filtered.filter(function(c) { return c.status === 'due_today'; });
             var completedToday = filtered.filter(function(c) { return c.status === 'completed_today'; });
-            var dueTomorrow = filtered.filter(function(c) { return (c.status === 'tomorrow' || c.also_tomorrow) && c.status !== 'completed_today'; });
-
             var allOverdue = choresData.filter(function(c) { return c.status === 'overdue'; });
             if ('setAppBadge' in navigator) {
                 if (allOverdue.length > 0) {
@@ -7905,7 +7953,6 @@
             var frag = document.createDocumentFragment();
             if (overdue.length > 0) frag.appendChild(renderSection('Overdue', overdue, 'overdue'));
             if (dueToday.length > 0) frag.appendChild(renderSection('Due Today', dueToday, 'due'));
-            if (choreFilter === 'all' && dueTomorrow.length > 0) frag.appendChild(renderSection('Due Tomorrow', dueTomorrow, 'tomorrow'));
             if (completedToday.length > 0) frag.appendChild(renderSection('Completed', completedToday, 'completed'));
 
             if (frag.childNodes.length === 0) {
