@@ -6141,7 +6141,11 @@
                 const resp = await fetch('/api/home/summary');
                 if (!resp.ok) return;
                 tileSummaries = await resp.json();
-                renderHomeTiles();
+                // Do not call renderHomeTiles() here: enabledModules may not yet be
+                // populated if fetchEnabledModules() hasn't resolved yet (race condition).
+                // renderHomeTiles() is called by renderHomeScreen() in the Promise.all
+                // .then() callback, which guarantees both fetchEnabledModules and
+                // fetchTileSummaries have completed before tiles are rendered.
             } catch(e) { console.error('Failed to fetch summaries:', e); }
         }
 
@@ -6893,6 +6897,7 @@
         // Fetch home summaries (tiles + up next)
         async function fetchHomeSummaries() {
             await fetchTileSummaries();
+            renderHomeTiles();
             renderUpNext();
         }
 
@@ -7407,7 +7412,15 @@
         async function loadAuthUser() {
             try {
                 const resp = await fetch('/api/auth/me');
-                if (!resp.ok) return;
+                if (!resp.ok) {
+                    // Session expired or invalid — clear client-side login state
+                    // and redirect to onboarding so the user can re-authenticate.
+                    if (resp.status === 401 || resp.status === 403) {
+                        localStorage.removeItem('currentUser');
+                        window.location = '/onboard';
+                    }
+                    return;
+                }
                 const data = await resp.json();
                 authUser = data;
                 userRole = data.user.role;

@@ -641,7 +641,12 @@ async def logout():
         content=json.dumps({"ok": True, "message": "Logged out"}),
         media_type="application/json",
     )
-    response.delete_cookie(key=COOKIE_NAME)
+    response.delete_cookie(
+        key=COOKIE_NAME,
+        httponly=True,
+        samesite="lax",
+        secure=COOKIE_SECURE,
+    )
     return response
 
 
