@@ -400,13 +400,14 @@ def get_status():
                 """).fetchall()
 
             agent_health = {
-                "last_24h": {"info": 0, "warning": 0, "critical": 0, "auto_fixed": 0},
+                "last_24h": {"info": 0, "warning": 0, "critical": 0, "auto_fixed": 0, "total": 0},
                 "recent_actions": [dict(r) for r in recent],
             }
             for row in stats:
-                agent_health["last_24h"][row["severity"]] = agent_health["last_24h"].get(row["severity"], 0) + row["cnt"]
+                agent_health["last_24h"][row["severity"]] += row["cnt"]
                 if row["auto_fixed"]:
                     agent_health["last_24h"]["auto_fixed"] += row["cnt"]
+                agent_health["last_24h"]["total"] += row["cnt"]
         except Exception as e:
             logger.warning("Failed to get agent health: %s", e)
 
