@@ -377,15 +377,45 @@ async def rectify_error(request: Request):
 
 @router.get("/api/status")
 def get_status():
-    """System status, error logs, and changelog. No auth — protected by Cloudflare Access externally."""
+    """System status, error logs, changelog, and agent health."""
     try:
         changelog = _get_changelog(30)
         _attach_summaries(changelog)
+
+        # Agent health summary
+        agent_health = {}
+        try:
+            with get_db() as conn:
+                stats = conn.execute("""
+                    SELECT severity, auto_fixed, COUNT(*) as cnt
+                    FROM agent_actions
+                    WHERE created_at > datetime('now', '-1 day')
+                    GROUP BY severity, auto_fixed
+                """).fetchall()
+
+                recent = conn.execute("""
+                    SELECT agent, action_type, title, severity, auto_fixed, created_at
+                    FROM agent_actions
+                    ORDER BY created_at DESC LIMIT 10
+                """).fetchall()
+
+            agent_health = {
+                "last_24h": {"info": 0, "warning": 0, "critical": 0, "auto_fixed": 0},
+                "recent_actions": [dict(r) for r in recent],
+            }
+            for row in stats:
+                agent_health["last_24h"][row["severity"]] = agent_health["last_24h"].get(row["severity"], 0) + row["cnt"]
+                if row["auto_fixed"]:
+                    agent_health["last_24h"]["auto_fixed"] += row["cnt"]
+        except Exception as e:
+            logger.warning("Failed to get agent health: %s", e)
+
         return JSONResponse(
             content={
                 "health": _get_health(),
                 "errors": _get_errors(50),
                 "changelog": changelog,
+                "agents": agent_health,
             },
             headers={"Access-Control-Allow-Origin": "*"},
         )
