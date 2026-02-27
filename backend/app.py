@@ -1565,6 +1565,11 @@ async def startup():
     asyncio.create_task(push_notification_task())
     logger.info("Push notification task started")
 
+    # Start self-healing agents loop
+    from agents.loop import agent_loop_task
+    asyncio.create_task(agent_loop_task())
+    logger.info("Self-healing agents loop started")
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8001)
