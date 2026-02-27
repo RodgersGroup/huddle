@@ -49,10 +49,12 @@ async def watchdog_and_maintenance_task():
     _last_gc = 0.0
     _last_pairing_cleanup = 0.0
     _last_page_flush = 0.0
+    _last_action_cleanup = 0.0
 
     GC_INTERVAL = 300           # 5 minutes
     PAIRING_CLEANUP_INTERVAL = 600  # 10 minutes
     PAGE_FLUSH_INTERVAL = 300   # 5 minutes
+    ACTION_CLEANUP_INTERVAL = 86400  # 24 hours
 
     while True:
         try:
@@ -85,6 +87,18 @@ async def watchdog_and_maintenance_task():
                     await flush_page_views()
                 except Exception as e:
                     logger.warning("Failed to flush page views: %s", e)
+
+            # Clean old agent action records every 24 hours (keep 30 days)
+            if now - _last_action_cleanup >= ACTION_CLEANUP_INTERVAL:
+                _last_action_cleanup = now
+                try:
+                    with get_db() as conn:
+                        conn.execute(
+                            "DELETE FROM agent_actions WHERE created_at < datetime('now', '-30 days')"
+                        )
+                        conn.commit()
+                except Exception as e:
+                    logger.warning("Failed to clean old agent actions: %s", e)
 
         except Exception as e:
             logger.error("Watchdog task error: %s", e, exc_info=True)
