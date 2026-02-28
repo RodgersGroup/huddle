@@ -125,8 +125,8 @@ class ConnectionManager:
 
     async def _periodic_log(self):
         """Log connection counts every 60 seconds and run periodic stale cleanup."""
-        try:
-            while True:
+        while True:
+            try:
                 await asyncio.sleep(60)
                 total = self._total_connections()
                 if total > 0:
@@ -142,10 +142,10 @@ class ConnectionManager:
                 if total > 100 or (total > 0 and time_since_cleanup >= self.CLEANUP_INTERVAL_SECONDS):
                     self._last_cleanup_time = now
                     await self._cleanup_stale()
-        except asyncio.CancelledError:
-            pass
-        except Exception as e:
-            logger.error("WebSocket periodic log error: %s", e)
+            except asyncio.CancelledError:
+                return
+            except Exception as e:
+                logger.warning("WebSocket periodic log error (will retry): %s", e)
 
 
 manager = ConnectionManager()
