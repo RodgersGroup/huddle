@@ -3,7 +3,7 @@ import logging
 import sqlite3
 from fastapi import APIRouter, Depends, HTTPException, Request
 from auth import get_current_user, require_role, TenantContext
-from db import get_db
+from db import get_db, check_version
 from websocket import manager
 
 logger = logging.getLogger("huddle")
@@ -177,6 +177,7 @@ async def update_reward(reward_id: int, request: Request, tenant: TenantContext 
             ).fetchone()
             if not existing:
                 raise HTTPException(status_code=404, detail="Reward not found")
+            check_version(data, existing, "reward")
 
             name = data.get("name", existing["name"]).strip()
             cost = data.get("cost", existing["cost"])
@@ -185,7 +186,7 @@ async def update_reward(reward_id: int, request: Request, tenant: TenantContext 
             available = data.get("available", existing["available"])
 
             conn.execute(
-                "UPDATE rewards SET name = ?, description = ?, cost = ?, icon = ?, available = ? WHERE id = ? AND household_id = ?",
+                "UPDATE rewards SET name = ?, description = ?, cost = ?, icon = ?, available = ?, version = COALESCE(version, 0) + 1, updated_at = datetime('now') WHERE id = ? AND household_id = ?",
                 (name, description, cost, icon, 1 if available else 0, reward_id, household_id)
             )
             conn.commit()

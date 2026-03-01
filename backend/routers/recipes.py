@@ -11,7 +11,7 @@ from urllib.request import Request as URLRequest, urlopen
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from auth import TenantContext, get_current_user, require_role
-from db import get_db
+from db import get_db, check_version
 from websocket import manager
 
 logger = logging.getLogger("huddle")
@@ -258,6 +258,7 @@ async def update_recipe(recipe_id: int, request: Request, tenant: TenantContext 
             ).fetchone()
             if not existing:
                 raise HTTPException(status_code=404, detail="Recipe not found")
+            check_version(data, existing, "recipe")
 
             # --- Input validation ---
             name = data.get("name", existing["name"])
@@ -273,7 +274,8 @@ async def update_recipe(recipe_id: int, request: Request, tenant: TenantContext 
 
             conn.execute("""
                 UPDATE recipes SET name = ?, description = ?, source_url = ?, servings = ?,
-                    prep_time_mins = ?, cook_time_mins = ?, image_url = ?, notes = ?, updated_at = ?
+                    prep_time_mins = ?, cook_time_mins = ?, image_url = ?, notes = ?, updated_at = ?,
+                    version = COALESCE(version, 0) + 1
                 WHERE id = ? AND household_id = ?
             """, (
                 name,

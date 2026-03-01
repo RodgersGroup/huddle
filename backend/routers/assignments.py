@@ -3,7 +3,7 @@ import sqlite3
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Request
 from auth import get_current_user, TenantContext
-from db import get_db
+from db import get_db, check_version
 from websocket import manager
 from push import send_push_to_person_bg
 
@@ -126,6 +126,7 @@ async def update_assignment(assignment_id: int, request: Request, tenant: Tenant
             ).fetchone()
             if not existing:
                 raise HTTPException(status_code=404, detail="Assignment not found")
+            check_version(data, existing, "assignment")
 
             now = datetime.now().isoformat()
             new_status = data.get("status", existing["status"])
@@ -137,7 +138,8 @@ async def update_assignment(assignment_id: int, request: Request, tenant: Tenant
 
             conn.execute("""
                 UPDATE assignments SET title=?, description=?, subject=?, assigned_to=?,
-                due_date=?, due_time=?, status=?, priority=?, notes=?, updated_at=?, completed_at=?
+                due_date=?, due_time=?, status=?, priority=?, notes=?, updated_at=?, completed_at=?,
+                version = COALESCE(version, 0) + 1
                 WHERE id=? AND household_id=?
             """, (
                 data.get("title", existing["title"]),

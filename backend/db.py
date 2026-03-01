@@ -73,6 +73,23 @@ def close_all_connections():
 atexit.register(close_all_connections)
 
 
+def check_version(data: dict, existing: sqlite3.Row, entity_name: str) -> None:
+    """Check optimistic locking version if client provides one.
+
+    Raises HTTPException(409) if the client's version doesn't match the DB.
+    No-op if client doesn't send a version (backwards-compatible).
+    """
+    client_version = data.get("version")
+    if client_version is not None:
+        current_version = existing["version"] if "version" in existing.keys() else None
+        if current_version is not None and int(client_version) != current_version:
+            from fastapi import HTTPException
+            raise HTTPException(
+                status_code=409,
+                detail=f"Conflict: {entity_name} was modified by another user. Please refresh and try again.",
+            )
+
+
 def init_db():
     """Initialise the database schema via the migrations system."""
     with get_db() as conn:

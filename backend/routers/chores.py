@@ -8,7 +8,7 @@ import random
 from datetime import datetime, date, timedelta
 from typing import Optional
 from zoneinfo import ZoneInfo
-from db import get_db
+from db import get_db, check_version
 from settings import get_people, get_member_colors, get_setting
 from websocket import manager
 from push import send_push_to_person
@@ -690,15 +690,7 @@ async def update_chore(chore_id: int, request: Request, tenant: TenantContext = 
             if not existing:
                 raise HTTPException(status_code=404, detail="Chore not found")
 
-            # Optimistic locking: if client sends version, check it matches
-            client_version = data.get('version')
-            if client_version is not None:
-                current_version = existing['version'] if 'version' in existing.keys() else None
-                if current_version is not None and int(client_version) != current_version:
-                    raise HTTPException(
-                        status_code=409,
-                        detail="Conflict: chore was modified by another user. Please refresh and try again.",
-                    )
+            check_version(data, existing, "chore")
 
             conn.execute("""
                 UPDATE chores

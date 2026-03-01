@@ -8,7 +8,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Request
 from auth import get_current_user, require_role, TenantContext
 
-from db import get_db
+from db import get_db, check_version
 from settings import get_people, get_participant_color, get_participant_label, get_calendar_colors, get_setting
 from websocket import manager
 from push import send_push_to_person_bg
@@ -518,6 +518,7 @@ async def update_family_calendar_event(event_id: int, request: Request, tenant: 
             existing = conn.execute("SELECT * FROM calendar_events WHERE id = ? AND household_id = ? AND deleted_at IS NULL", (event_id, household_id)).fetchone()
             if not existing:
                 raise HTTPException(status_code=404, detail="Event not found")
+            check_version(data, existing, "calendar event")
 
             event_type = data.get('event_type', existing['event_type'])
             participants = data.get('participants', json.loads(existing['participants'] or '[]'))
@@ -540,7 +541,8 @@ async def update_family_calendar_event(event_id: int, request: Request, tenant: 
                     all_day = ?,
                     participants = ?,
                     recurrence_rule = ?,
-                    updated_at = CURRENT_TIMESTAMP
+                    updated_at = CURRENT_TIMESTAMP,
+                    version = COALESCE(version, 0) + 1
                 WHERE id = ? AND household_id = ?
             """, (
                 data.get('title', existing['title']),

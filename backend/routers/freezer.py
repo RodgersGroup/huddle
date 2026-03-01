@@ -4,7 +4,7 @@ import logging
 import sqlite3
 from fastapi import APIRouter, Depends, HTTPException, Request
 from auth import get_current_user, TenantContext
-from db import get_db
+from db import get_db, check_version
 from websocket import manager
 
 logger = logging.getLogger("huddle")
@@ -72,14 +72,16 @@ async def update_freezer_item(item_id: int, request: Request, tenant: TenantCont
         data = await request.json()
         with get_db() as conn:
             existing = conn.execute(
-                "SELECT id FROM freezer_items WHERE id = ? AND household_id = ? AND deleted_at IS NULL",
+                "SELECT * FROM freezer_items WHERE id = ? AND household_id = ? AND deleted_at IS NULL",
                 (item_id, tenant.household_id),
             ).fetchone()
             if not existing:
                 raise HTTPException(status_code=404, detail="Item not found")
+            check_version(data, existing, "freezer item")
 
             conn.execute(
-                """UPDATE freezer_items SET name=?, category=?, quantity=?, date_frozen=?, expiry_date=?, notes=?
+                """UPDATE freezer_items SET name=?, category=?, quantity=?, date_frozen=?, expiry_date=?, notes=?,
+                       version = COALESCE(version, 0) + 1, updated_at = datetime('now')
                    WHERE id=? AND household_id=?""",
                 (
                     data.get("name", ""),

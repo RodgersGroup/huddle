@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from auth import get_current_user, require_role, TenantContext
 from datetime import datetime, date
 from zoneinfo import ZoneInfo
-from db import get_db
+from db import get_db, check_version
 from settings import get_setting
 from websocket import manager
 
@@ -173,9 +173,11 @@ async def update_pet(pet_id: int, request: Request, tenant: TenantContext = Depe
             ).fetchone()
             if not existing:
                 raise HTTPException(status_code=404, detail="Pet not found")
+            check_version(data, existing, "pet")
 
             conn.execute("""
-                UPDATE pets SET name=?, species=?, breed=?, date_of_birth=?, icon=?, notes=?
+                UPDATE pets SET name=?, species=?, breed=?, date_of_birth=?, icon=?, notes=?,
+                    version = COALESCE(version, 0) + 1, updated_at = datetime('now')
                 WHERE id=? AND household_id=?
             """, (
                 data.get('name', existing['name']),

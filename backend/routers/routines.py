@@ -5,7 +5,7 @@ import json
 from datetime import datetime, date, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Request
 from auth import get_current_user, require_role, TenantContext
-from db import get_db
+from db import get_db, check_version
 from settings import get_setting
 from websocket import manager
 
@@ -205,6 +205,7 @@ async def update_routine(routine_id: int, request: Request, tenant: TenantContex
             ).fetchone()
             if not routine:
                 raise HTTPException(status_code=404, detail="Routine not found")
+            check_version(data, routine, "routine")
 
             # Update routine fields
             name = data.get("name", routine["name"]).strip()
@@ -213,7 +214,7 @@ async def update_routine(routine_id: int, request: Request, tenant: TenantContex
             sort_order = data.get("sort_order", routine["sort_order"])
 
             conn.execute(
-                "UPDATE routines SET name = ?, routine_type = ?, assigned_to = ?, sort_order = ? WHERE id = ? AND household_id = ?",
+                "UPDATE routines SET name = ?, routine_type = ?, assigned_to = ?, sort_order = ?, version = COALESCE(version, 0) + 1, updated_at = datetime('now') WHERE id = ? AND household_id = ?",
                 (name, routine_type, assigned_to, sort_order, routine_id, household_id)
             )
 

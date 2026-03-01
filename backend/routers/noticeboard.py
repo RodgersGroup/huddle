@@ -3,7 +3,7 @@ import sqlite3
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Request
 from auth import get_current_user, TenantContext
-from db import get_db
+from db import get_db, check_version
 from websocket import manager
 
 logger = logging.getLogger("huddle")
@@ -120,6 +120,7 @@ async def update_post(post_id: int, request: Request, tenant: TenantContext = De
             # Only own posts or manager can edit
             if existing["posted_by"] != tenant.display_name and tenant.role != "manager":
                 raise HTTPException(status_code=403, detail="Not authorised")
+            check_version(data, existing, "post")
 
             title = data.get("title", existing["title"])
             if isinstance(title, str):
@@ -138,7 +139,8 @@ async def update_post(post_id: int, request: Request, tenant: TenantContext = De
             now = datetime.now().isoformat()
             conn.execute("""
                 UPDATE noticeboard_posts
-                SET title=?, body=?, post_type=?, priority=?, pinned=?, expires_at=?, updated_at=?
+                SET title=?, body=?, post_type=?, priority=?, pinned=?, expires_at=?, updated_at=?,
+                    version = COALESCE(version, 0) + 1
                 WHERE id=? AND household_id=?
             """, (
                 title, body,

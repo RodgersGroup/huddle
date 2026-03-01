@@ -7,7 +7,7 @@ import urllib.error
 from fastapi import APIRouter, Depends, HTTPException, Request
 from auth import get_current_user, TenantContext
 from datetime import datetime
-from db import get_db
+from db import get_db, check_version
 from websocket import manager
 from push import send_push_to_person_bg
 from settings import get_people
@@ -267,6 +267,7 @@ async def update_shopping_item(item_id: int, request: Request, tenant: TenantCon
             ).fetchone()
             if not existing:
                 raise HTTPException(status_code=404, detail="Item not found")
+            check_version(data, existing, "shopping item")
 
             # --- Input validation ---
             name = data.get('name', existing['name'])
@@ -282,7 +283,8 @@ async def update_shopping_item(item_id: int, request: Request, tenant: TenantCon
 
             conn.execute("""
                 UPDATE shopping_items
-                SET name = ?, quantity = ?, category = ?, notes = ?, shop = ?
+                SET name = ?, quantity = ?, category = ?, notes = ?, shop = ?,
+                    version = COALESCE(version, 0) + 1, updated_at = datetime('now')
                 WHERE id = ? AND household_id = ?
             """, (
                 name,

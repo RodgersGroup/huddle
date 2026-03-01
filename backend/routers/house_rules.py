@@ -4,7 +4,7 @@ import json
 from fastapi import APIRouter, Depends, HTTPException, Request
 from auth import get_current_user, TenantContext
 from datetime import datetime
-from db import get_db
+from db import get_db, check_version
 from settings import get_people
 from websocket import manager
 from push import send_push_to_person_bg
@@ -180,6 +180,7 @@ async def update_rule(rule_id: int, request: Request, tenant: TenantContext = De
             ).fetchone()
             if not existing:
                 raise HTTPException(status_code=404, detail="Rule not found")
+            check_version(data, existing, "house rule")
 
             title = data.get("title", existing["title"])
             if isinstance(title, str):
@@ -206,7 +207,8 @@ async def update_rule(rule_id: int, request: Request, tenant: TenantContext = De
 
             conn.execute("""
                 UPDATE house_rules
-                SET title = ?, description = ?, category = ?, updated_at = ?
+                SET title = ?, description = ?, category = ?, updated_at = ?,
+                    version = COALESCE(version, 0) + 1
                 WHERE id = ? AND household_id = ?
             """, (title, description, category, now, rule_id, household_id))
 

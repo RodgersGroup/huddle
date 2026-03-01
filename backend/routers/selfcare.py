@@ -8,7 +8,7 @@ from zoneinfo import ZoneInfo
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from auth import get_current_user, TenantContext
-from db import get_db
+from db import get_db, check_version
 from settings import get_setting
 from websocket import manager
 
@@ -210,11 +210,12 @@ async def update_selfcare_item(item_id: int, request: Request, tenant: TenantCon
 
         with get_db() as conn:
             existing = conn.execute(
-                "SELECT id FROM selfcare_items WHERE id = ? AND household_id = ? AND deleted_at IS NULL",
+                "SELECT * FROM selfcare_items WHERE id = ? AND household_id = ? AND deleted_at IS NULL",
                 (item_id, household_id),
             ).fetchone()
             if not existing:
                 raise HTTPException(status_code=404, detail="Item not found")
+            check_version(data, existing, "selfcare item")
 
             updates = []
             params = []
@@ -251,6 +252,8 @@ async def update_selfcare_item(item_id: int, request: Request, tenant: TenantCon
                     params.append(val)
 
             if updates:
+                updates.append("version = COALESCE(version, 0) + 1")
+                updates.append("updated_at = datetime('now')")
                 params.append(item_id)
                 params.append(household_id)
                 conn.execute(

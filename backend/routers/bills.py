@@ -6,7 +6,7 @@ from auth import get_current_user, require_role, TenantContext
 from collections import defaultdict
 from datetime import datetime, date
 from zoneinfo import ZoneInfo
-from db import get_db
+from db import get_db, check_version
 from settings import get_setting, get_people
 from websocket import manager
 from push import send_push_to_person_bg
@@ -155,6 +155,7 @@ async def update_bill(bill_id: int, request: Request, tenant: TenantContext = De
             existing = conn.execute("SELECT * FROM bills WHERE id = ? AND household_id = ? AND deleted_at IS NULL", (bill_id, household_id)).fetchone()
             if not existing:
                 raise HTTPException(status_code=404, detail="Bill not found")
+            check_version(data, existing, "bill")
             split_type = data.get('split_type', existing['split_type'] or 'equal')
             if split_type not in ('equal', 'custom', 'single'):
                 split_type = 'equal'
@@ -167,7 +168,8 @@ async def update_bill(bill_id: int, request: Request, tenant: TenantContext = De
                 split_between_json = existing['split_between'] or '[]'
 
             conn.execute("""
-                UPDATE bills SET name=?, amount=?, due_date=?, recurrence=?, category=?, notes=?, split_type=?, split_between=?
+                UPDATE bills SET name=?, amount=?, due_date=?, recurrence=?, category=?, notes=?, split_type=?, split_between=?,
+                    version = COALESCE(version, 0) + 1, updated_at = datetime('now')
                 WHERE id=? AND household_id=?
             """, (
                 data.get('name', existing['name']),
