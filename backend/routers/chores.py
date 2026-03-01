@@ -465,15 +465,31 @@ def get_chore_stats(period: str = "week", tenant: TenantContext = Depends(get_cu
             total_expected = total_done + skips + sum(1 for c in chores if c['status'] in ('overdue', 'due_today'))
             overall_rate = round((total_done / total_expected * 100) if total_expected > 0 else 100)
 
+            # Count per-person completions for the period from DB
+            person_completions = conn.execute("""
+                SELECT completed_by, COUNT(*) as cnt FROM completions
+                WHERE household_id = ? AND completed_at >= ? AND completed_by NOT LIKE 'SKIPPED%'
+                GROUP BY completed_by
+            """, (household_id, start_date)).fetchall()
+            person_comp_map = {r['completed_by']: r['cnt'] for r in person_completions}
+
+            # Count per-person currently due/overdue chores
+            person_due_map: dict[str, int] = {}
+            for c in chores:
+                if c['status'] in ('overdue', 'due_today'):
+                    for p in (c.get('people') or []):
+                        person_due_map[p] = person_due_map.get(p, 0) + 1
+
             per_person = []
             for person in people:
-                person_done = comp_map.get(person, 0)
-                assigned = len([c for c in chores if person in (c.get('people') or [])])
+                person_done = person_comp_map.get(person, 0)
+                person_remaining = person_due_map.get(person, 0)
+                person_expected = person_done + person_remaining
                 per_person.append({
                     "name": person,
                     "completed": person_done,
-                    "assigned": max(assigned, 1),
-                    "rate": min(round((person_done / max(assigned, 1)) * 100), 100),
+                    "assigned": max(person_expected, 1),
+                    "rate": min(round((person_done / max(person_expected, 1)) * 100), 100),
                 })
 
             streaks = []
@@ -674,10 +690,22 @@ async def update_chore(chore_id: int, request: Request, tenant: TenantContext = 
             if not existing:
                 raise HTTPException(status_code=404, detail="Chore not found")
 
+            # Optimistic locking: if client sends version, check it matches
+            client_version = data.get('version')
+            if client_version is not None:
+                current_version = existing['version'] if 'version' in existing.keys() else None
+                if current_version is not None and int(client_version) != current_version:
+                    raise HTTPException(
+                        status_code=409,
+                        detail="Conflict: chore was modified by another user. Please refresh and try again.",
+                    )
+
             conn.execute("""
                 UPDATE chores
                 SET name = ?, description = ?, schedule_type = ?, schedule_days = ?,
-                    schedule_interval = ?, people = ?
+                    schedule_interval = ?, people = ?,
+                    version = COALESCE(version, 0) + 1,
+                    updated_at = datetime('now')
                 WHERE id = ? AND household_id = ?
             """, (
                 data['name'],

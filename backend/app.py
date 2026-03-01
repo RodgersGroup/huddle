@@ -25,7 +25,7 @@ from websocket import manager
 from background import watchdog_and_maintenance_task, service_monitor_task, push_notification_task
 
 # Routers
-from routers import chores, calendar, meals, adhoc, bills, inventory, polls, settings_api, modules, shopping, status, recipes, pairing, routines, rewards, allowances, feedback, pets, noticeboard, assignments, expenses, house_rules, tenancy, freezer, selfcare, client_errors, agents
+from routers import chores, calendar, meals, adhoc, bills, inventory, polls, settings_api, modules, shopping, status, recipes, pairing, routines, rewards, allowances, feedback, pets, noticeboard, assignments, expenses, house_rules, tenancy, freezer, selfcare, client_errors, agents, sync
 from fuel import router as fuel_router
 from push import router as push_router
 from auth import router as auth_router, get_current_user, TenantContext
@@ -110,6 +110,8 @@ async def security_headers(request: Request, call_next):
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["Permissions-Policy"] = "camera=(), microphone=()"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["Content-Security-Policy"] = "frame-ancestors 'none'"
     return response
 
 
@@ -206,6 +208,7 @@ app.include_router(push_router)
 app.include_router(auth_router)
 app.include_router(client_errors.router)
 app.include_router(agents.router)
+app.include_router(sync.router)
 
 
 # ============================================================================
