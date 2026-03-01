@@ -357,7 +357,8 @@ def mobile_page(request: Request):
     from auth import COOKIE_NAME, verify_session_token
     token = request.cookies.get(COOKIE_NAME)
     if not token or not verify_session_token(token):
-        return RedirectResponse(url="/onboard", status_code=302)
+        url = "/onboard?reason=session_expired" if token else "/onboard"
+        return RedirectResponse(url=url, status_code=302)
     try:
         return templates.TemplateResponse("mobile.html", {"request": request})
     except HTTPException:

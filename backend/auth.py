@@ -106,7 +106,45 @@ except ImportError:
 
 
 # Configuration
-from config import SECRET_KEY, SESSION_MAX_AGE, RATE_LIMIT_AUTH, ENVIRONMENT, ACCESS_TOKEN_MAX_AGE, REFRESH_TOKEN_MAX_AGE
+from config import SECRET_KEY, SESSION_MAX_AGE, RATE_LIMIT_AUTH, ENVIRONMENT, ACCESS_TOKEN_MAX_AGE, REFRESH_TOKEN_MAX_AGE, AUTH_VERSION
+
+# ---------------------------------------------------------------------------
+# Auth version — cached read from file, fallback to config constant
+# ---------------------------------------------------------------------------
+_AUTH_VERSION_FILE = Path(__file__).parent / "auth_version.txt"
+_auth_version_cache = None
+_auth_version_ts = 0.0
+
+def get_auth_version() -> int:
+    """Return the current auth version (file takes priority over env/config).
+
+    Cached for 60 seconds to avoid disk reads on every request.
+    """
+    global _auth_version_cache, _auth_version_ts
+    now = time.time()
+    if _auth_version_cache is not None and (now - _auth_version_ts) < 60:
+        return _auth_version_cache
+    try:
+        v = int(_AUTH_VERSION_FILE.read_text().strip())
+    except (FileNotFoundError, ValueError):
+        v = AUTH_VERSION
+    _auth_version_cache = v
+    _auth_version_ts = now
+    return v
+
+
+def force_reauth_all() -> int:
+    """Bump auth version and revoke all DB sessions. Returns count of revoked sessions."""
+    global _auth_version_cache, _auth_version_ts
+    new_version = get_auth_version() + 1
+    _AUTH_VERSION_FILE.write_text(str(new_version))
+    # Clear cache so next call picks up the new version immediately
+    _auth_version_cache = None
+    _auth_version_ts = 0.0
+    with get_db() as conn:
+        cursor = conn.execute("UPDATE sessions SET revoked = 1 WHERE revoked = 0")
+        conn.commit()
+        return cursor.rowcount
 SERIALIZER = URLSafeTimedSerializer(SECRET_KEY) if AUTH_ENABLED else None
 MAGIC_LINK_MAX_AGE = 1800  # 30 minutes
 COOKIE_NAME = "huddle_session"
@@ -146,6 +184,7 @@ def create_access_token(user_id: int, household_id: int, session_id: str) -> str
         "household_id": household_id,
         "session_id": session_id,
         "type": "access",
+        "v": get_auth_version(),
     })
 
 
@@ -156,6 +195,8 @@ def verify_access_token(token: str):
     try:
         data = SERIALIZER.loads(token, max_age=ACCESS_TOKEN_MAX_AGE)
         if data.get("type") == "access" and "user_id" in data:
+            if data.get("v", 0) < get_auth_version():
+                return None  # Token predates auth version bump
             return data
         return None
     except (BadSignature, SignatureExpired):
@@ -337,7 +378,7 @@ def create_session_token(user_id: int, household_id: int, original_household_id:
     """Create a signed session token encoding user and household IDs."""
     if not SERIALIZER:
         raise RuntimeError("Auth is not enabled (itsdangerous not installed)")
-    payload = {"user_id": user_id, "household_id": household_id}
+    payload = {"user_id": user_id, "household_id": household_id, "v": get_auth_version()}
     if original_household_id is not None:
         payload["original_household_id"] = original_household_id
     return SERIALIZER.dumps(payload)
@@ -350,6 +391,8 @@ def verify_session_token(token: str):
     try:
         data = SERIALIZER.loads(token, max_age=SESSION_MAX_AGE)
         if "user_id" in data and "household_id" in data:
+            if data.get("v", 0) < get_auth_version():
+                return None  # Cookie predates auth version bump
             return data
         return None
     except (BadSignature, SignatureExpired):
@@ -892,6 +935,65 @@ async def login_token(request: Request):
     return JSONResponse(content=tokens)
 
 
+@router.post("/api/auth/password-login")
+async def password_login_cookie(request: Request):
+    """Login with email + password and set a session cookie (for the onboard page).
+
+    Unlike /api/auth/token which returns bearer tokens, this sets the same
+    cookie that magic-link auth uses, so /mobile page checks work seamlessly.
+    """
+    if not BCRYPT_ENABLED:
+        raise HTTPException(status_code=500, detail="Password auth not available")
+
+    client_ip = request.client.host if request.client else "unknown"
+    if rate_limiter.is_limited(client_ip, max_requests=RATE_LIMIT_AUTH, window_seconds=600):
+        return JSONResponse(status_code=429, content={"error": "Too many requests"})
+
+    try:
+        body = await request.json()
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid JSON")
+
+    email = body.get("email", "").strip().lower()
+    password = body.get("password", "")
+
+    if not email or not password:
+        raise HTTPException(status_code=400, detail="Email and password are required")
+
+    with get_db() as conn:
+        user = conn.execute(
+            "SELECT id, email, display_name, password_hash FROM users WHERE email = ?",
+            (email,),
+        ).fetchone()
+
+    if not user or not user["password_hash"]:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    if not verify_password(password, user["password_hash"]):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    with get_db() as conn:
+        membership = conn.execute(
+            "SELECT household_id FROM household_members WHERE user_id = ? LIMIT 1",
+            (user["id"],),
+        ).fetchone()
+    household_id = membership["household_id"] if membership else 0
+
+    session_token = create_session_token(user["id"], household_id)
+    redirect_url = "/mobile" if membership else "/onboard"
+
+    response = JSONResponse(content={"ok": True, "redirect": redirect_url})
+    response.set_cookie(
+        key=COOKIE_NAME,
+        value=session_token,
+        max_age=SESSION_MAX_AGE,
+        httponly=True,
+        samesite="lax",
+        secure=COOKIE_SECURE,
+    )
+    return response
+
+
 @router.post("/api/auth/token/refresh")
 async def refresh_token(request: Request):
     """Exchange a refresh token for a new access/refresh token pair (token rotation)."""
@@ -1057,6 +1159,45 @@ async def logout(request: Request):
         secure=COOKIE_SECURE,
     )
     return response
+
+
+@router.post("/api/auth/password/set")
+async def set_password(request: Request, tenant: TenantContext = Depends(get_current_user)):
+    """Set a password for a magic-link-only account. Rejects if user already has one."""
+    if not BCRYPT_ENABLED:
+        raise HTTPException(status_code=500, detail="Password auth not available")
+
+    try:
+        body = await request.json()
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid JSON")
+
+    password = body.get("password", "")
+    if not password:
+        raise HTTPException(status_code=400, detail="Password is required")
+    if len(password) < MIN_PASSWORD_LENGTH:
+        raise HTTPException(status_code=400, detail=f"Password must be at least {MIN_PASSWORD_LENGTH} characters")
+
+    with get_db() as conn:
+        user = conn.execute(
+            "SELECT id, password_hash FROM users WHERE id = ?", (tenant.user_id,)
+        ).fetchone()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if user["password_hash"]:
+        raise HTTPException(status_code=409, detail="Account already has a password. Use /api/auth/password/change instead.")
+
+    new_hash = hash_password(password)
+    with get_db() as conn:
+        conn.execute(
+            "UPDATE users SET password_hash = ? WHERE id = ?",
+            (new_hash, tenant.user_id),
+        )
+        conn.commit()
+
+    logger.info("Password set for magic-link user %s", tenant.user_id)
+    return {"ok": True, "message": "Password set successfully. You can now log in with email and password."}
 
 
 @router.post("/api/auth/password/change")
@@ -2832,3 +2973,20 @@ def _send_access_approval_email(managers: list, requester_name: str, household_n
             logger.info("Access approval email sent to %s for %s requesting %s", manager_email, requester_name, household_name)
     except Exception as e:
         logger.warning("Failed to send access approval email: %s", e)
+
+
+# ---------------------------------------------------------------------------
+# Admin endpoints
+# ---------------------------------------------------------------------------
+
+@router.post("/api/admin/force-reauth")
+async def admin_force_reauth(request: Request, user: TenantContext = Depends(get_current_user)):
+    """Force all users to re-authenticate by bumping auth version and revoking all DB sessions."""
+    from config import SUPERADMIN_EMAILS
+    with get_db() as conn:
+        row = conn.execute("SELECT email FROM users WHERE id = ?", (user.user_id,)).fetchone()
+    if not row or row["email"] not in SUPERADMIN_EMAILS:
+        raise HTTPException(status_code=403, detail="Superadmin access required")
+    count = force_reauth_all()
+    logger.info("Force re-auth triggered by user %s — %d sessions revoked, auth version now %d", user.user_id, count, get_auth_version())
+    return {"ok": True, "sessions_revoked": count, "auth_version": get_auth_version()}

@@ -634,16 +634,46 @@
         </div>
 
         <div id="loginMsg"></div>
-
-        <div class="form-group">
-            <input type="email" class="form-input" id="loginEmail" placeholder="Enter your email to get started" autocomplete="email" inputmode="email" autofocus>
+        <div id="sessionExpiredBanner" style="display:none;background:rgba(78,205,196,0.1);border:1px solid rgba(78,205,196,0.25);border-radius:12px;padding:14px 16px;margin-bottom:16px;text-align:center;">
+            <div style="font-size:15px;font-weight:600;color:#4ecdc4;margin-bottom:4px;">Session expired</div>
+            <div style="font-size:13px;color:#888;line-height:1.4;">For your security, all sessions have been reset. Please log in again.</div>
         </div>
 
-        <button class="btn-primary" id="loginBtn" onclick="requestMagicLink()">
-            Send Magic Link &#10024;
-        </button>
+        <!-- Magic link form (default) -->
+        <div id="magicLinkForm">
+            <div class="form-group">
+                <input type="email" class="form-input" id="loginEmail" placeholder="Enter your email to get started" autocomplete="email" inputmode="email" autofocus>
+            </div>
 
-        <div class="helper-text">We'll email you a link to log in &#8212; no password needed</div>
+            <button class="btn-primary" id="loginBtn" onclick="requestMagicLink()">
+                Send Magic Link &#10024;
+            </button>
+
+            <div class="helper-text">We'll email you a link to log in &#8212; no password needed</div>
+
+            <div style="text-align:center;margin-top:16px;">
+                <span style="color:#4ecdc4;font-size:13px;cursor:pointer;font-weight:600;" onclick="togglePasswordLogin(true)">Log in with password instead</span>
+            </div>
+        </div>
+
+        <!-- Password login form (toggled) -->
+        <div id="passwordLoginForm" style="display:none;">
+            <div class="form-group">
+                <input type="email" class="form-input" id="pwLoginEmail" placeholder="Email" autocomplete="email" inputmode="email">
+            </div>
+            <div class="form-group">
+                <input type="password" class="form-input" id="pwLoginPassword" placeholder="Password" autocomplete="current-password">
+            </div>
+            <div id="pwLoginError" class="msg msg-error" style="display:none;"></div>
+
+            <button class="btn-primary" id="pwLoginBtn" onclick="doPasswordLogin()">
+                Log In
+            </button>
+
+            <div style="text-align:center;margin-top:16px;">
+                <span style="color:#4ecdc4;font-size:13px;cursor:pointer;font-weight:600;" onclick="togglePasswordLogin(false)">Use magic link instead</span>
+            </div>
+        </div>
 
         <div style="text-align:center;margin-top:24px;padding-top:20px;border-top:1px solid #333;">
             <span style="color:#888;font-size:13px;">No email? </span>
@@ -1290,7 +1320,7 @@
         try {
             var resp = await fetch('/api/auth/magic-link', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
+                headers: {'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest'},
                 body: JSON.stringify({email: email})
             });
             var data = await resp.json();
@@ -1300,17 +1330,87 @@
                 document.getElementById('sentEmailDisplay').textContent = email;
                 showStep('stepCheckEmail');
             } else if (resp.status === 429) {
-                showMsg('loginMsg', 'Too many requests — please wait a few minutes and try again.', 'error');
+                showMsg('loginMsg', 'Too many requests. Please wait a few minutes and try again.', 'error');
             } else if (resp.status === 400) {
                 showMsg('loginMsg', data.detail || 'Please check your email address and try again.', 'error');
+            } else if (resp.status === 403) {
+                showMsg('loginMsg', 'Request blocked. Please refresh the page and try again.', 'error');
+            } else if (resp.status === 500) {
+                showMsg('loginMsg', 'Server error. Please try again in a moment.', 'error');
             } else {
-                showMsg('loginMsg', data.detail || 'Something went wrong. Please try again.', 'error');
+                showMsg('loginMsg', 'Something went wrong. Please try again.', 'error');
             }
         } catch (e) {
             showMsg('loginMsg', 'Network error. Please try again.', 'error');
         } finally {
             btn.disabled = false;
             btn.textContent = 'Send Magic Link \u2728';
+        }
+    }
+
+    // Toggle between magic link and password login forms
+    function togglePasswordLogin(showPassword) {
+        document.getElementById('magicLinkForm').style.display = showPassword ? 'none' : 'block';
+        document.getElementById('passwordLoginForm').style.display = showPassword ? 'block' : 'none';
+        document.getElementById('pwLoginError').style.display = 'none';
+        if (showPassword) {
+            // Copy email if already entered
+            var mlEmail = document.getElementById('loginEmail').value.trim();
+            if (mlEmail) document.getElementById('pwLoginEmail').value = mlEmail;
+            document.getElementById('pwLoginPassword').focus();
+        } else {
+            document.getElementById('loginEmail').focus();
+        }
+    }
+
+    // Password login
+    async function doPasswordLogin() {
+        var email = document.getElementById('pwLoginEmail').value.trim().toLowerCase();
+        var password = document.getElementById('pwLoginPassword').value;
+        var errorEl = document.getElementById('pwLoginError');
+        errorEl.style.display = 'none';
+
+        if (!email || !email.includes('@')) {
+            errorEl.textContent = 'Please enter a valid email address.';
+            errorEl.style.display = 'block';
+            return;
+        }
+        if (!password) {
+            errorEl.textContent = 'Please enter your password.';
+            errorEl.style.display = 'block';
+            return;
+        }
+
+        var btn = document.getElementById('pwLoginBtn');
+        btn.disabled = true;
+        btn.textContent = 'Logging in...';
+
+        try {
+            var resp = await fetch('/api/auth/password-login', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest'},
+                body: JSON.stringify({email: email, password: password})
+            });
+            var data = await resp.json();
+
+            if (resp.ok && data.redirect) {
+                window.location = data.redirect;
+            } else if (resp.status === 401) {
+                errorEl.textContent = 'Invalid email or password.';
+                errorEl.style.display = 'block';
+            } else if (resp.status === 429) {
+                errorEl.textContent = 'Too many attempts. Please wait and try again.';
+                errorEl.style.display = 'block';
+            } else {
+                errorEl.textContent = data.detail || 'Something went wrong. Please try again.';
+                errorEl.style.display = 'block';
+            }
+        } catch (e) {
+            errorEl.textContent = 'Network error. Please try again.';
+            errorEl.style.display = 'block';
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Log In';
         }
     }
 
@@ -1327,7 +1427,7 @@
         try {
             var resp = await fetch('/api/auth/magic-link', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
+                headers: {'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest'},
                 body: JSON.stringify({email: email})
             });
             if (resp.ok) {
@@ -1963,6 +2063,17 @@
     var inviteParam = params.get('invite');
     var setupParam = params.get('setup');
     var errorParam = params.get('error');
+    var reasonParam = params.get('reason');
+
+    // Show session expired banner (from force re-auth)
+    if (reasonParam === 'session_expired') {
+        var banner = document.getElementById('sessionExpiredBanner');
+        if (banner) banner.style.display = 'block';
+        setTimeout(function() {
+            var emailInput = document.getElementById('loginEmail');
+            if (emailInput) emailInput.focus();
+        }, 300);
+    }
 
     // Show expired link message and auto-focus email input
     if (errorParam === 'expired') {
@@ -2017,6 +2128,12 @@
     // Enter key support
     document.getElementById('loginEmail').addEventListener('keydown', function(e) {
         if (e.key === 'Enter') requestMagicLink();
+    });
+    document.getElementById('pwLoginEmail').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') document.getElementById('pwLoginPassword').focus();
+    });
+    document.getElementById('pwLoginPassword').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') doPasswordLogin();
     });
     document.getElementById('householdName').addEventListener('keydown', function(e) {
         if (e.key === 'Enter') goToStep2();

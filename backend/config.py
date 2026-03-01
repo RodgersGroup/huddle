@@ -130,6 +130,9 @@ SENTRY_DSN = _get("SENTRY_DSN", _defaults)
 ACCESS_TOKEN_MAX_AGE = int(os.environ.get("ACCESS_TOKEN_MAX_AGE", "900"))  # 15 minutes
 REFRESH_TOKEN_MAX_AGE = int(os.environ.get("REFRESH_TOKEN_MAX_AGE", "2592000"))  # 30 days
 
+# Auth version — bump to instantly invalidate all signed tokens (cookies + access tokens)
+AUTH_VERSION = int(os.environ.get("AUTH_VERSION", "1"))
+
 _DEFAULT_SECRET = "huddle-chores-secret-change-in-production"
 _RECOGNIZED_ENVIRONMENTS = set(_ENV_DEFAULTS.keys())
 
