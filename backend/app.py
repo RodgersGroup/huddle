@@ -77,7 +77,7 @@ async def request_id_middleware(request: Request, call_next):
 from page_views import record_page_view, flush_page_views
 
 # CSRF protection: paths exempt from X-Requested-With header check
-_CSRF_EXEMPT_PATHS = {"/ws", "/api/billing/webhook", "/api/auth/signup", "/api/auth/token", "/api/auth/token/refresh", "/api/sync/push"}
+_CSRF_EXEMPT_PATHS = {"/ws", "/api/billing/webhook", "/api/auth/signup", "/api/auth/token", "/api/auth/token/refresh", "/api/auth/password-login", "/api/sync/push"}
 _CSRF_METHODS = {"POST", "PUT", "DELETE", "PATCH"}
 
 
@@ -95,6 +95,14 @@ async def csrf_header_check(request: Request, call_next):
         and request.url.path not in _CSRF_EXEMPT_PATHS
     ):
         if request.headers.get("X-Requested-With") != "XMLHttpRequest":
+            client = request.client.host if request.client else "unknown"
+            xrw = request.headers.get("X-Requested-With", "<missing>")
+            ua = request.headers.get("User-Agent", "<none>")[:120]
+            logger.warning(
+                "CSRF block: %s %s from %s | X-Requested-With=%r | Referer=%s | UA=%s",
+                request.method, request.url.path, client, xrw,
+                request.headers.get("Referer", "<none>"), ua,
+            )
             return JSONResponse(
                 status_code=403,
                 content={"detail": "Missing or invalid X-Requested-With header"},
@@ -354,9 +362,16 @@ def kiosk_display_page(request: Request, token: str = None):
 @app.get("/mobile", response_class=HTMLResponse)
 def mobile_page(request: Request):
     """Mobile PWA page. Redirects to /onboard if not authenticated."""
-    from auth import COOKIE_NAME, verify_session_token
+    from auth import COOKIE_NAME, verify_session_token, verify_access_token
+    # Check session cookie first (magic-link auth)
     token = request.cookies.get(COOKIE_NAME)
-    if not token or not verify_session_token(token):
+    authenticated = bool(token and verify_session_token(token))
+    # Fall back to Bearer token (password/token auth)
+    if not authenticated:
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.startswith("Bearer "):
+            authenticated = bool(verify_access_token(auth_header[7:]))
+    if not authenticated:
         url = "/onboard?reason=session_expired" if token else "/onboard"
         return RedirectResponse(url=url, status_code=302)
     try:
@@ -1526,14 +1541,34 @@ async def websocket_endpoint(websocket: WebSocket):
                 logger.debug("WebSocket kiosk token lookup failed: %s", e)
 
     if household_id is None:
+        client = websocket.client.host if websocket.client else "unknown"
+        has_cookie = "yes" if session_cookie else "no"
+        has_token = "yes" if websocket.query_params.get("token") else "no"
+        logger.warning(
+            "WebSocket auth failed: client=%s cookie=%s kiosk_token=%s",
+            client, has_cookie, has_token,
+        )
         await websocket.accept()
         await websocket.close(code=4001, reason="Authentication required")
         return
 
     await manager.connect(websocket, household_id)
     try:
-        while True:
-            await websocket.receive_text()
+        # Run heartbeat pings alongside message receive to keep the connection
+        # alive through proxies (Cloudflare Tunnel has a ~100s idle timeout).
+        async def heartbeat():
+            while True:
+                await asyncio.sleep(30)
+                try:
+                    await websocket.send_json({"type": "ping"})
+                except Exception:
+                    return
+        ping_task = asyncio.create_task(heartbeat())
+        try:
+            while True:
+                await websocket.receive_text()
+        finally:
+            ping_task.cancel()
     except WebSocketDisconnect:
         pass
     except Exception as e:
