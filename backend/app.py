@@ -221,7 +221,7 @@ def health_check():
         except ImportError:
             from backports.zoneinfo import ZoneInfo
 
-        tz = ZoneInfo(get_setting("timezone", "Australia/Sydney"))
+        tz = ZoneInfo(get_setting("timezone", "Australia/Sydney", household_id=1))
         now = datetime.now(tz)
 
         checks = {}
