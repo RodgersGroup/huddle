@@ -1280,11 +1280,12 @@ async def get_me(user: TenantContext = Depends(get_current_user)):
                 (user.user_id,),
             ).fetchall()
 
-            # Get current user's email directly from users table
+            # Get current user's email and password status from users table
             current_user_row = conn.execute(
-                "SELECT email FROM users WHERE id = ?", (user.user_id,)
+                "SELECT email, password_hash FROM users WHERE id = ?", (user.user_id,)
             ).fetchone()
             current_user_email = current_user_row["email"] if current_user_row else None
+            has_password = bool(current_user_row["password_hash"]) if current_user_row else False
 
         # Check if current user is superadmin
         from config import SUPERADMIN_EMAILS
@@ -1297,6 +1298,7 @@ async def get_me(user: TenantContext = Depends(get_current_user)):
             "role": user.role,
             "avatar_url": get_avatar_url(user.user_id),
             "is_superadmin": is_superadmin,
+            "has_password": has_password,
         }
         result = {
             "user": result_user,
@@ -1567,6 +1569,7 @@ async def join_household(request: Request):
         invite_code = body.get("invite_code", "").strip().upper()
         display_name = body.get("display_name", "").strip()
         color = body.get("color", "#ff6b9d").strip()
+        password = body.get("password", "").strip()
 
         if not invite_code:
             raise HTTPException(status_code=400, detail="Invite code is required")
@@ -1625,6 +1628,14 @@ async def join_household(request: Request):
                     (household_id, user_id, display_name, color, now),
                 )
             conn.commit()
+
+            # Set password if provided during join (optional, >= MIN_PASSWORD_LENGTH chars)
+            if password and len(password) >= MIN_PASSWORD_LENGTH and BCRYPT_ENABLED:
+                conn.execute(
+                    "UPDATE users SET password_hash = ? WHERE id = ? AND password_hash IS NULL",
+                    (hash_password(password), user_id),
+                )
+                conn.commit()
 
         session_token = create_session_token(user_id, household_id)
         response = Response(

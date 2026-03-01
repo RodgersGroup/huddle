@@ -4881,7 +4881,24 @@
                 </div>
             </div>
 
-            <!-- 7. About -->
+            <!-- 7. Device Logs (manager only) -->
+            <div class="settings-section manager-only" style="display:none">
+                <div class="settings-section-header">Device Logs</div>
+                <div class="settings-group">
+                    <div class="settings-row" onclick="openDeviceLogsSheet()">
+                        <span class="settings-row-label">View Error Logs</span>
+                        <div class="settings-row-value">
+                            <span id="settingsErrorCount">--</span>
+                            <span class="settings-row-chevron">&rsaquo;</span>
+                        </div>
+                    </div>
+                    <div class="settings-row" onclick="clearDeviceLogs()">
+                        <span class="settings-row-label" style="color:var(--danger)">Clear Logs</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 8. About -->
             <div class="settings-section">
                 <div class="settings-section-header">About</div>
                 <div class="settings-group">
@@ -5021,7 +5038,33 @@
         <div id="settingsSheetExtra"></div>
     </div>
 
-    <!-- Completion Modal -->
+    <!-- Device Logs Bottom Sheet -->
+    <div class="settings-sheet-overlay" id="deviceLogsOverlay" onclick="closeDeviceLogsSheet()"></div>
+    <div class="settings-sheet" id="deviceLogsSheet" style="max-height:85vh">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <div class="settings-sheet-title" style="margin-bottom:0">Device Error Logs</div>
+            <button onclick="closeDeviceLogsSheet()" style="background:none;border:none;color:var(--text-muted);font-size:24px;cursor:pointer;padding:0 4px;">&times;</button>
+        </div>
+        <div id="deviceLogsContent" style="font-size:13px;color:var(--text-secondary);">Loading...</div>
+    </div>
+
+    <!-- Set Password Prompt Modal -->
+    <div class="modal-overlay" id="setPasswordModal">
+        <div class="modal" style="align-self:center; max-width:360px;">
+            <div class="modal-title" style="text-align:center">Set a Password</div>
+            <div style="color:var(--text-secondary);font-size:14px;text-align:center;margin-bottom:16px;">
+                Add a password so you can log in faster next time — no more waiting for a magic link email.
+            </div>
+            <div id="setPasswordMsg" style="display:none;padding:8px 12px;border-radius:8px;margin-bottom:12px;font-size:13px;text-align:center"></div>
+            <input type="password" id="setPasswordInput" placeholder="Password (8+ characters)" autocomplete="new-password"
+                   style="width:100%;background:var(--bg-primary);border:1px solid var(--border-color-medium);border-radius:10px;padding:12px 16px;color:var(--text-primary);font-size:16px;margin-bottom:10px;box-sizing:border-box;">
+            <input type="password" id="setPasswordConfirm" placeholder="Confirm password" autocomplete="new-password"
+                   style="width:100%;background:var(--bg-primary);border:1px solid var(--border-color-medium);border-radius:10px;padding:12px 16px;color:var(--text-primary);font-size:16px;margin-bottom:16px;box-sizing:border-box;">
+            <button onclick="submitSetPassword()" style="width:100%;background:var(--due-today);color:#000;border:none;border-radius:10px;padding:14px;font-size:16px;font-weight:600;cursor:pointer;margin-bottom:8px;">Set Password</button>
+            <button onclick="dismissPasswordPrompt()" style="width:100%;background:none;border:none;color:var(--text-muted);font-size:14px;padding:10px;cursor:pointer;">Maybe later</button>
+        </div>
+    </div>
+
     <div class="modal-overlay" id="modalOverlay">
         <div class="modal">
             <!-- Step 1: Who completed this? -->
@@ -7648,8 +7691,180 @@
                         if (el) el.textContent = data.household.invite_code;
                     }
                 }
+
+                // Prompt passwordless users to set a password (skip dependents/kiosk)
+                if (!data.user.has_password
+                    && userRole !== 'dependent' && userRole !== 'kiosk'
+                    && !sessionStorage.getItem('passwordPromptDismissed')) {
+                    document.getElementById('setPasswordModal').classList.add('show');
+                }
             } catch (e) {
                 console.error('Auth check failed:', e);
+            }
+        }
+
+        async function submitSetPassword() {
+            const pw = document.getElementById('setPasswordInput').value;
+            const confirm = document.getElementById('setPasswordConfirm').value;
+            const msgEl = document.getElementById('setPasswordMsg');
+
+            if (pw.length < 8) {
+                msgEl.style.display = '';
+                msgEl.style.background = 'rgba(255,107,107,0.15)';
+                msgEl.style.color = 'var(--danger)';
+                msgEl.textContent = 'Password must be at least 8 characters';
+                return;
+            }
+            if (pw !== confirm) {
+                msgEl.style.display = '';
+                msgEl.style.background = 'rgba(255,107,107,0.15)';
+                msgEl.style.color = 'var(--danger)';
+                msgEl.textContent = 'Passwords do not match';
+                return;
+            }
+
+            try {
+                const resp = await fetch('/api/auth/password/set', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: pw })
+                });
+                if (resp.ok) {
+                    document.getElementById('setPasswordModal').classList.remove('show');
+                    showToast('Password set! You can now log in with email + password.');
+                } else {
+                    const data = await resp.json();
+                    msgEl.style.display = '';
+                    msgEl.style.background = 'rgba(255,107,107,0.15)';
+                    msgEl.style.color = 'var(--danger)';
+                    msgEl.textContent = data.detail || 'Failed to set password';
+                }
+            } catch (e) {
+                msgEl.style.display = '';
+                msgEl.style.background = 'rgba(255,107,107,0.15)';
+                msgEl.style.color = 'var(--danger)';
+                msgEl.textContent = 'Network error. Please try again.';
+            }
+        }
+
+        function dismissPasswordPrompt() {
+            sessionStorage.setItem('passwordPromptDismissed', '1');
+            document.getElementById('setPasswordModal').classList.remove('show');
+        }
+
+        // Device error logs for managers
+        function _buildDeviceLogEntry(e) {
+            var row = document.createElement('div');
+            row.style.cssText = 'padding:8px 0;border-bottom:1px solid var(--border-color);';
+
+            var header = document.createElement('div');
+            header.style.cssText = 'display:flex;justify-content:space-between;align-items:start;gap:8px;';
+
+            var msg = document.createElement('div');
+            msg.style.cssText = 'flex:1;word-break:break-word;';
+            msg.textContent = (e.message || '').substring(0, 120);
+            header.appendChild(msg);
+
+            var ts = document.createElement('div');
+            ts.style.cssText = 'white-space:nowrap;font-size:11px;color:var(--text-muted);';
+            ts.textContent = e.ts ? new Date(e.ts).toLocaleString() : '';
+            header.appendChild(ts);
+
+            row.appendChild(header);
+
+            if (e.stack) {
+                var stackPre = document.createElement('pre');
+                stackPre.style.cssText = 'display:none;background:var(--bg-primary);border-radius:6px;padding:8px;margin-top:4px;font-size:11px;overflow-x:auto;white-space:pre-wrap;word-break:break-all;color:var(--text-secondary);';
+                stackPre.textContent = e.stack;
+
+                var toggleBtn = document.createElement('button');
+                toggleBtn.style.cssText = 'background:none;border:none;color:var(--accent);font-size:12px;cursor:pointer;padding:0;margin-top:4px;';
+                toggleBtn.textContent = 'Toggle stack trace';
+                toggleBtn.onclick = function() { stackPre.style.display = stackPre.style.display === 'none' ? 'block' : 'none'; };
+
+                row.appendChild(toggleBtn);
+                row.appendChild(stackPre);
+            }
+            return row;
+        }
+
+        async function openDeviceLogsSheet() {
+            document.getElementById('deviceLogsOverlay').classList.add('open');
+            document.getElementById('deviceLogsSheet').classList.add('open');
+            var content = document.getElementById('deviceLogsContent');
+            content.textContent = 'Loading...';
+
+            try {
+                var resp = await fetch('/api/client-errors?limit=100');
+                if (!resp.ok) throw new Error('Failed to fetch');
+                var data = await resp.json();
+                var errors = data.errors || [];
+
+                content.textContent = '';
+
+                if (errors.length === 0) {
+                    content.style.textAlign = 'center';
+                    content.style.padding = '30px';
+                    content.textContent = 'No errors logged';
+                    var countEl = document.getElementById('settingsErrorCount');
+                    if (countEl) countEl.textContent = '0';
+                    return;
+                }
+                content.style.textAlign = '';
+                content.style.padding = '';
+
+                var countEl = document.getElementById('settingsErrorCount');
+                if (countEl) countEl.textContent = errors.length >= 100 ? '100+' : String(errors.length);
+
+                // Group by display_name
+                var grouped = {};
+                errors.forEach(function(e) {
+                    var name = e.display_name || 'Unknown';
+                    if (!grouped[name]) grouped[name] = [];
+                    grouped[name].push(e);
+                });
+
+                Object.keys(grouped).forEach(function(name) {
+                    var errs = grouped[name];
+                    var section = document.createElement('div');
+                    section.style.marginBottom = '16px';
+
+                    var heading = document.createElement('div');
+                    heading.style.cssText = 'font-weight:600;color:var(--text-primary);font-size:14px;margin-bottom:8px;';
+                    heading.textContent = name + ' (' + errs.length + ')';
+                    section.appendChild(heading);
+
+                    errs.forEach(function(e) {
+                        section.appendChild(_buildDeviceLogEntry(e));
+                    });
+
+                    content.appendChild(section);
+                });
+            } catch (e) {
+                content.textContent = 'Failed to load error logs';
+                content.style.cssText = 'text-align:center;padding:20px;color:var(--danger);';
+            }
+        }
+
+        function closeDeviceLogsSheet() {
+            document.getElementById('deviceLogsOverlay').classList.remove('open');
+            document.getElementById('deviceLogsSheet').classList.remove('open');
+        }
+
+        async function clearDeviceLogs() {
+            if (!confirm('Clear all device error logs?')) return;
+            try {
+                var resp = await fetch('/api/client-errors', { method: 'DELETE' });
+                if (resp.ok) {
+                    showToast('Error logs cleared');
+                    var countEl = document.getElementById('settingsErrorCount');
+                    if (countEl) countEl.textContent = '0';
+                    closeDeviceLogsSheet();
+                } else {
+                    showToast('Failed to clear logs', 'error');
+                }
+            } catch (e) {
+                showToast('Network error', 'error');
             }
         }
 
@@ -8298,12 +8513,17 @@
         async function submitCompletion() {
             if (!selectedChoreId || !selectedCompleter) return;
 
+            // Capture state before closeModal() resets it
+            const choreId = selectedChoreId;
+            const completer = selectedCompleter;
+            const helpers = [...selectedHelpers];
+
             try {
-                const body = { completed_by: selectedCompleter };
-                if (selectedHelpers.length > 0) {
-                    body.completed_with = selectedHelpers;
+                const body = { completed_by: completer };
+                if (helpers.length > 0) {
+                    body.completed_with = helpers;
                 }
-                const response = await fetch(`/api/chores/${selectedChoreId}/complete`, {
+                const response = await fetch(`/api/chores/${choreId}/complete`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(body)
@@ -8317,22 +8537,22 @@
                     haptic(isMilestone ? [30, 40, 30, 40, 30] : [15, 50, 15]);
                     closeModal();
 
-                    const card = document.querySelector(`[data-chore-id="${selectedChoreId}"]`);
+                    const card = document.querySelector(`[data-chore-id="${choreId}"]`);
                     playCelebration(card, streak, isMilestone);
 
                     if (isMilestone) {
                         showToast(`\uD83D\uDD25 ${streak} streak! Keep it up!`);
                     } else {
-                        const withText = selectedHelpers.length > 0 ? ` with ${selectedHelpers.join(', ')}` : '';
-                        showToast(`Done! Completed by ${selectedCompleter}${withText}`);
+                        const withText = helpers.length > 0 ? ` with ${helpers.join(', ')}` : '';
+                        showToast(`Done! Completed by ${completer}${withText}`);
                     }
 
                     setTimeout(() => {
-                        const choreIdx = choresData.findIndex(c => c.id === selectedChoreId);
+                        const choreIdx = choresData.findIndex(c => c.id === choreId);
                         if (choreIdx >= 0) {
                             choresData[choreIdx].status = 'completed_today';
-                            choresData[choreIdx].last_completed_by = selectedCompleter;
-                            choresData[choreIdx].last_completed_with = selectedHelpers.length > 0 ? selectedHelpers : null;
+                            choresData[choreIdx].last_completed_by = completer;
+                            choresData[choreIdx].last_completed_with = helpers.length > 0 ? helpers : null;
                             renderChores();
                         }
                         fetchChores();
@@ -8349,9 +8569,10 @@
         // Skip chore
         async function skipChore() {
             if (!selectedChoreId) return;
+            const choreId = selectedChoreId;
 
             try {
-                const response = await fetch(`/api/chores/${selectedChoreId}/skip`, {
+                const response = await fetch(`/api/chores/${choreId}/skip`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ skipped_by: currentUser })
@@ -8359,8 +8580,7 @@
 
                 if (response.ok) {
                     showToast('Chore skipped!');
-                    // Immediately remove from local data
-                    choresData = choresData.filter(c => c.id !== selectedChoreId);
+                    choresData = choresData.filter(c => c.id !== choreId);
                     renderChores();
                     closeModal();
                     fetchChores();
@@ -9316,6 +9536,9 @@
 
             ws.onmessage = (event) => {
                 const data = JSON.parse(event.data);
+
+                // Respond to server heartbeat pings to keep connection alive
+                if (data.type === 'ping') { try { ws.send('pong'); } catch(e) {} return; }
 
                 // Map WS event types to module keys for cache invalidation
                 const wsModuleMap = {

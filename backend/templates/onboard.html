@@ -897,6 +897,11 @@
             <div class="color-picker-row" id="createColorPicker"></div>
         </div>
 
+        <div class="form-group">
+            <div class="form-input-label">Password <span style="font-weight:400;color:#888">(optional)</span></div>
+            <input type="password" class="form-input" id="createPassword" placeholder="8+ characters for faster login" autocomplete="new-password" minlength="8">
+        </div>
+
         <button class="btn-primary" onclick="goToStep3()">Continue</button>
         <button class="back-link" onclick="showCreateStep('stepHouseholdName')">Back</button>
     </div>
@@ -1103,6 +1108,11 @@
         <div class="form-group">
             <div class="form-input-label">Pick your colour</div>
             <div class="color-picker-row" id="joinColorPicker"></div>
+        </div>
+
+        <div class="form-group">
+            <div class="form-input-label">Password <span style="font-weight:400;color:#888">(optional)</span></div>
+            <input type="password" class="form-input" id="joinPassword" placeholder="8+ characters for faster login" autocomplete="new-password" minlength="8">
         </div>
 
         <button class="btn-primary" id="joinBtn" onclick="joinHousehold()">Join household</button>
@@ -1668,6 +1678,16 @@
                 }
             }
 
+            // Set password if provided during create flow (non-blocking, best-effort)
+            var createPw = (document.getElementById('createPassword').value || '').trim();
+            if (createPw && createPw.length >= 8) {
+                fetch('/api/auth/password/set', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({password: createPw})
+                }).catch(function() {});
+            }
+
             // Store household data for later steps
             createdHouseholdData = createData;
 
@@ -1955,9 +1975,11 @@
     async function joinHousehold() {
         var inviteCode = document.getElementById('inviteCode').value.trim().toUpperCase();
         var displayName = document.getElementById('joinDisplayName').value.trim();
+        var password = (document.getElementById('joinPassword').value || '').trim();
 
         if (!inviteCode) { showMsg('joinMsg', 'Please enter an invite code.', 'error'); return; }
         if (!displayName) { showMsg('joinMsg', 'Please enter your name.', 'error'); return; }
+        if (password && password.length < 8) { showMsg('joinMsg', 'Password must be at least 8 characters.', 'error'); return; }
 
         var btn = document.getElementById('joinBtn');
         btn.disabled = true;
@@ -1970,11 +1992,14 @@
         // Upload avatar if one was selected (non-blocking)
         uploadAvatarIfPending();
 
+        var payload = {invite_code: inviteCode, display_name: displayName, color: selectedJoinColor};
+        if (password) payload.password = password;
+
         try {
             var resp = await fetch('/api/household/join', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({invite_code: inviteCode, display_name: displayName, color: selectedJoinColor})
+                body: JSON.stringify(payload)
             });
             var data = await resp.json();
 

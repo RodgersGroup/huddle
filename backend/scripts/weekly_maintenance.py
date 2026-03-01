@@ -183,7 +183,36 @@ def prune_sessions():
         logger.error("Session pruning failed: %s", e, exc_info=True)
 
 
-# ── 4. Log rotation safety check ─────────────────────────────────────────
+# ── 4. Client error log pruning ──────────────────────────────────────────
+
+def prune_client_error_logs():
+    """Delete client error log entries older than 30 days."""
+    try:
+        conn = sqlite3.connect(str(DB_FILE))
+        # Table may not exist yet if migration hasn't run
+        tables = [r[0] for r in conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='client_error_logs'"
+        ).fetchall()]
+        if not tables:
+            logger.info("client_error_logs table not found, skipping")
+            conn.close()
+            return
+
+        deleted = conn.execute(
+            "DELETE FROM client_error_logs WHERE created_at < datetime('now', '-30 days')"
+        ).rowcount
+        conn.commit()
+        conn.close()
+
+        if deleted:
+            logger.info("Client error log pruning: removed %d entries older than 30 days", deleted)
+        else:
+            logger.info("Client error log pruning: no old entries to remove")
+    except Exception as e:
+        logger.error("Client error log pruning failed: %s", e, exc_info=True)
+
+
+# ── 5. Log rotation safety check ─────────────────────────────────────────
 
 MAX_LOG_SIZE = 50 * 1024 * 1024  # 50 MB hard limit
 
@@ -236,6 +265,7 @@ def main():
     vacuum_database()
     cleanup_push_subscriptions()
     prune_sessions()
+    prune_client_error_logs()
     check_log_rotation()
 
     logger.info("=== Weekly maintenance complete ===")
