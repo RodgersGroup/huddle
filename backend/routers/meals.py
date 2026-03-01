@@ -222,7 +222,7 @@ def get_meals(tenant: TenantContext = Depends(get_current_user)):
     try:
         tz_name = get_setting("timezone", "Australia/Sydney", household_id)
         with get_db() as conn:
-            rows = conn.execute("SELECT * FROM meals WHERE household_id = ? ORDER BY day_of_week, meal_type", (household_id,)).fetchall()
+            rows = conn.execute("SELECT * FROM meals WHERE household_id = ? AND deleted_at IS NULL ORDER BY day_of_week, meal_type", (household_id,)).fetchall()
             meals = {}
             for row in rows:
                 day = row['day_of_week']
@@ -494,7 +494,7 @@ async def save_meals(request: Request, tenant: TenantContext = Depends(require_r
         # --- End validation ---
 
         with get_db() as conn:
-            conn.execute("DELETE FROM meals WHERE household_id = ?", (household_id,))
+            conn.execute("UPDATE meals SET deleted_at = datetime('now'), updated_at = datetime('now') WHERE household_id = ? AND deleted_at IS NULL", (household_id,))
             for meal in data.get('meals', []):
                 conn.execute("""
                     INSERT INTO meals (day_of_week, meal_type, meal_name, meal_variant, cooked_by, household_id)
@@ -532,7 +532,7 @@ async def assign_meal_cook(meal_id: int, request: Request, tenant: TenantContext
             cooked_by = cooked_by.strip() if isinstance(cooked_by, str) else ''
 
         with get_db() as conn:
-            meal = conn.execute("SELECT id FROM meals WHERE id = ? AND household_id = ?", (meal_id, household_id)).fetchone()
+            meal = conn.execute("SELECT id FROM meals WHERE id = ? AND household_id = ? AND deleted_at IS NULL", (meal_id, household_id)).fetchone()
             if not meal:
                 raise HTTPException(status_code=404, detail="Meal not found")
             conn.execute("UPDATE meals SET cooked_by = ? WHERE id = ? AND household_id = ?", (cooked_by or None, meal_id, household_id))
@@ -556,7 +556,7 @@ async def clear_meals(tenant: TenantContext = Depends(require_role("manager", "m
     household_id = tenant.household_id
     try:
         with get_db() as conn:
-            conn.execute("DELETE FROM meals WHERE household_id = ?", (household_id,))
+            conn.execute("UPDATE meals SET deleted_at = datetime('now'), updated_at = datetime('now') WHERE household_id = ? AND deleted_at IS NULL", (household_id,))
             conn.commit()
         await manager.broadcast({"type": "meals_updated"}, household_id=household_id)
         return {"message": "Meals cleared"}

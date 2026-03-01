@@ -197,7 +197,7 @@ _UNSET = object()
 
 def get_chores_with_status(conn, household_id: int) -> list:
     """Get all chores with their current status, with load balancing (max 2 per person per day)."""
-    chores = conn.execute("SELECT * FROM chores WHERE household_id = ? ORDER BY name", (household_id,)).fetchall()
+    chores = conn.execute("SELECT * FROM chores WHERE household_id = ? AND deleted_at IS NULL ORDER BY name", (household_id,)).fetchall()
     result = []
 
     # Batch-fetch all completions to avoid N+1 queries (was 5 SELECTs per chore)
@@ -536,7 +536,7 @@ def get_chore(chore_id: int, tenant: TenantContext = Depends(get_current_user)):
     household_id = tenant.household_id
     try:
         with get_db() as conn:
-            chore = conn.execute("SELECT * FROM chores WHERE id = ? AND household_id = ?", (chore_id, household_id)).fetchone()
+            chore = conn.execute("SELECT * FROM chores WHERE id = ? AND household_id = ? AND deleted_at IS NULL", (chore_id, household_id)).fetchone()
             if not chore:
                 raise HTTPException(status_code=404, detail="Chore not found")
             chore_dict = dict(chore)
@@ -614,7 +614,7 @@ async def create_chore(request: Request, tenant: TenantContext = Depends(require
                 if h_tier == "free":
                     limit = FREE_TIER_LIMITS.get("chores")
                     if limit:
-                        count = conn.execute("SELECT COUNT(*) FROM chores WHERE household_id = ?", (household_id,)).fetchone()[0]
+                        count = conn.execute("SELECT COUNT(*) FROM chores WHERE household_id = ? AND deleted_at IS NULL", (household_id,)).fetchone()[0]
                         if count >= limit:
                             raise HTTPException(status_code=403, detail=f"Free plan is limited to {limit} chores. Upgrade to add more.")
 
@@ -686,7 +686,7 @@ async def update_chore(chore_id: int, request: Request, tenant: TenantContext = 
         # --- End validation ---
 
         with get_db() as conn:
-            existing = conn.execute("SELECT * FROM chores WHERE id = ? AND household_id = ?", (chore_id, household_id)).fetchone()
+            existing = conn.execute("SELECT * FROM chores WHERE id = ? AND household_id = ? AND deleted_at IS NULL", (chore_id, household_id)).fetchone()
             if not existing:
                 raise HTTPException(status_code=404, detail="Chore not found")
 
@@ -738,7 +738,7 @@ async def delete_chore(chore_id: int, tenant: TenantContext = Depends(require_ro
     try:
         with get_db() as conn:
             conn.execute("DELETE FROM completions WHERE chore_id = ? AND household_id = ?", (chore_id, household_id))
-            result = conn.execute("DELETE FROM chores WHERE id = ? AND household_id = ?", (chore_id, household_id))
+            result = conn.execute("UPDATE chores SET deleted_at = datetime('now'), updated_at = datetime('now') WHERE id = ? AND household_id = ?", (chore_id, household_id))
             conn.commit()
             if result.rowcount == 0:
                 raise HTTPException(status_code=404, detail="Chore not found")
@@ -829,7 +829,7 @@ async def complete_chore(chore_id: int, request: Request, background_tasks: Back
             completed_with_str = None
 
         with get_db() as conn:
-            chore = conn.execute("SELECT * FROM chores WHERE id = ? AND household_id = ?", (chore_id, household_id)).fetchone()
+            chore = conn.execute("SELECT * FROM chores WHERE id = ? AND household_id = ? AND deleted_at IS NULL", (chore_id, household_id)).fetchone()
             if not chore:
                 raise HTTPException(status_code=404, detail="Chore not found")
 
@@ -934,7 +934,7 @@ async def skip_chore(chore_id: int, request: Request, tenant: TenantContext = De
             pass
 
         with get_db() as conn:
-            chore = conn.execute("SELECT * FROM chores WHERE id = ? AND household_id = ?", (chore_id, household_id)).fetchone()
+            chore = conn.execute("SELECT * FROM chores WHERE id = ? AND household_id = ? AND deleted_at IS NULL", (chore_id, household_id)).fetchone()
             if not chore:
                 raise HTTPException(status_code=404, detail="Chore not found")
 

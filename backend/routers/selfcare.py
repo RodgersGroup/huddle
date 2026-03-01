@@ -80,7 +80,7 @@ def get_selfcare_items(tenant: TenantContext = Depends(get_current_user)):
         today = _today_local(household_id)
         with get_db() as conn:
             items = conn.execute(
-                "SELECT * FROM selfcare_items WHERE household_id = ? ORDER BY category, name",
+                "SELECT * FROM selfcare_items WHERE household_id = ? AND deleted_at IS NULL ORDER BY category, name",
                 (household_id,),
             ).fetchall()
 
@@ -210,7 +210,7 @@ async def update_selfcare_item(item_id: int, request: Request, tenant: TenantCon
 
         with get_db() as conn:
             existing = conn.execute(
-                "SELECT id FROM selfcare_items WHERE id = ? AND household_id = ?",
+                "SELECT id FROM selfcare_items WHERE id = ? AND household_id = ? AND deleted_at IS NULL",
                 (item_id, household_id),
             ).fetchone()
             if not existing:
@@ -278,13 +278,13 @@ async def delete_selfcare_item(item_id: int, tenant: TenantContext = Depends(get
     try:
         with get_db() as conn:
             existing = conn.execute(
-                "SELECT id FROM selfcare_items WHERE id = ? AND household_id = ?",
+                "SELECT id FROM selfcare_items WHERE id = ? AND household_id = ? AND deleted_at IS NULL",
                 (item_id, household_id),
             ).fetchone()
             if not existing:
                 raise HTTPException(status_code=404, detail="Item not found")
 
-            conn.execute("DELETE FROM selfcare_items WHERE id = ? AND household_id = ?", (item_id, household_id))
+            conn.execute("UPDATE selfcare_items SET deleted_at = datetime('now'), updated_at = datetime('now') WHERE id = ? AND household_id = ?", (item_id, household_id))
             conn.commit()
 
         await manager.broadcast({"type": "selfcare_updated"}, household_id=household_id)
@@ -306,7 +306,7 @@ async def refill_selfcare_item(item_id: int, request: Request, tenant: TenantCon
     try:
         with get_db() as conn:
             existing = conn.execute(
-                "SELECT * FROM selfcare_items WHERE id = ? AND household_id = ?",
+                "SELECT * FROM selfcare_items WHERE id = ? AND household_id = ? AND deleted_at IS NULL",
                 (item_id, household_id),
             ).fetchone()
             if not existing:
@@ -352,7 +352,7 @@ async def log_selfcare_item(item_id: int, request: Request, tenant: TenantContex
 
         with get_db() as conn:
             existing = conn.execute(
-                "SELECT * FROM selfcare_items WHERE id = ? AND household_id = ?",
+                "SELECT * FROM selfcare_items WHERE id = ? AND household_id = ? AND deleted_at IS NULL",
                 (item_id, household_id),
             ).fetchone()
             if not existing:
@@ -422,7 +422,7 @@ def get_selfcare_history(item_id: int, tenant: TenantContext = Depends(get_curre
     try:
         with get_db() as conn:
             existing = conn.execute(
-                "SELECT id FROM selfcare_items WHERE id = ? AND household_id = ?",
+                "SELECT id FROM selfcare_items WHERE id = ? AND household_id = ? AND deleted_at IS NULL",
                 (item_id, household_id),
             ).fetchone()
             if not existing:

@@ -17,7 +17,7 @@ def get_inventory(tenant: TenantContext = Depends(get_current_user)):
     household_id = tenant.household_id
     try:
         with get_db() as conn:
-            rows = conn.execute("SELECT * FROM inventory_items WHERE household_id = ? ORDER BY category, name", (household_id,)).fetchall()
+            rows = conn.execute("SELECT * FROM inventory_items WHERE household_id = ? AND deleted_at IS NULL ORDER BY category, name", (household_id,)).fetchall()
             items = [dict(r) for r in rows]
             low_stock = [i for i in items if i['quantity'] <= i['low_threshold']]
             return {"items": items, "low_stock": low_stock}
@@ -138,7 +138,7 @@ async def update_inventory_item(item_id: int, request: Request, tenant: TenantCo
         # --- End validation ---
 
         with get_db() as conn:
-            existing = conn.execute("SELECT * FROM inventory_items WHERE id = ? AND household_id = ?", (item_id, household_id)).fetchone()
+            existing = conn.execute("SELECT * FROM inventory_items WHERE id = ? AND household_id = ? AND deleted_at IS NULL", (item_id, household_id)).fetchone()
             if not existing:
                 raise HTTPException(status_code=404, detail="Item not found")
             conn.execute("""
@@ -173,7 +173,7 @@ async def delete_inventory_item(item_id: int, tenant: TenantContext = Depends(ge
     household_id = tenant.household_id
     try:
         with get_db() as conn:
-            result = conn.execute("DELETE FROM inventory_items WHERE id = ? AND household_id = ?", (item_id, household_id))
+            result = conn.execute("UPDATE inventory_items SET deleted_at = datetime('now'), updated_at = datetime('now') WHERE id = ? AND household_id = ?", (item_id, household_id))
             conn.commit()
             if result.rowcount == 0:
                 raise HTTPException(status_code=404, detail="Item not found")

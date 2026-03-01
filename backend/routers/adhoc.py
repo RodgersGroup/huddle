@@ -52,7 +52,7 @@ def get_adhoc(tenant: TenantContext = Depends(get_current_user)):
         with get_db() as conn:
             rows = conn.execute("""
                 SELECT * FROM adhoc_tasks
-                WHERE household_id = ?
+                WHERE household_id = ? AND deleted_at IS NULL
                 ORDER BY completed ASC, created_at DESC
             """, (household_id,)).fetchall()
             return {"tasks": [_enrich_task(dict(r)) for r in rows]}
@@ -137,7 +137,7 @@ async def upload_task_photo(task_id: int, request: Request, tenant: TenantContex
         # Verify the task exists and belongs to this household
         with get_db() as conn:
             task = conn.execute(
-                "SELECT id FROM adhoc_tasks WHERE id = ? AND household_id = ?",
+                "SELECT id FROM adhoc_tasks WHERE id = ? AND household_id = ? AND deleted_at IS NULL",
                 (task_id, household_id)
             ).fetchone()
             if not task:
@@ -206,7 +206,7 @@ async def delete_task_photo(task_id: int, tenant: TenantContext = Depends(get_cu
     try:
         with get_db() as conn:
             task = conn.execute(
-                "SELECT id FROM adhoc_tasks WHERE id = ? AND household_id = ?",
+                "SELECT id FROM adhoc_tasks WHERE id = ? AND household_id = ? AND deleted_at IS NULL",
                 (task_id, household_id)
             ).fetchone()
             if not task:
@@ -241,7 +241,7 @@ async def complete_adhoc(task_id: int, request: Request, tenant: TenantContext =
         with get_db() as conn:
             # Fetch task details before updating (for notification)
             task = conn.execute(
-                "SELECT * FROM adhoc_tasks WHERE id = ? AND household_id = ?",
+                "SELECT * FROM adhoc_tasks WHERE id = ? AND household_id = ? AND deleted_at IS NULL",
                 (task_id, household_id)
             ).fetchone()
             if not task:
@@ -301,7 +301,7 @@ async def delete_adhoc(task_id: int, tenant: TenantContext = Depends(get_current
     household_id = tenant.household_id
     try:
         with get_db() as conn:
-            result = conn.execute("DELETE FROM adhoc_tasks WHERE id = ? AND household_id = ?", (task_id, household_id))
+            result = conn.execute("UPDATE adhoc_tasks SET deleted_at = datetime('now'), updated_at = datetime('now') WHERE id = ? AND household_id = ?", (task_id, household_id))
             conn.commit()
             if result.rowcount == 0:
                 raise HTTPException(status_code=404, detail="Task not found")
@@ -329,10 +329,10 @@ async def clear_completed(tenant: TenantContext = Depends(get_current_user)):
         with get_db() as conn:
             # Get IDs of completed tasks to clean up photos
             completed = conn.execute(
-                "SELECT id FROM adhoc_tasks WHERE completed = 1 AND household_id = ?",
+                "SELECT id FROM adhoc_tasks WHERE completed = 1 AND household_id = ? AND deleted_at IS NULL",
                 (household_id,)
             ).fetchall()
-            conn.execute("DELETE FROM adhoc_tasks WHERE completed = 1 AND household_id = ?", (household_id,))
+            conn.execute("UPDATE adhoc_tasks SET deleted_at = datetime('now'), updated_at = datetime('now') WHERE completed = 1 AND household_id = ?", (household_id,))
             conn.commit()
 
         # Clean up photo files

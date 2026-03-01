@@ -24,7 +24,7 @@ def list_assignments(request: Request, tenant: TenantContext = Depends(get_curre
         status = request.query_params.get("status")
 
         with get_db() as conn:
-            query = "SELECT * FROM assignments WHERE household_id = ?"
+            query = "SELECT * FROM assignments WHERE household_id = ? AND deleted_at IS NULL"
             params = [household_id]
 
             if person:
@@ -121,7 +121,7 @@ async def update_assignment(assignment_id: int, request: Request, tenant: Tenant
 
         with get_db() as conn:
             existing = conn.execute(
-                "SELECT * FROM assignments WHERE id = ? AND household_id = ?",
+                "SELECT * FROM assignments WHERE id = ? AND household_id = ? AND deleted_at IS NULL",
                 (assignment_id, household_id)
             ).fetchone()
             if not existing:
@@ -172,7 +172,7 @@ async def delete_assignment(assignment_id: int, tenant: TenantContext = Depends(
     try:
         with get_db() as conn:
             result = conn.execute(
-                "DELETE FROM assignments WHERE id = ? AND household_id = ?",
+                "UPDATE assignments SET deleted_at = datetime('now'), updated_at = datetime('now') WHERE id = ? AND household_id = ?",
                 (assignment_id, household_id)
             )
             conn.commit()

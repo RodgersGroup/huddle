@@ -100,7 +100,7 @@ def get_recipes(tenant: TenantContext = Depends(get_current_user)):
                 FROM recipes r
                 LEFT JOIN recipe_tags t ON t.recipe_id = r.id
                 LEFT JOIN recipe_ingredients ri ON ri.recipe_id = r.id
-                WHERE r.household_id = ?
+                WHERE r.household_id = ? AND r.deleted_at IS NULL
                 GROUP BY r.id
                 ORDER BY r.name
             """, (household_id,)).fetchall()
@@ -137,7 +137,7 @@ def search_recipes(q: str = "", tenant: TenantContext = Depends(get_current_user
                 FROM recipes r
                 LEFT JOIN recipe_tags t ON t.recipe_id = r.id
                 LEFT JOIN recipe_ingredients ri ON ri.recipe_id = r.id
-                WHERE r.household_id = ?
+                WHERE r.household_id = ? AND r.deleted_at IS NULL
                   AND (r.name LIKE ? OR t.tag LIKE ?)
                 GROUP BY r.id
                 ORDER BY r.name
@@ -165,7 +165,7 @@ def get_recipe(recipe_id: int, tenant: TenantContext = Depends(get_current_user)
     try:
         with get_db() as conn:
             row = conn.execute(
-                "SELECT * FROM recipes WHERE id = ? AND household_id = ?",
+                "SELECT * FROM recipes WHERE id = ? AND household_id = ? AND deleted_at IS NULL",
                 (recipe_id, household_id),
             ).fetchone()
             if not row:
@@ -253,7 +253,7 @@ async def update_recipe(recipe_id: int, request: Request, tenant: TenantContext 
 
         with get_db() as conn:
             existing = conn.execute(
-                "SELECT * FROM recipes WHERE id = ? AND household_id = ?",
+                "SELECT * FROM recipes WHERE id = ? AND household_id = ? AND deleted_at IS NULL",
                 (recipe_id, household_id),
             ).fetchone()
             if not existing:
@@ -321,7 +321,7 @@ async def delete_recipe(recipe_id: int, tenant: TenantContext = Depends(require_
     try:
         with get_db() as conn:
             result = conn.execute(
-                "DELETE FROM recipes WHERE id = ? AND household_id = ?",
+                "UPDATE recipes SET deleted_at = datetime('now'), updated_at = datetime('now') WHERE id = ? AND household_id = ?",
                 (recipe_id, household_id),
             )
             if result.rowcount == 0:
@@ -420,7 +420,7 @@ async def suggest_tags(recipe_id: int, tenant: TenantContext = Depends(get_curre
     try:
         with get_db() as conn:
             recipe = conn.execute(
-                "SELECT * FROM recipes WHERE id = ? AND household_id = ?",
+                "SELECT * FROM recipes WHERE id = ? AND household_id = ? AND deleted_at IS NULL",
                 (recipe_id, household_id)
             ).fetchone()
             if not recipe:

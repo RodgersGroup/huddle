@@ -82,7 +82,7 @@ def get_routines(tenant: TenantContext = Depends(get_current_user)):
 
         with get_db() as conn:
             routines = conn.execute(
-                "SELECT * FROM routines WHERE household_id = ? ORDER BY sort_order, id",
+                "SELECT * FROM routines WHERE household_id = ? AND deleted_at IS NULL ORDER BY sort_order, id",
                 (household_id,)
             ).fetchall()
 
@@ -200,7 +200,7 @@ async def update_routine(routine_id: int, request: Request, tenant: TenantContex
 
         with get_db() as conn:
             routine = conn.execute(
-                "SELECT * FROM routines WHERE id = ? AND household_id = ?",
+                "SELECT * FROM routines WHERE id = ? AND household_id = ? AND deleted_at IS NULL",
                 (routine_id, household_id)
             ).fetchone()
             if not routine:
@@ -251,13 +251,13 @@ async def delete_routine(routine_id: int, tenant: TenantContext = Depends(requir
     try:
         with get_db() as conn:
             routine = conn.execute(
-                "SELECT id FROM routines WHERE id = ? AND household_id = ?",
+                "SELECT id FROM routines WHERE id = ? AND household_id = ? AND deleted_at IS NULL",
                 (routine_id, household_id)
             ).fetchone()
             if not routine:
                 raise HTTPException(status_code=404, detail="Routine not found")
 
-            conn.execute("DELETE FROM routines WHERE id = ? AND household_id = ?", (routine_id, household_id))
+            conn.execute("UPDATE routines SET deleted_at = datetime('now'), updated_at = datetime('now') WHERE id = ? AND household_id = ?", (routine_id, household_id))
             conn.commit()
 
         await manager.broadcast({"type": "routines_updated"}, household_id=household_id)
@@ -282,7 +282,7 @@ async def complete_routine_item(routine_id: int, item_id: int, tenant: TenantCon
         with get_db() as conn:
             # Verify routine and item exist
             routine = conn.execute(
-                "SELECT * FROM routines WHERE id = ? AND household_id = ?",
+                "SELECT * FROM routines WHERE id = ? AND household_id = ? AND deleted_at IS NULL",
                 (routine_id, household_id)
             ).fetchone()
             if not routine:
@@ -384,7 +384,7 @@ async def uncomplete_routine_item(routine_id: int, item_id: int, tenant: TenantC
 
         with get_db() as conn:
             routine = conn.execute(
-                "SELECT id FROM routines WHERE id = ? AND household_id = ?",
+                "SELECT id FROM routines WHERE id = ? AND household_id = ? AND deleted_at IS NULL",
                 (routine_id, household_id)
             ).fetchone()
             if not routine:
@@ -415,7 +415,7 @@ def get_routine_streaks(tenant: TenantContext = Depends(get_current_user)):
     try:
         with get_db() as conn:
             routines = conn.execute(
-                "SELECT id, name, assigned_to, routine_type FROM routines WHERE household_id = ?",
+                "SELECT id, name, assigned_to, routine_type FROM routines WHERE household_id = ? AND deleted_at IS NULL",
                 (household_id,)
             ).fetchall()
 

@@ -24,7 +24,7 @@ def get_bills(tenant: TenantContext = Depends(get_current_user)):
         tz = ZoneInfo(get_setting("timezone", "Australia/Sydney", household_id))
         today = datetime.now(tz).date().isoformat()
         with get_db() as conn:
-            rows = conn.execute("SELECT * FROM bills WHERE household_id = ? ORDER BY paid ASC, due_date ASC", (household_id,)).fetchall()
+            rows = conn.execute("SELECT * FROM bills WHERE household_id = ? AND deleted_at IS NULL ORDER BY paid ASC, due_date ASC", (household_id,)).fetchall()
             bills = []
             for row in rows:
                 bill = dict(row)
@@ -152,7 +152,7 @@ async def update_bill(bill_id: int, request: Request, tenant: TenantContext = De
         # --- End validation ---
 
         with get_db() as conn:
-            existing = conn.execute("SELECT * FROM bills WHERE id = ? AND household_id = ?", (bill_id, household_id)).fetchone()
+            existing = conn.execute("SELECT * FROM bills WHERE id = ? AND household_id = ? AND deleted_at IS NULL", (bill_id, household_id)).fetchone()
             if not existing:
                 raise HTTPException(status_code=404, detail="Bill not found")
             split_type = data.get('split_type', existing['split_type'] or 'equal')
@@ -200,7 +200,7 @@ async def delete_bill(bill_id: int, tenant: TenantContext = Depends(require_role
     household_id = tenant.household_id
     try:
         with get_db() as conn:
-            result = conn.execute("DELETE FROM bills WHERE id = ? AND household_id = ?", (bill_id, household_id))
+            result = conn.execute("UPDATE bills SET deleted_at = datetime('now'), updated_at = datetime('now') WHERE id = ? AND household_id = ?", (bill_id, household_id))
             conn.commit()
             if result.rowcount == 0:
                 raise HTTPException(status_code=404, detail="Bill not found")
@@ -224,7 +224,7 @@ async def pay_bill(bill_id: int, request: Request, tenant: TenantContext = Depen
         data = await request.json()
         paid_by = data.get('paid_by')
         with get_db() as conn:
-            bill = conn.execute("SELECT * FROM bills WHERE id = ? AND household_id = ?", (bill_id, household_id)).fetchone()
+            bill = conn.execute("SELECT * FROM bills WHERE id = ? AND household_id = ? AND deleted_at IS NULL", (bill_id, household_id)).fetchone()
             if not bill:
                 raise HTTPException(status_code=404, detail="Bill not found")
             conn.execute("""
@@ -301,7 +301,7 @@ async def unpay_bill(bill_id: int, tenant: TenantContext = Depends(require_role(
     household_id = tenant.household_id
     try:
         with get_db() as conn:
-            bill = conn.execute("SELECT * FROM bills WHERE id = ? AND household_id = ?", (bill_id, household_id)).fetchone()
+            bill = conn.execute("SELECT * FROM bills WHERE id = ? AND household_id = ? AND deleted_at IS NULL", (bill_id, household_id)).fetchone()
             if not bill:
                 raise HTTPException(status_code=404, detail="Bill not found")
             conn.execute("""
@@ -328,7 +328,7 @@ def get_balances(tenant: TenantContext = Depends(get_current_user)):
         people = get_people(household_id=household_id)
         with get_db() as conn:
             rows = conn.execute(
-                "SELECT * FROM bills WHERE household_id = ? AND paid = 1 AND paid_by IS NOT NULL",
+                "SELECT * FROM bills WHERE household_id = ? AND paid = 1 AND paid_by IS NOT NULL AND deleted_at IS NULL",
                 (household_id,)
             ).fetchall()
 

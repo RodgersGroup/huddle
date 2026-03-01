@@ -111,7 +111,7 @@ def get_rewards_shop(tenant: TenantContext = Depends(get_current_user)):
     try:
         with get_db() as conn:
             rewards = conn.execute(
-                "SELECT * FROM rewards WHERE household_id = ? AND available = 1 ORDER BY cost, name",
+                "SELECT * FROM rewards WHERE household_id = ? AND available = 1 AND deleted_at IS NULL ORDER BY cost, name",
                 (household_id,)
             ).fetchall()
 
@@ -172,7 +172,7 @@ async def update_reward(reward_id: int, request: Request, tenant: TenantContext 
 
         with get_db() as conn:
             existing = conn.execute(
-                "SELECT * FROM rewards WHERE id = ? AND household_id = ?",
+                "SELECT * FROM rewards WHERE id = ? AND household_id = ? AND deleted_at IS NULL",
                 (reward_id, household_id)
             ).fetchone()
             if not existing:
@@ -209,13 +209,13 @@ async def delete_reward(reward_id: int, tenant: TenantContext = Depends(require_
     try:
         with get_db() as conn:
             existing = conn.execute(
-                "SELECT id FROM rewards WHERE id = ? AND household_id = ?",
+                "SELECT id FROM rewards WHERE id = ? AND household_id = ? AND deleted_at IS NULL",
                 (reward_id, household_id)
             ).fetchone()
             if not existing:
                 raise HTTPException(status_code=404, detail="Reward not found")
 
-            conn.execute("DELETE FROM rewards WHERE id = ? AND household_id = ?", (reward_id, household_id))
+            conn.execute("UPDATE rewards SET deleted_at = datetime('now'), updated_at = datetime('now') WHERE id = ? AND household_id = ?", (reward_id, household_id))
             conn.commit()
 
         await manager.broadcast({"type": "rewards_updated"}, household_id=household_id)
@@ -242,7 +242,7 @@ async def redeem_reward(reward_id: int, request: Request, tenant: TenantContext 
 
         with get_db() as conn:
             reward = conn.execute(
-                "SELECT * FROM rewards WHERE id = ? AND household_id = ? AND available = 1",
+                "SELECT * FROM rewards WHERE id = ? AND household_id = ? AND available = 1 AND deleted_at IS NULL",
                 (reward_id, household_id)
             ).fetchone()
             if not reward:

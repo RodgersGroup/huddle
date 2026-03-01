@@ -19,7 +19,7 @@ def get_polls(tenant: TenantContext = Depends(get_current_user)):
     household_id = tenant.household_id
     try:
         with get_db() as conn:
-            polls = conn.execute("SELECT * FROM polls WHERE household_id = ? ORDER BY created_at DESC", (household_id,)).fetchall()
+            polls = conn.execute("SELECT * FROM polls WHERE household_id = ? AND deleted_at IS NULL ORDER BY created_at DESC", (household_id,)).fetchall()
             result = []
             for poll in polls:
                 poll_dict = dict(poll)
@@ -120,7 +120,7 @@ async def vote_poll(poll_id: int, request: Request, tenant: TenantContext = Depe
         data['voter'] = voter
         data['option_id'] = option_id
         with get_db() as conn:
-            poll = conn.execute("SELECT * FROM polls WHERE id = ? AND household_id = ?", (poll_id, household_id)).fetchone()
+            poll = conn.execute("SELECT * FROM polls WHERE id = ? AND household_id = ? AND deleted_at IS NULL", (poll_id, household_id)).fetchone()
             if not poll:
                 raise HTTPException(status_code=404, detail="Poll not found")
             if poll['status'] != 'active':
@@ -177,12 +177,12 @@ async def delete_poll(poll_id: int, tenant: TenantContext = Depends(require_role
     try:
         with get_db() as conn:
             # Verify ownership before deleting children
-            poll = conn.execute("SELECT id FROM polls WHERE id = ? AND household_id = ?", (poll_id, household_id)).fetchone()
+            poll = conn.execute("SELECT id FROM polls WHERE id = ? AND household_id = ? AND deleted_at IS NULL", (poll_id, household_id)).fetchone()
             if not poll:
                 raise HTTPException(status_code=404, detail="Poll not found")
             conn.execute("DELETE FROM poll_votes WHERE poll_id = ? AND poll_id IN (SELECT id FROM polls WHERE household_id = ?)", (poll_id, household_id))
             conn.execute("DELETE FROM poll_options WHERE poll_id = ? AND poll_id IN (SELECT id FROM polls WHERE household_id = ?)", (poll_id, household_id))
-            conn.execute("DELETE FROM polls WHERE id = ? AND household_id = ?", (poll_id, household_id))
+            conn.execute("UPDATE polls SET deleted_at = datetime('now'), updated_at = datetime('now') WHERE id = ? AND household_id = ?", (poll_id, household_id))
             conn.commit()
         await manager.broadcast({"type": "poll_deleted", "poll_id": poll_id}, household_id=household_id)
         return {"message": "Poll deleted"}

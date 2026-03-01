@@ -25,7 +25,7 @@ from websocket import manager
 from background import watchdog_and_maintenance_task, service_monitor_task, push_notification_task
 
 # Routers
-from routers import chores, calendar, meals, adhoc, bills, inventory, polls, settings_api, modules, shopping, status, recipes, pairing, routines, rewards, allowances, feedback, pets, noticeboard, assignments, expenses, house_rules, tenancy, freezer, selfcare, client_errors, agents, sync
+from routers import chores, calendar, meals, adhoc, bills, inventory, polls, settings_api, modules, shopping, status, recipes, pairing, routines, rewards, allowances, feedback, pets, noticeboard, assignments, expenses, house_rules, tenancy, freezer, selfcare, client_errors, agents, sync, sessions
 from fuel import router as fuel_router
 from push import router as push_router
 from auth import router as auth_router, get_current_user, TenantContext
@@ -209,6 +209,7 @@ app.include_router(auth_router)
 app.include_router(client_errors.router)
 app.include_router(agents.router)
 app.include_router(sync.router)
+app.include_router(sessions.router)
 
 
 # ============================================================================

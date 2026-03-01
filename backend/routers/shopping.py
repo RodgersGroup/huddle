@@ -128,7 +128,7 @@ def get_shopping(tenant: TenantContext = Depends(get_current_user)):
         with get_db() as conn:
             rows = conn.execute("""
                 SELECT * FROM shopping_items
-                WHERE household_id = ?
+                WHERE household_id = ? AND deleted_at IS NULL
                 ORDER BY purchased ASC, created_at DESC
             """, (household_id,)).fetchall()
             return {"items": [dict(r) for r in rows]}
@@ -181,13 +181,13 @@ async def create_shopping_item(request: Request, tenant: TenantContext = Depends
                 if h_tier == "free":
                     limit = FREE_TIER_LIMITS.get("shopping")
                     if limit:
-                        count = conn.execute("SELECT COUNT(*) FROM shopping_items WHERE household_id = ? AND purchased = 0", (household_id,)).fetchone()[0]
+                        count = conn.execute("SELECT COUNT(*) FROM shopping_items WHERE household_id = ? AND purchased = 0 AND deleted_at IS NULL", (household_id,)).fetchone()[0]
                         if count >= limit:
                             raise HTTPException(status_code=403, detail=f"Free plan is limited to {limit} shopping items. Upgrade to add more.")
 
             # Smart duplicate detection: check for existing unpurchased item with same name
             existing = conn.execute(
-                "SELECT id, quantity FROM shopping_items WHERE LOWER(name) = LOWER(?) AND purchased = 0 AND household_id = ?",
+                "SELECT id, quantity FROM shopping_items WHERE LOWER(name) = LOWER(?) AND purchased = 0 AND household_id = ? AND deleted_at IS NULL",
                 (name, household_id)
             ).fetchone()
 
@@ -262,7 +262,7 @@ async def update_shopping_item(item_id: int, request: Request, tenant: TenantCon
 
         with get_db() as conn:
             existing = conn.execute(
-                "SELECT * FROM shopping_items WHERE id = ? AND household_id = ?",
+                "SELECT * FROM shopping_items WHERE id = ? AND household_id = ? AND deleted_at IS NULL",
                 (item_id, household_id)
             ).fetchone()
             if not existing:
@@ -314,7 +314,7 @@ async def clear_purchased(tenant: TenantContext = Depends(get_current_user)):
     try:
         with get_db() as conn:
             conn.execute(
-                "DELETE FROM shopping_items WHERE purchased = 1 AND household_id = ?",
+                "UPDATE shopping_items SET deleted_at = datetime('now'), updated_at = datetime('now') WHERE purchased = 1 AND household_id = ? AND deleted_at IS NULL",
                 (household_id,)
             )
             conn.commit()
@@ -337,7 +337,7 @@ async def clear_all_shopping(tenant: TenantContext = Depends(get_current_user)):
     try:
         with get_db() as conn:
             conn.execute(
-                "DELETE FROM shopping_items WHERE household_id = ?",
+                "UPDATE shopping_items SET deleted_at = datetime('now'), updated_at = datetime('now') WHERE household_id = ? AND deleted_at IS NULL",
                 (household_id,)
             )
             conn.commit()
@@ -358,7 +358,7 @@ async def delete_shopping_item(item_id: int, tenant: TenantContext = Depends(get
     try:
         with get_db() as conn:
             result = conn.execute(
-                "DELETE FROM shopping_items WHERE id = ? AND household_id = ?",
+                "UPDATE shopping_items SET deleted_at = datetime('now'), updated_at = datetime('now') WHERE id = ? AND household_id = ?",
                 (item_id, household_id)
             )
             conn.commit()

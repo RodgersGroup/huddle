@@ -23,7 +23,7 @@ def list_posts(tenant: TenantContext = Depends(get_current_user)):
             now = datetime.now().isoformat()
             rows = conn.execute("""
                 SELECT * FROM noticeboard_posts
-                WHERE household_id = ? AND (expires_at IS NULL OR expires_at > ?)
+                WHERE household_id = ? AND deleted_at IS NULL AND (expires_at IS NULL OR expires_at > ?)
                 ORDER BY pinned DESC, created_at DESC
             """, (household_id, now)).fetchall()
             return {"posts": [dict(r) for r in rows]}
@@ -111,7 +111,7 @@ async def update_post(post_id: int, request: Request, tenant: TenantContext = De
 
         with get_db() as conn:
             existing = conn.execute(
-                "SELECT * FROM noticeboard_posts WHERE id = ? AND household_id = ?",
+                "SELECT * FROM noticeboard_posts WHERE id = ? AND household_id = ? AND deleted_at IS NULL",
                 (post_id, household_id)
             ).fetchone()
             if not existing:
@@ -169,7 +169,7 @@ async def delete_post(post_id: int, tenant: TenantContext = Depends(get_current_
     try:
         with get_db() as conn:
             existing = conn.execute(
-                "SELECT posted_by FROM noticeboard_posts WHERE id = ? AND household_id = ?",
+                "SELECT posted_by FROM noticeboard_posts WHERE id = ? AND household_id = ? AND deleted_at IS NULL",
                 (post_id, household_id)
             ).fetchone()
             if not existing:
@@ -178,7 +178,7 @@ async def delete_post(post_id: int, tenant: TenantContext = Depends(get_current_
             if existing["posted_by"] != tenant.display_name and tenant.role != "manager":
                 raise HTTPException(status_code=403, detail="Not authorised")
 
-            conn.execute("DELETE FROM noticeboard_posts WHERE id = ? AND household_id = ?", (post_id, household_id))
+            conn.execute("UPDATE noticeboard_posts SET deleted_at = datetime('now'), updated_at = datetime('now') WHERE id = ? AND household_id = ?", (post_id, household_id))
             conn.commit()
 
         await manager.broadcast({"type": "noticeboard_updated"}, household_id=household_id)
@@ -202,7 +202,7 @@ async def toggle_pin(post_id: int, tenant: TenantContext = Depends(get_current_u
     try:
         with get_db() as conn:
             existing = conn.execute(
-                "SELECT pinned FROM noticeboard_posts WHERE id = ? AND household_id = ?",
+                "SELECT pinned FROM noticeboard_posts WHERE id = ? AND household_id = ? AND deleted_at IS NULL",
                 (post_id, household_id)
             ).fetchone()
             if not existing:

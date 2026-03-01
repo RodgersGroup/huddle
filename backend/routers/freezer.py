@@ -18,7 +18,7 @@ def list_freezer_items(tenant: TenantContext = Depends(get_current_user)):
     try:
         with get_db() as conn:
             rows = conn.execute(
-                "SELECT * FROM freezer_items WHERE household_id = ? ORDER BY date_frozen DESC, created_at DESC",
+                "SELECT * FROM freezer_items WHERE household_id = ? AND deleted_at IS NULL ORDER BY date_frozen DESC, created_at DESC",
                 (tenant.household_id,),
             ).fetchall()
         return {"items": [dict(r) for r in rows]}
@@ -72,7 +72,7 @@ async def update_freezer_item(item_id: int, request: Request, tenant: TenantCont
         data = await request.json()
         with get_db() as conn:
             existing = conn.execute(
-                "SELECT id FROM freezer_items WHERE id = ? AND household_id = ?",
+                "SELECT id FROM freezer_items WHERE id = ? AND household_id = ? AND deleted_at IS NULL",
                 (item_id, tenant.household_id),
             ).fetchone()
             if not existing:
@@ -112,7 +112,7 @@ async def delete_freezer_item(item_id: int, tenant: TenantContext = Depends(get_
     try:
         with get_db() as conn:
             conn.execute(
-                "DELETE FROM freezer_items WHERE id = ? AND household_id = ?",
+                "UPDATE freezer_items SET deleted_at = datetime('now'), updated_at = datetime('now') WHERE id = ? AND household_id = ?",
                 (item_id, tenant.household_id),
             )
             conn.commit()

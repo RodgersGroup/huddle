@@ -210,7 +210,7 @@ def get_family_calendar_month(year: int, month: int, tenant: TenantContext = Dep
         with get_db() as conn:
             rows = conn.execute("""
                 SELECT * FROM calendar_events
-                WHERE household_id = ?
+                WHERE household_id = ? AND deleted_at IS NULL
                   AND ((start_date <= ? AND (end_date >= ? OR end_date IS NULL OR event_type = 'recurring'))
                    OR (start_date >= ? AND start_date <= ?))
                 ORDER BY start_date, start_time
@@ -329,7 +329,7 @@ def get_family_calendar_events(start_date: str = None, end_date: str = None, ten
         with get_db() as conn:
             rows = conn.execute("""
                 SELECT * FROM calendar_events
-                WHERE household_id = ?
+                WHERE household_id = ? AND deleted_at IS NULL
                   AND ((start_date <= ? AND (end_date >= ? OR end_date IS NULL OR event_type = 'recurring'))
                    OR (start_date >= ? AND start_date <= ?))
                 ORDER BY start_date, start_time
@@ -361,7 +361,7 @@ def get_family_calendar_event(event_id: int, tenant: TenantContext = Depends(get
     household_id = tenant.household_id
     try:
         with get_db() as conn:
-            row = conn.execute("SELECT * FROM calendar_events WHERE id = ? AND household_id = ?", (event_id, household_id)).fetchone()
+            row = conn.execute("SELECT * FROM calendar_events WHERE id = ? AND household_id = ? AND deleted_at IS NULL", (event_id, household_id)).fetchone()
             if not row:
                 raise HTTPException(status_code=404, detail="Event not found")
 
@@ -515,7 +515,7 @@ async def update_family_calendar_event(event_id: int, request: Request, tenant: 
         # --- End validation ---
 
         with get_db() as conn:
-            existing = conn.execute("SELECT * FROM calendar_events WHERE id = ? AND household_id = ?", (event_id, household_id)).fetchone()
+            existing = conn.execute("SELECT * FROM calendar_events WHERE id = ? AND household_id = ? AND deleted_at IS NULL", (event_id, household_id)).fetchone()
             if not existing:
                 raise HTTPException(status_code=404, detail="Event not found")
 
@@ -582,7 +582,7 @@ async def delete_family_calendar_event(event_id: int, delete_type: str = "all", 
     household_id = tenant.household_id
     try:
         with get_db() as conn:
-            event = conn.execute("SELECT * FROM calendar_events WHERE id = ? AND household_id = ?", (event_id, household_id)).fetchone()
+            event = conn.execute("SELECT * FROM calendar_events WHERE id = ? AND household_id = ? AND deleted_at IS NULL", (event_id, household_id)).fetchone()
             if not event:
                 raise HTTPException(status_code=404, detail="Event not found")
 
@@ -590,7 +590,7 @@ async def delete_family_calendar_event(event_id: int, delete_type: str = "all", 
 
             if delete_type == "all":
                 conn.execute("DELETE FROM calendar_event_exceptions WHERE event_id = ?", (event_id,))
-                conn.execute("DELETE FROM calendar_events WHERE id = ? AND household_id = ?", (event_id, household_id))
+                conn.execute("UPDATE calendar_events SET deleted_at = datetime('now'), updated_at = datetime('now') WHERE id = ? AND household_id = ?", (event_id, household_id))
                 conn.commit()
                 message = "Event series deleted"
 
@@ -636,7 +636,7 @@ async def delete_family_calendar_event(event_id: int, delete_type: str = "all", 
                 message = f"This and all future occurrences deleted"
 
             else:
-                conn.execute("DELETE FROM calendar_events WHERE id = ? AND household_id = ?", (event_id, household_id))
+                conn.execute("UPDATE calendar_events SET deleted_at = datetime('now'), updated_at = datetime('now') WHERE id = ? AND household_id = ?", (event_id, household_id))
                 conn.commit()
                 message = "Event deleted"
 
@@ -658,7 +658,7 @@ def get_event_exceptions(event_id: int, tenant: TenantContext = Depends(get_curr
     household_id = tenant.household_id
     try:
         with get_db() as conn:
-            event = conn.execute("SELECT * FROM calendar_events WHERE id = ? AND household_id = ?", (event_id, household_id)).fetchone()
+            event = conn.execute("SELECT * FROM calendar_events WHERE id = ? AND household_id = ? AND deleted_at IS NULL", (event_id, household_id)).fetchone()
             if not event:
                 raise HTTPException(status_code=404, detail="Event not found")
 
@@ -699,7 +699,7 @@ async def add_event_exception(event_id: int, request: Request, tenant: TenantCon
             raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
 
         with get_db() as conn:
-            event = conn.execute("SELECT * FROM calendar_events WHERE id = ? AND household_id = ?", (event_id, household_id)).fetchone()
+            event = conn.execute("SELECT * FROM calendar_events WHERE id = ? AND household_id = ? AND deleted_at IS NULL", (event_id, household_id)).fetchone()
             if not event:
                 raise HTTPException(status_code=404, detail="Event not found")
 

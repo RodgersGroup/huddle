@@ -34,7 +34,7 @@ def get_allowances(tenant: TenantContext = Depends(get_current_user)):
 
             # Savings goals
             goals = conn.execute(
-                "SELECT * FROM savings_goals WHERE household_id = ? AND completed = 0 ORDER BY person, name",
+                "SELECT * FROM savings_goals WHERE household_id = ? AND completed = 0 AND deleted_at IS NULL ORDER BY person, name",
                 (household_id,)
             ).fetchall()
 
@@ -264,7 +264,7 @@ async def delete_savings_goal(goal_id: int, tenant: TenantContext = Depends(requ
             if not goal:
                 raise HTTPException(status_code=404, detail="Goal not found")
 
-            conn.execute("DELETE FROM savings_goals WHERE id = ? AND household_id = ?", (goal_id, household_id))
+            conn.execute("UPDATE savings_goals SET deleted_at = datetime('now'), updated_at = datetime('now') WHERE id = ? AND household_id = ?", (goal_id, household_id))
             conn.commit()
 
         await manager.broadcast({"type": "allowances_updated"}, household_id=household_id)

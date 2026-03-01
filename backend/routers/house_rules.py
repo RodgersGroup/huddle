@@ -81,7 +81,7 @@ def list_rules(tenant: TenantContext = Depends(get_current_user)):
         with get_db() as conn:
             rows = conn.execute("""
                 SELECT * FROM house_rules
-                WHERE household_id = ?
+                WHERE household_id = ? AND deleted_at IS NULL
                 ORDER BY sort_order ASC, created_at ASC
             """, (household_id,)).fetchall()
 
@@ -175,7 +175,7 @@ async def update_rule(rule_id: int, request: Request, tenant: TenantContext = De
 
         with get_db() as conn:
             existing = conn.execute(
-                "SELECT * FROM house_rules WHERE id = ? AND household_id = ?",
+                "SELECT * FROM house_rules WHERE id = ? AND household_id = ? AND deleted_at IS NULL",
                 (rule_id, household_id)
             ).fetchone()
             if not existing:
@@ -252,13 +252,13 @@ async def delete_rule(rule_id: int, tenant: TenantContext = Depends(get_current_
     try:
         with get_db() as conn:
             existing = conn.execute(
-                "SELECT id FROM house_rules WHERE id = ? AND household_id = ?",
+                "SELECT id FROM house_rules WHERE id = ? AND household_id = ? AND deleted_at IS NULL",
                 (rule_id, household_id)
             ).fetchone()
             if not existing:
                 raise HTTPException(status_code=404, detail="Rule not found")
 
-            conn.execute("DELETE FROM house_rules WHERE id = ? AND household_id = ?", (rule_id, household_id))
+            conn.execute("UPDATE house_rules SET deleted_at = datetime('now'), updated_at = datetime('now') WHERE id = ? AND household_id = ?", (rule_id, household_id))
             conn.commit()
 
         await manager.broadcast({"type": "house_rules_updated"}, household_id=household_id)
@@ -280,7 +280,7 @@ async def acknowledge_rule(rule_id: int, tenant: TenantContext = Depends(get_cur
     try:
         with get_db() as conn:
             existing = conn.execute(
-                "SELECT id FROM house_rules WHERE id = ? AND household_id = ?",
+                "SELECT id FROM house_rules WHERE id = ? AND household_id = ? AND deleted_at IS NULL",
                 (rule_id, household_id)
             ).fetchone()
             if not existing:

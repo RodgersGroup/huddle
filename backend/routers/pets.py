@@ -47,7 +47,7 @@ def get_pets(tenant: TenantContext = Depends(get_current_user)):
 
         with get_db() as conn:
             pets = conn.execute(
-                "SELECT * FROM pets WHERE household_id = ? ORDER BY name",
+                "SELECT * FROM pets WHERE household_id = ? AND deleted_at IS NULL ORDER BY name",
                 (household_id,)
             ).fetchall()
 
@@ -168,7 +168,7 @@ async def update_pet(pet_id: int, request: Request, tenant: TenantContext = Depe
 
         with get_db() as conn:
             existing = conn.execute(
-                "SELECT * FROM pets WHERE id = ? AND household_id = ?",
+                "SELECT * FROM pets WHERE id = ? AND household_id = ? AND deleted_at IS NULL",
                 (pet_id, household_id)
             ).fetchone()
             if not existing:
@@ -208,7 +208,7 @@ async def delete_pet(pet_id: int, tenant: TenantContext = Depends(require_role("
     try:
         with get_db() as conn:
             existing = conn.execute(
-                "SELECT id FROM pets WHERE id = ? AND household_id = ?",
+                "SELECT id FROM pets WHERE id = ? AND household_id = ? AND deleted_at IS NULL",
                 (pet_id, household_id)
             ).fetchone()
             if not existing:
@@ -233,7 +233,7 @@ async def delete_pet(pet_id: int, tenant: TenantContext = Depends(require_role("
                 (pet_id, household_id)
             )
             conn.execute(
-                "DELETE FROM pets WHERE id = ? AND household_id = ?",
+                "UPDATE pets SET deleted_at = datetime('now'), updated_at = datetime('now') WHERE id = ? AND household_id = ?",
                 (pet_id, household_id)
             )
             conn.commit()
@@ -260,7 +260,7 @@ def get_pet_tasks(pet_id: int, tenant: TenantContext = Depends(get_current_user)
 
         with get_db() as conn:
             existing = conn.execute(
-                "SELECT id FROM pets WHERE id = ? AND household_id = ?",
+                "SELECT id FROM pets WHERE id = ? AND household_id = ? AND deleted_at IS NULL",
                 (pet_id, household_id)
             ).fetchone()
             if not existing:
@@ -320,7 +320,7 @@ async def create_pet_task(pet_id: int, request: Request, tenant: TenantContext =
 
         with get_db() as conn:
             existing = conn.execute(
-                "SELECT id FROM pets WHERE id = ? AND household_id = ?",
+                "SELECT id FROM pets WHERE id = ? AND household_id = ? AND deleted_at IS NULL",
                 (pet_id, household_id)
             ).fetchone()
             if not existing:
@@ -583,7 +583,7 @@ def get_vet_appointments(pet_id: int, tenant: TenantContext = Depends(get_curren
     try:
         with get_db() as conn:
             existing = conn.execute(
-                "SELECT id FROM pets WHERE id = ? AND household_id = ?",
+                "SELECT id FROM pets WHERE id = ? AND household_id = ? AND deleted_at IS NULL",
                 (pet_id, household_id)
             ).fetchone()
             if not existing:
@@ -614,7 +614,7 @@ async def create_vet_appointment(pet_id: int, request: Request, tenant: TenantCo
 
         with get_db() as conn:
             existing = conn.execute(
-                "SELECT id FROM pets WHERE id = ? AND household_id = ?",
+                "SELECT id FROM pets WHERE id = ? AND household_id = ? AND deleted_at IS NULL",
                 (pet_id, household_id)
             ).fetchone()
             if not existing:
