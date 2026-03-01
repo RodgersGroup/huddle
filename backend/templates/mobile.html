@@ -5856,6 +5856,18 @@
 
     <div class="toast" id="toast"></div>
 
+    <!-- Pending sync badge — shown when offline mutations are queued -->
+    <div id="pendingSyncBadge" style="display:none; position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+        z-index:9999; background:var(--accent, #6366f1); color:#fff; padding:6px 16px; border-radius:20px;
+        font-size:13px; font-weight:600; align-items:center; gap:6px; box-shadow:0 2px 12px rgba(0,0,0,.25);
+        animation:pendingPulse 2s ease-in-out infinite;">
+        <span style="display:inline-block;width:8px;height:8px;background:#fff;border-radius:50%;opacity:.8;"></span>
+        <span>0 pending</span>
+    </div>
+    <style>
+        @keyframes pendingPulse { 0%,100%{opacity:1} 50%{opacity:.7} }
+    </style>
+
     <!-- Upgrade Prompt Modal -->
     <div class="modal-overlay" id="upgradeModal">
         <div class="modal" style="text-align:center; padding: 28px 24px;">
@@ -5960,6 +5972,7 @@
         <button class="feedback-submit-btn" id="feedbackSubmitBtn" onclick="submitFeedback()">Submit Feedback</button>
     </div>
 
+    <script src="/static/offline-queue.js"></script>
     <script>
         // Client error reporter — sends errors to /api/client-errors for tracking
         (function() {
@@ -6022,11 +6035,38 @@
                     if (!resp.ok && url.includes('/api/') && !url.includes('/api/client-errors')) {
                         console.warn('API error:', resp.status, resp.url);
                         window._reportError({ message: 'API ' + method + ' ' + resp.status + ': ' + url, source: 'fetch' });
+                        // Show user-friendly toast for auth/CSRF errors
+                        if (resp.status === 401 && typeof showToast === 'function') {
+                            showToast('Session expired. Please refresh the page.', 'error');
+                        } else if (resp.status === 403 && typeof showToast === 'function') {
+                            showToast('Request blocked. Please refresh and try again.', 'error');
+                        }
                     }
                     return resp;
                 }).catch(function(err) {
                     if (url.includes('/api/') && !url.includes('/api/client-errors')) {
-                        window._reportError({ message: 'API ' + method + ' network error: ' + url + ' — ' + err.message, source: 'fetch', stack: err.stack });
+                        window._reportError({ message: 'API ' + method + ' network error: ' + url + ' - ' + err.message, source: 'fetch', stack: err.stack });
+                        // Queue offline mutations (POST/PUT/DELETE to /api/*) — exclude recursion-prone paths
+                        var _queueableMethods = { POST: 1, PUT: 1, DELETE: 1 };
+                        if (_queueableMethods[method.toUpperCase()]
+                            && url.includes('/api/')
+                            && !url.includes('/api/client-errors')
+                            && !url.includes('/api/sync/push')
+                            && window.offlineQueue) {
+                            var bodyStr = (init && init.body) || null;
+                            window.offlineQueue.enqueue(url, method, {}, bodyStr);
+                            if (typeof showToast === 'function') {
+                                showToast('Saved offline. Will sync when connected.', 'warning');
+                            }
+                            // Return synthetic 202 so calling code doesn't error
+                            return new Response(JSON.stringify({ id: 'temp_' + Date.now(), _offline: true }), {
+                                status: 202,
+                                headers: { 'Content-Type': 'application/json' }
+                            });
+                        }
+                        if (typeof showToast === 'function') {
+                            showToast('Connection error. Check your internet.', 'error');
+                        }
                     }
                     throw err;
                 });
@@ -6762,10 +6802,10 @@
                 var data = await resp.json();
                 var chores = data.chores || [];
 
-                // Get top 3 due/overdue/completed-today chores
+                // Get top 5 due/overdue/completed-today/tomorrow chores
                 var due = chores.filter(function(c) {
-                    return c.status === 'overdue' || c.status === 'due_today' || c.status === 'completed_today';
-                }).slice(0, 3);
+                    return c.status === 'overdue' || c.status === 'due_today' || c.status === 'completed_today' || c.status === 'tomorrow';
+                }).slice(0, 5);
 
                 while (container.firstChild) container.removeChild(container.firstChild);
 
@@ -6804,7 +6844,8 @@
 
                     var timeEl = document.createElement('div');
                     timeEl.className = 'up-next-time';
-                    timeEl.textContent = person + (chore.status === 'overdue' ? ' \u00B7 Overdue' : '');
+                    var statusLabel = chore.status === 'overdue' ? ' \u00B7 Overdue' : chore.status === 'tomorrow' ? ' \u00B7 Tomorrow' : '';
+                    timeEl.textContent = person + statusLabel;
                     info.appendChild(timeEl);
 
                     card.appendChild(circle);
@@ -14767,8 +14808,8 @@
 
         // Register service worker for PWA
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js?v=10').then(reg => {
-                console.log('Service worker v10 registered');
+            navigator.serviceWorker.register('/sw.js?v=13').then(reg => {
+                console.log('Service worker v13 registered');
                 setInterval(() => reg.update(), 60 * 60 * 1000);
                 if (currentUser) {
                     reg.addEventListener('updatefound', () => {
@@ -14782,15 +14823,54 @@
                 }
             }).catch(err => console.error('SW registration failed:', err));
 
-            // Listen for deep-link messages from service worker (notification taps)
+            // Listen for messages from service worker
             navigator.serviceWorker.addEventListener('message', (event) => {
                 if (event.data && event.data.type === 'open_module' && event.data.module) {
                     if (typeof openModule === 'function') {
                         openModule(event.data.module);
                     }
                 }
+                // Background Sync completed — refresh data
+                if (event.data && event.data.type === 'sync_complete') {
+                    console.log('[offline] Background sync completed, refreshing data');
+                    if (window.offlineQueue) window.offlineQueue.updateBadge();
+                    var _m = typeof MODULE_TAB_MAP !== 'undefined' && typeof activeScreen !== 'undefined' && MODULE_TAB_MAP[activeScreen]; if (_m && _m.fetch) _m.fetch();
+                }
             });
         }
+
+        // Offline queue: replay on reconnect and on page load
+        (function() {
+            function replayAndRefresh() {
+                if (!window.offlineQueue) return;
+                window.offlineQueue.replay().then(function(result) {
+                    if (result && result.synced > 0) {
+                        if (typeof showToast === 'function') {
+                            showToast(result.synced + ' offline change(s) synced!', 'success');
+                        }
+                        // Refresh current module data
+                        var _m = typeof MODULE_TAB_MAP !== 'undefined' && typeof activeScreen !== 'undefined' && MODULE_TAB_MAP[activeScreen]; if (_m && _m.fetch) _m.fetch();
+                    }
+                    if (result && result.conflicts > 0) {
+                        if (typeof showToast === 'function') {
+                            showToast(result.conflicts + ' conflict(s) resolved by server.', 'warning');
+                        }
+                    }
+                });
+            }
+            window.addEventListener('online', function() {
+                document.getElementById('offlineBanner').style.display = 'none';
+                replayAndRefresh();
+            });
+            window.addEventListener('offline', function() {
+                document.getElementById('offlineBanner').style.display = 'block';
+            });
+            // On page load, replay any ops queued from previous session
+            if (navigator.onLine && window.offlineQueue) {
+                window.offlineQueue.updateBadge();
+                replayAndRefresh();
+            }
+        })();
 
         // Install prompt
         let deferredPrompt = null;

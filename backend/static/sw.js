@@ -1,6 +1,6 @@
-// Service Worker for Huddle PWA - v12
-const STATIC_CACHE = 'huddle-static-v12';
-const API_CACHE = 'huddle-api-v12';
+// Service Worker for Huddle PWA - v13
+const STATIC_CACHE = 'huddle-static-v13';
+const API_CACHE = 'huddle-api-v13';
 
 // Assets to precache on install
 const PRECACHE_URLS = [
@@ -167,12 +167,99 @@ async function getPushPerson() {
     }
 }
 
-// Listen for person name from the main app
+// Listen for messages from the main app
 self.addEventListener('message', (event) => {
     if (event.data && event.data.type === 'set_push_person') {
         setPushPerson(event.data.person);
     }
+    // Register Background Sync when offline mutations are queued
+    if (event.data && event.data.type === 'register_sync') {
+        if (self.registration.sync) {
+            self.registration.sync.register('huddle-sync-queue').catch(() => {});
+        }
+    }
 });
+
+// Background Sync — replay offline queue when connectivity returns
+const OFFLINE_DB_NAME = 'huddle-offline';
+const OFFLINE_STORE = 'queue';
+
+self.addEventListener('sync', (event) => {
+    if (event.tag === 'huddle-sync-queue') {
+        event.waitUntil(replayOfflineQueue());
+    }
+});
+
+async function replayOfflineQueue() {
+    try {
+        const db = await openOfflineDB();
+        const ops = await getAllFromStore(db);
+        if (!ops.length) return;
+
+        const payload = {
+            operations: ops.map(op => ({
+                id: op.id, url: op.url, method: op.method,
+                body: op.body, tempId: op.tempId, timestamp: op.timestamp
+            }))
+        };
+
+        const resp = await fetch('/api/sync/push', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!resp.ok) throw new Error('Sync push failed: ' + resp.status);
+        const data = await resp.json();
+
+        // Remove completed/conflicted ops from IndexedDB
+        for (const r of (data.results || [])) {
+            if (r.status === 'ok' || r.status === 'conflict') {
+                await deleteFromStore(db, r.id);
+            }
+        }
+
+        // Notify main page
+        const allClients = await clients.matchAll({ type: 'window' });
+        for (const client of allClients) {
+            client.postMessage({ type: 'sync_complete', results: data.results });
+        }
+    } catch (e) {
+        // Will retry on next sync event
+    }
+}
+
+function openOfflineDB() {
+    return new Promise((resolve, reject) => {
+        const req = indexedDB.open(OFFLINE_DB_NAME, 1);
+        req.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains(OFFLINE_STORE)) {
+                db.createObjectStore(OFFLINE_STORE, { keyPath: 'id', autoIncrement: true });
+            }
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+    });
+}
+
+function getAllFromStore(db) {
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(OFFLINE_STORE, 'readonly');
+        const req = tx.objectStore(OFFLINE_STORE).getAll();
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror = () => reject(req.error);
+    });
+}
+
+function deleteFromStore(db, id) {
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(OFFLINE_STORE, 'readwrite');
+        const req = tx.objectStore(OFFLINE_STORE).delete(id);
+        req.onsuccess = () => resolve();
+        req.onerror = () => reject(req.error);
+    });
+}
 
 // Push notification handler — branded Huddle notifications
 self.addEventListener('push', (event) => {
