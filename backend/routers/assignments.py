@@ -1,7 +1,7 @@
 import logging
 import sqlite3
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from auth import get_current_user, TenantContext
 from db import get_db, check_version
 from websocket import manager
@@ -16,8 +16,8 @@ VALID_PRIORITIES = {"low", "normal", "high", "urgent"}
 
 
 @router.get("/api/assignments")
-def list_assignments(request: Request, tenant: TenantContext = Depends(get_current_user)):
-    """List assignments, optionally filtered by person or status."""
+def list_assignments(request: Request, tenant: TenantContext = Depends(get_current_user), since: str | None = Query(None)):
+    """List assignments, optionally filtered by person or status. Pass ?since=<timestamp> for delta sync."""
     household_id = tenant.household_id
     try:
         person = request.query_params.get("person")
@@ -27,6 +27,9 @@ def list_assignments(request: Request, tenant: TenantContext = Depends(get_curre
             query = "SELECT * FROM assignments WHERE household_id = ? AND deleted_at IS NULL"
             params = [household_id]
 
+            if since:
+                query += " AND updated_at > ?"
+                params.append(since)
             if person:
                 query += " AND assigned_to = ?"
                 params.append(person)
@@ -36,7 +39,14 @@ def list_assignments(request: Request, tenant: TenantContext = Depends(get_curre
 
             query += " ORDER BY CASE WHEN status = 'done' THEN 1 ELSE 0 END, due_date ASC NULLS LAST, created_at DESC"
             rows = conn.execute(query, params).fetchall()
-            return {"assignments": [dict(r) for r in rows]}
+            response = {"assignments": [dict(r) for r in rows]}
+            if since:
+                deleted_rows = conn.execute(
+                    "SELECT id FROM assignments WHERE household_id = ? AND deleted_at > ?",
+                    (household_id, since),
+                ).fetchall()
+                response["deleted"] = [r["id"] for r in deleted_rows]
+            return response
     except HTTPException:
         raise
     except sqlite3.Error as e:

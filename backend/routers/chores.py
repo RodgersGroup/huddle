@@ -1,7 +1,7 @@
 import logging
 import math
 import sqlite3
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from auth import get_current_user, require_role, TenantContext
 import json
 import random
@@ -380,12 +380,16 @@ def calculate_streak(conn, chore_id: int, household_id: int) -> int:
 
 
 @router.get("/api/chores")
-def get_chores(tenant: TenantContext = Depends(get_current_user)):
-    """Get all chores with status, monthly stats, and weekly summary."""
+def get_chores(tenant: TenantContext = Depends(get_current_user), since: str | None = Query(None)):
+    """Get all chores with status, monthly stats, and weekly summary. Pass ?since=<timestamp> for delta sync."""
     household_id = tenant.household_id
     try:
         with get_db() as conn:
             chores = get_chores_with_status(conn, household_id)
+
+            # When delta syncing, filter to only chores changed since the timestamp
+            if since:
+                chores = [c for c in chores if c.get("updated_at") and c["updated_at"] > since]
 
             first_of_month = today_local(household_id).replace(day=1)
             monthly_stats = {}
@@ -415,12 +419,19 @@ def get_chores(tenant: TenantContext = Depends(get_current_user)):
             for chore in chores:
                 chore['streak'] = calculate_streak(conn, chore['id'], household_id)
 
-            return {
+            response = {
                 "chores": chores,
                 "people": get_people(household_id=household_id),
                 "monthly_stats": monthly_stats,
-                "weekly_summary": weekly_summary
+                "weekly_summary": weekly_summary,
             }
+            if since:
+                deleted_rows = conn.execute(
+                    "SELECT id FROM chores WHERE household_id = ? AND deleted_at > ?",
+                    (household_id, since),
+                ).fetchall()
+                response["deleted"] = [r["id"] for r in deleted_rows]
+            return response
     except HTTPException:
         raise
     except sqlite3.Error as e:

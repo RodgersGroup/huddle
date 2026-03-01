@@ -5,7 +5,7 @@ import sqlite3
 from datetime import datetime, date
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from auth import get_current_user, TenantContext
 from db import get_db, check_version
@@ -73,16 +73,22 @@ def _compute_stock_alerts(item: dict) -> list[dict]:
 
 
 @router.get("/api/selfcare")
-def get_selfcare_items(tenant: TenantContext = Depends(get_current_user)):
-    """List all self care items with last-logged info."""
+def get_selfcare_items(tenant: TenantContext = Depends(get_current_user), since: str | None = Query(None)):
+    """List all self care items with last-logged info. Pass ?since=<timestamp> for delta sync."""
     household_id = tenant.household_id
     try:
         today = _today_local(household_id)
         with get_db() as conn:
-            items = conn.execute(
-                "SELECT * FROM selfcare_items WHERE household_id = ? AND deleted_at IS NULL ORDER BY category, name",
-                (household_id,),
-            ).fetchall()
+            if since:
+                items = conn.execute(
+                    "SELECT * FROM selfcare_items WHERE household_id = ? AND deleted_at IS NULL AND updated_at > ? ORDER BY category, name",
+                    (household_id, since),
+                ).fetchall()
+            else:
+                items = conn.execute(
+                    "SELECT * FROM selfcare_items WHERE household_id = ? AND deleted_at IS NULL ORDER BY category, name",
+                    (household_id,),
+                ).fetchall()
 
             result = []
             for item in items:
@@ -121,7 +127,14 @@ def get_selfcare_items(tenant: TenantContext = Depends(get_current_user)):
 
                 result.append(item_dict)
 
-        return {"items": result}
+            response = {"items": result}
+            if since:
+                deleted_rows = conn.execute(
+                    "SELECT id FROM selfcare_items WHERE household_id = ? AND deleted_at > ?",
+                    (household_id, since),
+                ).fetchall()
+                response["deleted"] = [r["id"] for r in deleted_rows]
+            return response
     except HTTPException:
         raise
     except sqlite3.Error as e:

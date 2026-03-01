@@ -1,6 +1,6 @@
 import logging
 import sqlite3
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from auth import get_current_user, TenantContext
 from datetime import datetime
 from db import get_db, check_version
@@ -12,15 +12,31 @@ router = APIRouter()
 
 
 @router.get("/api/inventory")
-def get_inventory(tenant: TenantContext = Depends(get_current_user)):
-    """Get all inventory items grouped by category."""
+def get_inventory(tenant: TenantContext = Depends(get_current_user), since: str | None = Query(None)):
+    """Get all inventory items grouped by category. Pass ?since=<timestamp> for delta sync."""
     household_id = tenant.household_id
     try:
         with get_db() as conn:
-            rows = conn.execute("SELECT * FROM inventory_items WHERE household_id = ? AND deleted_at IS NULL ORDER BY category, name", (household_id,)).fetchall()
+            if since:
+                rows = conn.execute(
+                    "SELECT * FROM inventory_items WHERE household_id = ? AND deleted_at IS NULL AND updated_at > ? ORDER BY category, name",
+                    (household_id, since),
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    "SELECT * FROM inventory_items WHERE household_id = ? AND deleted_at IS NULL ORDER BY category, name",
+                    (household_id,),
+                ).fetchall()
             items = [dict(r) for r in rows]
             low_stock = [i for i in items if i['quantity'] <= i['low_threshold']]
-            return {"items": items, "low_stock": low_stock}
+            response = {"items": items, "low_stock": low_stock}
+            if since:
+                deleted_rows = conn.execute(
+                    "SELECT id FROM inventory_items WHERE household_id = ? AND deleted_at > ?",
+                    (household_id, since),
+                ).fetchall()
+                response["deleted"] = [r["id"] for r in deleted_rows]
+            return response
     except HTTPException:
         raise
     except sqlite3.Error as e:

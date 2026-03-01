@@ -1,7 +1,7 @@
 import logging
 import sqlite3
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from auth import get_current_user, TenantContext
 from db import get_db, check_version
 from websocket import manager
@@ -15,18 +15,32 @@ VALID_PRIORITIES = {"normal", "high", "urgent"}
 
 
 @router.get("/api/noticeboard")
-def list_posts(tenant: TenantContext = Depends(get_current_user)):
-    """List all noticeboard posts (pinned first, then newest)."""
+def list_posts(tenant: TenantContext = Depends(get_current_user), since: str | None = Query(None)):
+    """List all noticeboard posts (pinned first, then newest). Pass ?since=<timestamp> for delta sync."""
     household_id = tenant.household_id
     try:
         with get_db() as conn:
             now = datetime.now().isoformat()
-            rows = conn.execute("""
-                SELECT * FROM noticeboard_posts
-                WHERE household_id = ? AND deleted_at IS NULL AND (expires_at IS NULL OR expires_at > ?)
-                ORDER BY pinned DESC, created_at DESC
-            """, (household_id, now)).fetchall()
-            return {"posts": [dict(r) for r in rows]}
+            if since:
+                rows = conn.execute("""
+                    SELECT * FROM noticeboard_posts
+                    WHERE household_id = ? AND deleted_at IS NULL AND (expires_at IS NULL OR expires_at > ?) AND updated_at > ?
+                    ORDER BY pinned DESC, created_at DESC
+                """, (household_id, now, since)).fetchall()
+            else:
+                rows = conn.execute("""
+                    SELECT * FROM noticeboard_posts
+                    WHERE household_id = ? AND deleted_at IS NULL AND (expires_at IS NULL OR expires_at > ?)
+                    ORDER BY pinned DESC, created_at DESC
+                """, (household_id, now)).fetchall()
+            response = {"posts": [dict(r) for r in rows]}
+            if since:
+                deleted_rows = conn.execute(
+                    "SELECT id FROM noticeboard_posts WHERE household_id = ? AND deleted_at > ?",
+                    (household_id, since),
+                ).fetchall()
+                response["deleted"] = [r["id"] for r in deleted_rows]
+            return response
     except HTTPException:
         raise
     except sqlite3.Error as e:

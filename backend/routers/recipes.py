@@ -8,7 +8,7 @@ import sqlite3
 from datetime import datetime
 from urllib.request import Request as URLRequest, urlopen
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from auth import TenantContext, get_current_user, require_role
 from db import get_db, check_version
@@ -88,28 +88,48 @@ def _insert_children(conn, recipe_id, ingredients, steps, tags):
 # ---------------------------------------------------------------------------
 
 @router.get("/api/recipes")
-def get_recipes(tenant: TenantContext = Depends(get_current_user)):
-    """List all recipes with tags and ingredient count."""
+def get_recipes(tenant: TenantContext = Depends(get_current_user), since: str | None = Query(None)):
+    """List all recipes with tags and ingredient count. Pass ?since=<timestamp> for delta sync."""
     household_id = tenant.household_id
     try:
         with get_db() as conn:
-            rows = conn.execute("""
-                SELECT r.*,
-                       GROUP_CONCAT(DISTINCT t.tag) AS tags,
-                       COUNT(DISTINCT ri.id) AS ingredient_count
-                FROM recipes r
-                LEFT JOIN recipe_tags t ON t.recipe_id = r.id
-                LEFT JOIN recipe_ingredients ri ON ri.recipe_id = r.id
-                WHERE r.household_id = ? AND r.deleted_at IS NULL
-                GROUP BY r.id
-                ORDER BY r.name
-            """, (household_id,)).fetchall()
+            if since:
+                rows = conn.execute("""
+                    SELECT r.*,
+                           GROUP_CONCAT(DISTINCT t.tag) AS tags,
+                           COUNT(DISTINCT ri.id) AS ingredient_count
+                    FROM recipes r
+                    LEFT JOIN recipe_tags t ON t.recipe_id = r.id
+                    LEFT JOIN recipe_ingredients ri ON ri.recipe_id = r.id
+                    WHERE r.household_id = ? AND r.deleted_at IS NULL AND r.updated_at > ?
+                    GROUP BY r.id
+                    ORDER BY r.name
+                """, (household_id, since)).fetchall()
+            else:
+                rows = conn.execute("""
+                    SELECT r.*,
+                           GROUP_CONCAT(DISTINCT t.tag) AS tags,
+                           COUNT(DISTINCT ri.id) AS ingredient_count
+                    FROM recipes r
+                    LEFT JOIN recipe_tags t ON t.recipe_id = r.id
+                    LEFT JOIN recipe_ingredients ri ON ri.recipe_id = r.id
+                    WHERE r.household_id = ? AND r.deleted_at IS NULL
+                    GROUP BY r.id
+                    ORDER BY r.name
+                """, (household_id,)).fetchall()
             recipes = []
             for row in rows:
                 d = dict(row)
                 d["tags"] = d["tags"].split(",") if d["tags"] else []
                 recipes.append(d)
-            return {"recipes": recipes}
+            response = {"recipes": recipes}
+            if since:
+                deleted_rows = conn.execute(
+                    "SELECT id FROM recipes WHERE household_id = ? AND deleted_at > ?",
+                    (household_id, since),
+                ).fetchall()
+                response["deleted"] = [r["id"] for r in deleted_rows]
+            return response
     except HTTPException:
         raise
     except sqlite3.Error as e:

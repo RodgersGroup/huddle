@@ -1,7 +1,7 @@
 import json
 import logging
 import sqlite3
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from auth import get_current_user, require_role, TenantContext
 from collections import defaultdict
 from datetime import datetime, date
@@ -17,20 +17,36 @@ router = APIRouter()
 
 
 @router.get("/api/bills")
-def get_bills(tenant: TenantContext = Depends(get_current_user)):
-    """Get all bills, flagging overdue ones."""
+def get_bills(tenant: TenantContext = Depends(get_current_user), since: str | None = Query(None)):
+    """Get all bills, flagging overdue ones. Pass ?since=<timestamp> for delta sync."""
     household_id = tenant.household_id
     try:
         tz = ZoneInfo(get_setting("timezone", "Australia/Sydney", household_id))
         today = datetime.now(tz).date().isoformat()
         with get_db() as conn:
-            rows = conn.execute("SELECT * FROM bills WHERE household_id = ? AND deleted_at IS NULL ORDER BY paid ASC, due_date ASC", (household_id,)).fetchall()
+            if since:
+                rows = conn.execute(
+                    "SELECT * FROM bills WHERE household_id = ? AND deleted_at IS NULL AND updated_at > ? ORDER BY paid ASC, due_date ASC",
+                    (household_id, since),
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    "SELECT * FROM bills WHERE household_id = ? AND deleted_at IS NULL ORDER BY paid ASC, due_date ASC",
+                    (household_id,),
+                ).fetchall()
             bills = []
             for row in rows:
                 bill = dict(row)
                 bill['overdue'] = bill['paid'] == 0 and bill['due_date'] < today
                 bills.append(bill)
-            return {"bills": bills}
+            response = {"bills": bills}
+            if since:
+                deleted_rows = conn.execute(
+                    "SELECT id FROM bills WHERE household_id = ? AND deleted_at > ?",
+                    (household_id, since),
+                ).fetchall()
+                response["deleted"] = [r["id"] for r in deleted_rows]
+            return response
     except HTTPException:
         raise
     except sqlite3.Error as e:

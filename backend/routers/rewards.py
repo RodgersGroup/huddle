@@ -1,7 +1,7 @@
 """Rewards & Stars API — points for chores/routines, reward shop, redemptions."""
 import logging
 import sqlite3
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from auth import get_current_user, require_role, TenantContext
 from db import get_db, check_version
 from websocket import manager
@@ -105,17 +105,30 @@ async def award_points(request: Request, tenant: TenantContext = Depends(require
 
 
 @router.get("/api/rewards/shop")
-def get_rewards_shop(tenant: TenantContext = Depends(get_current_user)):
-    """Get available rewards in the shop."""
+def get_rewards_shop(tenant: TenantContext = Depends(get_current_user), since: str | None = Query(None)):
+    """Get available rewards in the shop. Pass ?since=<timestamp> for delta sync."""
     household_id = tenant.household_id
     try:
         with get_db() as conn:
-            rewards = conn.execute(
-                "SELECT * FROM rewards WHERE household_id = ? AND available = 1 AND deleted_at IS NULL ORDER BY cost, name",
-                (household_id,)
-            ).fetchall()
+            if since:
+                rewards = conn.execute(
+                    "SELECT * FROM rewards WHERE household_id = ? AND available = 1 AND deleted_at IS NULL AND updated_at > ? ORDER BY cost, name",
+                    (household_id, since),
+                ).fetchall()
+            else:
+                rewards = conn.execute(
+                    "SELECT * FROM rewards WHERE household_id = ? AND available = 1 AND deleted_at IS NULL ORDER BY cost, name",
+                    (household_id,),
+                ).fetchall()
 
-        return {"rewards": [dict(r) for r in rewards]}
+            response = {"rewards": [dict(r) for r in rewards]}
+            if since:
+                deleted_rows = conn.execute(
+                    "SELECT id FROM rewards WHERE household_id = ? AND deleted_at > ?",
+                    (household_id, since),
+                ).fetchall()
+                response["deleted"] = [r["id"] for r in deleted_rows]
+            return response
     except HTTPException:
         raise
     except sqlite3.Error as e:

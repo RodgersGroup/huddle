@@ -43,9 +43,14 @@ _SYNC_RESOURCES = {
     "selfcare_items": "selfcare_items",
     "freezer_items": "freezer_items",
     "polls": "polls",
-    "allowances": "allowances",
     "rewards": "rewards",
     "assignments": "assignments",
+    "expenses": "expenses",
+    "settlements": "settlements",
+    "shared_costs": "shared_costs",
+    "vehicles": "vehicles",
+    "vehicle_maintenance": "vehicle_maintenance",
+    "savings_goals": "savings_goals",
 }
 
 

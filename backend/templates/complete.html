@@ -444,7 +444,7 @@
             try {
                 const response = await fetch(`/api/chores/${choreId}/skip`, {
                     method: 'POST',
-                    headers: KIOSK_TOKEN ? {'Authorization': 'Bearer ' + KIOSK_TOKEN} : {}
+                    headers: getAuthHeaders()
                 });
 
                 if (!response.ok) {

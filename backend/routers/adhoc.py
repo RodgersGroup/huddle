@@ -2,7 +2,7 @@ import logging
 import os
 import sqlite3
 from pathlib import Path
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from auth import get_current_user, TenantContext
 from datetime import datetime
 from db import get_db
@@ -45,17 +45,31 @@ def _delete_task_photo(task_id: int):
 
 
 @router.get("/api/adhoc")
-def get_adhoc(tenant: TenantContext = Depends(get_current_user)):
-    """Get all adhoc tasks, incomplete first."""
+def get_adhoc(tenant: TenantContext = Depends(get_current_user), since: str | None = Query(None)):
+    """Get all adhoc tasks, incomplete first. Pass ?since=<timestamp> for delta sync."""
     household_id = tenant.household_id
     try:
         with get_db() as conn:
-            rows = conn.execute("""
-                SELECT * FROM adhoc_tasks
-                WHERE household_id = ? AND deleted_at IS NULL
-                ORDER BY completed ASC, created_at DESC
-            """, (household_id,)).fetchall()
-            return {"tasks": [_enrich_task(dict(r)) for r in rows]}
+            if since:
+                rows = conn.execute("""
+                    SELECT * FROM adhoc_tasks
+                    WHERE household_id = ? AND deleted_at IS NULL AND updated_at > ?
+                    ORDER BY completed ASC, created_at DESC
+                """, (household_id, since)).fetchall()
+            else:
+                rows = conn.execute("""
+                    SELECT * FROM adhoc_tasks
+                    WHERE household_id = ? AND deleted_at IS NULL
+                    ORDER BY completed ASC, created_at DESC
+                """, (household_id,)).fetchall()
+            response = {"tasks": [_enrich_task(dict(r)) for r in rows]}
+            if since:
+                deleted_rows = conn.execute(
+                    "SELECT id FROM adhoc_tasks WHERE household_id = ? AND deleted_at > ?",
+                    (household_id, since),
+                ).fetchall()
+                response["deleted"] = [r["id"] for r in deleted_rows]
+            return response
     except HTTPException:
         raise
     except sqlite3.Error as e:

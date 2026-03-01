@@ -2,7 +2,7 @@ import logging
 import sqlite3
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from auth import get_current_user, require_role, TenantContext
 from db import get_db
 from settings import get_setting
@@ -216,13 +216,22 @@ def get_duties_for_household(conn, household_id: int, tz_name: str = "Australia/
 
 
 @router.get("/api/meals")
-def get_meals(tenant: TenantContext = Depends(get_current_user)):
-    """Get current meal plan grouped by day and type, plus duty assignments."""
+def get_meals(tenant: TenantContext = Depends(get_current_user), since: str | None = Query(None)):
+    """Get current meal plan grouped by day and type, plus duty assignments. Pass ?since=<timestamp> for delta sync."""
     household_id = tenant.household_id
     try:
         tz_name = get_setting("timezone", "Australia/Sydney", household_id)
         with get_db() as conn:
-            rows = conn.execute("SELECT * FROM meals WHERE household_id = ? AND deleted_at IS NULL ORDER BY day_of_week, meal_type", (household_id,)).fetchall()
+            if since:
+                rows = conn.execute(
+                    "SELECT * FROM meals WHERE household_id = ? AND deleted_at IS NULL AND updated_at > ? ORDER BY day_of_week, meal_type",
+                    (household_id, since),
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    "SELECT * FROM meals WHERE household_id = ? AND deleted_at IS NULL ORDER BY day_of_week, meal_type",
+                    (household_id,),
+                ).fetchall()
             meals = {}
             for row in rows:
                 day = row['day_of_week']
@@ -241,7 +250,14 @@ def get_meals(tenant: TenantContext = Depends(get_current_user)):
                 meals[day][row['meal_type']].append(meal_entry)
 
             duties = get_duties_for_household(conn, household_id, tz_name)
-            return {"meals": meals, "duties": duties}
+            response = {"meals": meals, "duties": duties}
+            if since:
+                deleted_rows = conn.execute(
+                    "SELECT id FROM meals WHERE household_id = ? AND deleted_at > ?",
+                    (household_id, since),
+                ).fetchall()
+                response["deleted"] = [r["id"] for r in deleted_rows]
+            return response
     except HTTPException:
         raise
     except sqlite3.Error as e:

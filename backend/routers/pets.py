@@ -2,7 +2,7 @@ import json
 import logging
 import random
 import sqlite3
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from auth import get_current_user, require_role, TenantContext
 from datetime import datetime, date
 from zoneinfo import ZoneInfo
@@ -37,8 +37,8 @@ def _is_task_due_today(task: dict, today: date) -> bool:
 
 
 @router.get("/api/pets")
-def get_pets(tenant: TenantContext = Depends(get_current_user)):
-    """List all pets with task counts and upcoming vet appointments."""
+def get_pets(tenant: TenantContext = Depends(get_current_user), since: str | None = Query(None)):
+    """List all pets with task counts and upcoming vet appointments. Pass ?since=<timestamp> for delta sync."""
     household_id = tenant.household_id
     try:
         today = _today_local(household_id)
@@ -46,10 +46,16 @@ def get_pets(tenant: TenantContext = Depends(get_current_user)):
         day_name = today.strftime('%A')
 
         with get_db() as conn:
-            pets = conn.execute(
-                "SELECT * FROM pets WHERE household_id = ? AND deleted_at IS NULL ORDER BY name",
-                (household_id,)
-            ).fetchall()
+            if since:
+                pets = conn.execute(
+                    "SELECT * FROM pets WHERE household_id = ? AND deleted_at IS NULL AND updated_at > ? ORDER BY name",
+                    (household_id, since),
+                ).fetchall()
+            else:
+                pets = conn.execute(
+                    "SELECT * FROM pets WHERE household_id = ? AND deleted_at IS NULL ORDER BY name",
+                    (household_id,),
+                ).fetchall()
 
             result = []
             for pet in pets:
@@ -77,7 +83,14 @@ def get_pets(tenant: TenantContext = Depends(get_current_user)):
                 pet_dict['upcoming_vet_appointments'] = [dict(a) for a in upcoming_vet]
                 result.append(pet_dict)
 
-            return {"pets": result}
+            response = {"pets": result}
+            if since:
+                deleted_rows = conn.execute(
+                    "SELECT id FROM pets WHERE household_id = ? AND deleted_at > ?",
+                    (household_id, since),
+                ).fetchall()
+                response["deleted"] = [r["id"] for r in deleted_rows]
+            return response
     except HTTPException:
         raise
     except sqlite3.Error as e:

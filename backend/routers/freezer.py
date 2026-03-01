@@ -2,7 +2,7 @@
 
 import logging
 import sqlite3
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from auth import get_current_user, TenantContext
 from db import get_db, check_version
 from websocket import manager
@@ -13,15 +13,28 @@ router = APIRouter()
 
 
 @router.get("/api/freezer")
-def list_freezer_items(tenant: TenantContext = Depends(get_current_user)):
-    """List all freezer items for the household."""
+def list_freezer_items(tenant: TenantContext = Depends(get_current_user), since: str | None = Query(None)):
+    """List all freezer items for the household. Pass ?since=<timestamp> for delta sync."""
     try:
         with get_db() as conn:
-            rows = conn.execute(
-                "SELECT * FROM freezer_items WHERE household_id = ? AND deleted_at IS NULL ORDER BY date_frozen DESC, created_at DESC",
-                (tenant.household_id,),
-            ).fetchall()
-        return {"items": [dict(r) for r in rows]}
+            if since:
+                rows = conn.execute(
+                    "SELECT * FROM freezer_items WHERE household_id = ? AND deleted_at IS NULL AND updated_at > ? ORDER BY date_frozen DESC, created_at DESC",
+                    (tenant.household_id, since),
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    "SELECT * FROM freezer_items WHERE household_id = ? AND deleted_at IS NULL ORDER BY date_frozen DESC, created_at DESC",
+                    (tenant.household_id,),
+                ).fetchall()
+            response = {"items": [dict(r) for r in rows]}
+            if since:
+                deleted_rows = conn.execute(
+                    "SELECT id FROM freezer_items WHERE household_id = ? AND deleted_at > ?",
+                    (tenant.household_id, since),
+                ).fetchall()
+                response["deleted"] = [r["id"] for r in deleted_rows]
+            return response
     except sqlite3.Error as e:
         logger.error("Database error in list_freezer_items: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="Database error")

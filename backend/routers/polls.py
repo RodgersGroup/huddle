@@ -1,6 +1,6 @@
 import logging
 import sqlite3
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from auth import get_current_user, require_role, TenantContext
 from datetime import datetime
 from db import get_db
@@ -14,12 +14,21 @@ router = APIRouter()
 
 
 @router.get("/api/polls")
-def get_polls(tenant: TenantContext = Depends(get_current_user)):
-    """Get all polls with vote counts and voter details."""
+def get_polls(tenant: TenantContext = Depends(get_current_user), since: str | None = Query(None)):
+    """Get all polls with vote counts and voter details. Pass ?since=<timestamp> for delta sync."""
     household_id = tenant.household_id
     try:
         with get_db() as conn:
-            polls = conn.execute("SELECT * FROM polls WHERE household_id = ? AND deleted_at IS NULL ORDER BY created_at DESC", (household_id,)).fetchall()
+            if since:
+                polls = conn.execute(
+                    "SELECT * FROM polls WHERE household_id = ? AND deleted_at IS NULL AND updated_at > ? ORDER BY created_at DESC",
+                    (household_id, since),
+                ).fetchall()
+            else:
+                polls = conn.execute(
+                    "SELECT * FROM polls WHERE household_id = ? AND deleted_at IS NULL ORDER BY created_at DESC",
+                    (household_id,),
+                ).fetchall()
             result = []
             for poll in polls:
                 poll_dict = dict(poll)
@@ -39,7 +48,14 @@ def get_polls(tenant: TenantContext = Depends(get_current_user)):
                     poll_dict['options'].append(opt_dict)
                 poll_dict['total_votes'] = total_votes
                 result.append(poll_dict)
-            return {"polls": result}
+            response = {"polls": result}
+            if since:
+                deleted_rows = conn.execute(
+                    "SELECT id FROM polls WHERE household_id = ? AND deleted_at > ?",
+                    (household_id, since),
+                ).fetchall()
+                response["deleted"] = [r["id"] for r in deleted_rows]
+            return response
     except HTTPException:
         raise
     except sqlite3.Error as e:

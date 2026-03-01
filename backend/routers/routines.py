@@ -3,7 +3,7 @@ import logging
 import sqlite3
 import json
 from datetime import datetime, date, timedelta
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from auth import get_current_user, require_role, TenantContext
 from db import get_db, check_version
 from settings import get_setting
@@ -74,17 +74,23 @@ def _get_streak(conn, routine_id, household_id):
 
 
 @router.get("/api/routines")
-def get_routines(tenant: TenantContext = Depends(get_current_user)):
-    """Get all routines with items and today's completions."""
+def get_routines(tenant: TenantContext = Depends(get_current_user), since: str | None = Query(None)):
+    """Get all routines with items and today's completions. Pass ?since=<timestamp> for delta sync."""
     household_id = tenant.household_id
     try:
         today_str = _get_today_str(household_id)
 
         with get_db() as conn:
-            routines = conn.execute(
-                "SELECT * FROM routines WHERE household_id = ? AND deleted_at IS NULL ORDER BY sort_order, id",
-                (household_id,)
-            ).fetchall()
+            if since:
+                routines = conn.execute(
+                    "SELECT * FROM routines WHERE household_id = ? AND deleted_at IS NULL AND updated_at > ? ORDER BY sort_order, id",
+                    (household_id, since),
+                ).fetchall()
+            else:
+                routines = conn.execute(
+                    "SELECT * FROM routines WHERE household_id = ? AND deleted_at IS NULL ORDER BY sort_order, id",
+                    (household_id,),
+                ).fetchall()
 
             result = []
             for r in routines:
@@ -125,7 +131,14 @@ def get_routines(tenant: TenantContext = Depends(get_current_user)):
                     "streak": _get_streak(conn, r["id"], household_id),
                 })
 
-            return {"routines": result}
+            response = {"routines": result}
+            if since:
+                deleted_rows = conn.execute(
+                    "SELECT id FROM routines WHERE household_id = ? AND deleted_at > ?",
+                    (household_id, since),
+                ).fetchall()
+                response["deleted"] = [r["id"] for r in deleted_rows]
+            return response
     except HTTPException:
         raise
     except sqlite3.Error as e:

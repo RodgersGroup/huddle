@@ -1,7 +1,7 @@
 import logging
 import sqlite3
 import json
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from auth import get_current_user, TenantContext
 from datetime import datetime
 from db import get_db, check_version
@@ -72,18 +72,25 @@ async def reorder_rules(request: Request, tenant: TenantContext = Depends(get_cu
 
 
 @router.get("/api/house-rules")
-def list_rules(tenant: TenantContext = Depends(get_current_user)):
-    """List all house rules with acknowledgement status."""
+def list_rules(tenant: TenantContext = Depends(get_current_user), since: str | None = Query(None)):
+    """List all house rules with acknowledgement status. Pass ?since=<timestamp> for delta sync."""
     household_id = tenant.household_id
     try:
         people = get_people(household_id=household_id)
 
         with get_db() as conn:
-            rows = conn.execute("""
-                SELECT * FROM house_rules
-                WHERE household_id = ? AND deleted_at IS NULL
-                ORDER BY sort_order ASC, created_at ASC
-            """, (household_id,)).fetchall()
+            if since:
+                rows = conn.execute("""
+                    SELECT * FROM house_rules
+                    WHERE household_id = ? AND deleted_at IS NULL AND updated_at > ?
+                    ORDER BY sort_order ASC, created_at ASC
+                """, (household_id, since)).fetchall()
+            else:
+                rows = conn.execute("""
+                    SELECT * FROM house_rules
+                    WHERE household_id = ? AND deleted_at IS NULL
+                    ORDER BY sort_order ASC, created_at ASC
+                """, (household_id,)).fetchall()
 
             rules = []
             for row in rows:
@@ -98,7 +105,14 @@ def list_rules(tenant: TenantContext = Depends(get_current_user)):
                 rule["not_acknowledged"] = not_acknowledged
                 rules.append(rule)
 
-            return {"rules": rules}
+            response = {"rules": rules}
+            if since:
+                deleted_rows = conn.execute(
+                    "SELECT id FROM house_rules WHERE household_id = ? AND deleted_at > ?",
+                    (household_id, since),
+                ).fetchall()
+                response["deleted"] = [r["id"] for r in deleted_rows]
+            return response
     except HTTPException:
         raise
     except sqlite3.Error as e:
