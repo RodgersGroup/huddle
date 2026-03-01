@@ -126,6 +126,10 @@ RATE_LIMIT_AUTH = _get("RATE_LIMIT_AUTH", _defaults)
 PI_SCREEN_CONTROL = _get("PI_SCREEN_CONTROL", _defaults)
 SENTRY_DSN = _get("SENTRY_DSN", _defaults)
 
+# Token auth settings (AnyList-style access/refresh tokens)
+ACCESS_TOKEN_MAX_AGE = int(os.environ.get("ACCESS_TOKEN_MAX_AGE", "900"))  # 15 minutes
+REFRESH_TOKEN_MAX_AGE = int(os.environ.get("REFRESH_TOKEN_MAX_AGE", "2592000"))  # 30 days
+
 _DEFAULT_SECRET = "huddle-chores-secret-change-in-production"
 _RECOGNIZED_ENVIRONMENTS = set(_ENV_DEFAULTS.keys())
 

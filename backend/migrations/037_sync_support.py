@@ -68,7 +68,7 @@ def up(conn: sqlite3.Connection):
         # Add updated_at column (skip tables that already have it)
         if table not in _TABLES_PARTIAL and not _has_column(conn, table, "updated_at"):
             conn.execute(
-                f"ALTER TABLE {table} ADD COLUMN updated_at TEXT DEFAULT (datetime('now'))"
+                f"ALTER TABLE {table} ADD COLUMN updated_at TEXT DEFAULT NULL"
             )
             # Backfill existing rows with created_at or current time
             try:

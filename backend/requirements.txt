@@ -9,3 +9,4 @@ pywebpush
 sentry-sdk[fastapi]
 pytest
 httpx<0.28
+bcrypt==5.0.0

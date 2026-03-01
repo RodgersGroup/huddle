@@ -1,15 +1,25 @@
 """
-Magic link authentication module for Huddle.
+Authentication module for Huddle.
 
-Provides passwordless authentication via email magic links, session management,
-household creation/joining, kiosk token management, and FastAPI dependencies
-for extracting tenant context from requests.
+Supports two auth methods:
+1. Email + password (AnyList-style) → access/refresh token pair
+2. Magic link (passwordless) → session cookie (legacy, still supported)
+
+Token auth flow:
+  POST /api/auth/signup   → create account with email+password → tokens
+  POST /api/auth/token    → login with email+password → tokens
+  POST /api/auth/token/refresh → refresh access token with refresh token
+  POST /api/auth/logout   → revoke session
+
+Also provides household creation/joining, kiosk token management, and FastAPI
+dependencies for extracting tenant context from requests.
 """
 
 import hashlib
 import logging
 import sqlite3
 import time
+import uuid
 from fastapi import APIRouter, HTTPException, Request, Response, Depends, UploadFile, File
 from fastapi.responses import RedirectResponse, JSONResponse, HTMLResponse
 import json
@@ -21,6 +31,13 @@ from datetime import datetime, timedelta
 from dataclasses import dataclass
 from db import get_db
 from settings import get_setting
+
+# Password hashing
+try:
+    import bcrypt
+    BCRYPT_ENABLED = True
+except ImportError:
+    BCRYPT_ENABLED = False
 
 logger = logging.getLogger("huddle")
 
@@ -89,11 +106,161 @@ except ImportError:
 
 
 # Configuration
-from config import SECRET_KEY, SESSION_MAX_AGE, RATE_LIMIT_AUTH, ENVIRONMENT
+from config import SECRET_KEY, SESSION_MAX_AGE, RATE_LIMIT_AUTH, ENVIRONMENT, ACCESS_TOKEN_MAX_AGE, REFRESH_TOKEN_MAX_AGE
 SERIALIZER = URLSafeTimedSerializer(SECRET_KEY) if AUTH_ENABLED else None
 MAGIC_LINK_MAX_AGE = 1800  # 30 minutes
 COOKIE_NAME = "huddle_session"
 COOKIE_SECURE = ENVIRONMENT == "production"
+MIN_PASSWORD_LENGTH = 8
+
+
+# ---------------------------------------------------------------------------
+# Password hashing (bcrypt)
+# ---------------------------------------------------------------------------
+
+def hash_password(password: str) -> str:
+    """Hash a password with bcrypt. Returns the hash string."""
+    if not BCRYPT_ENABLED:
+        raise RuntimeError("bcrypt is not installed")
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+
+def verify_password(password: str, password_hash: str) -> bool:
+    """Verify a password against a bcrypt hash."""
+    if not BCRYPT_ENABLED:
+        return False
+    return bcrypt.checkpw(password.encode("utf-8"), password_hash.encode("utf-8"))
+
+
+# ---------------------------------------------------------------------------
+# Access / Refresh token management (AnyList-style)
+# ---------------------------------------------------------------------------
+
+def create_access_token(user_id: int, household_id: int, session_id: str) -> str:
+    """Create a short-lived signed access token (15 min default)."""
+    if not SERIALIZER:
+        raise RuntimeError("Auth is not enabled (itsdangerous not installed)")
+    return SERIALIZER.dumps({
+        "user_id": user_id,
+        "household_id": household_id,
+        "session_id": session_id,
+        "type": "access",
+    })
+
+
+def verify_access_token(token: str):
+    """Verify an access token. Returns payload dict or None."""
+    if not SERIALIZER:
+        return None
+    try:
+        data = SERIALIZER.loads(token, max_age=ACCESS_TOKEN_MAX_AGE)
+        if data.get("type") == "access" and "user_id" in data:
+            return data
+        return None
+    except (BadSignature, SignatureExpired):
+        return None
+
+
+def create_session_with_tokens(
+    user_id: int,
+    household_id: int,
+    device_id: str = None,
+    device_name: str = None,
+    ip_address: str = None,
+) -> dict:
+    """Create a new session and return access_token + refresh_token + session info.
+
+    This is the AnyList-style auth response: the client stores both tokens,
+    uses access_token for API calls, and calls /auth/token/refresh when it expires.
+    """
+    session_id = uuid.uuid4().hex
+    refresh_token = secrets.token_urlsafe(64)
+    now = datetime.now()
+    expires_at = (now + timedelta(seconds=REFRESH_TOKEN_MAX_AGE)).isoformat()
+
+    with get_db() as conn:
+        conn.execute(
+            """INSERT INTO sessions (id, user_id, household_id, refresh_token,
+                   device_id, device_name, ip_address, created_at, last_used_at, expires_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (session_id, user_id, household_id, refresh_token,
+             device_id, device_name, ip_address, now.isoformat(), now.isoformat(), expires_at),
+        )
+        conn.commit()
+
+    access_token = create_access_token(user_id, household_id, session_id)
+
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_type": "bearer",
+        "expires_in": ACCESS_TOKEN_MAX_AGE,
+        "user_id": user_id,
+        "household_id": household_id,
+        "session_id": session_id,
+    }
+
+
+def refresh_session_tokens(refresh_token: str, ip_address: str = None) -> dict:
+    """Validate a refresh token and issue a new token pair.
+
+    Implements token rotation: the old refresh token is revoked and a new one
+    is issued. This means a stolen refresh token can only be used once.
+    """
+    now = datetime.now()
+
+    with get_db() as conn:
+        session = conn.execute(
+            """SELECT id, user_id, household_id, device_id, device_name, expires_at
+               FROM sessions
+               WHERE refresh_token = ? AND revoked = 0""",
+            (refresh_token,),
+        ).fetchone()
+
+        if not session:
+            raise HTTPException(status_code=401, detail="Invalid or revoked refresh token")
+
+        if session["expires_at"] < now.isoformat():
+            # Expired — revoke and reject
+            conn.execute("UPDATE sessions SET revoked = 1 WHERE id = ?", (session["id"],))
+            conn.commit()
+            raise HTTPException(status_code=401, detail="Refresh token expired")
+
+        # Token rotation: revoke old, create new
+        conn.execute("UPDATE sessions SET revoked = 1 WHERE id = ?", (session["id"],))
+        conn.commit()
+
+    # Create a fresh session (new session ID + new refresh token)
+    return create_session_with_tokens(
+        user_id=session["user_id"],
+        household_id=session["household_id"],
+        device_id=session["device_id"],
+        device_name=session["device_name"],
+        ip_address=ip_address,
+    )
+
+
+def revoke_session(session_id: str):
+    """Revoke a specific session (logout from one device)."""
+    with get_db() as conn:
+        conn.execute("UPDATE sessions SET revoked = 1 WHERE id = ?", (session_id,))
+        conn.commit()
+
+
+def revoke_all_sessions(user_id: int, except_session_id: str = None):
+    """Revoke all sessions for a user, optionally keeping one (current session)."""
+    with get_db() as conn:
+        if except_session_id:
+            conn.execute(
+                "UPDATE sessions SET revoked = 1 WHERE user_id = ? AND id != ? AND revoked = 0",
+                (user_id, except_session_id),
+            )
+        else:
+            conn.execute(
+                "UPDATE sessions SET revoked = 1 WHERE user_id = ? AND revoked = 0",
+                (user_id,),
+            )
+        conn.commit()
 
 
 @dataclass
@@ -463,25 +630,74 @@ async def get_current_user(request: Request) -> TenantContext:
                             _set_sentry_context(tenant)
                             return tenant
 
-    # Check kiosk token (Authorization: Bearer header or ?token= query param)
-    # SECURITY NOTE: The ?token= query parameter fallback means kiosk tokens
-    # can appear in access logs, Referer headers, and browser history. The
-    # preferred method is the Authorization: Bearer header (used by kiosk.html's
-    # apiFetch). The query param path is kept for backward compatibility with
-    # the initial page load URL (/kiosk?token=xxx). A future migration should
-    # move entirely to the Authorization header for API calls and use a
-    # short-lived cookie or session for the initial page render.
+    # Check Bearer token — could be an access token (AnyList-style) or a kiosk token
     auth_header = request.headers.get("Authorization", "")
-    kiosk_token = None
+    bearer_token = None
     if auth_header.startswith("Bearer "):
-        kiosk_token = auth_header[7:]
-    elif request.query_params.get("token"):
-        kiosk_token = request.query_params.get("token")
+        bearer_token = auth_header[7:]
 
-    if kiosk_token:
+    if bearer_token:
+        # Try as access token first
+        data = verify_access_token(bearer_token)
+        if data:
+            with get_db() as conn:
+                if data["household_id"] == 0:
+                    user = conn.execute(
+                        "SELECT id, display_name FROM users WHERE id = ?",
+                        (data["user_id"],),
+                    ).fetchone()
+                    if user:
+                        tenant = TenantContext(
+                            user_id=user["id"],
+                            household_id=0,
+                            display_name=user["display_name"] or "New User",
+                            role="pending",
+                        )
+                        _set_sentry_context(tenant)
+                        return tenant
+                else:
+                    member = conn.execute(
+                        """SELECT hm.display_name, hm.role, hm.household_id, hm.user_id
+                           FROM household_members hm
+                           WHERE hm.user_id = ? AND hm.household_id = ?""",
+                        (data["user_id"], data["household_id"]),
+                    ).fetchone()
+                    if member:
+                        tenant = TenantContext(
+                            user_id=member["user_id"],
+                            household_id=member["household_id"],
+                            display_name=member["display_name"],
+                            role=member["role"],
+                        )
+                        _set_sentry_context(tenant)
+                        return tenant
+
+        # Try as kiosk token
         with get_db() as conn:
             kt = conn.execute(
-                "SELECT * FROM kiosk_tokens WHERE token = ?", (kiosk_token,)
+                "SELECT * FROM kiosk_tokens WHERE token = ?", (bearer_token,)
+            ).fetchone()
+            if kt:
+                conn.execute(
+                    "UPDATE kiosk_tokens SET last_used_at = ? WHERE id = ?",
+                    (datetime.now().isoformat(), kt["id"]),
+                )
+                conn.commit()
+                tenant = TenantContext(
+                    user_id=0,
+                    household_id=kt["household_id"],
+                    display_name="Kiosk",
+                    role="kiosk",
+                )
+                _set_sentry_context(tenant)
+                return tenant
+
+    # Fallback: kiosk token via query param (legacy)
+    kiosk_query_token = request.query_params.get("token")
+    if kiosk_query_token:
+        with get_db() as conn:
+            kt = conn.execute(
+                "SELECT * FROM kiosk_tokens WHERE token = ?", (kiosk_query_token,)
             ).fetchone()
             if kt:
                 conn.execute(
@@ -512,6 +728,136 @@ async def get_optional_user(request: Request):
 # Router
 
 router = APIRouter()
+
+
+# ---------------------------------------------------------------------------
+# AnyList-style email + password auth endpoints
+# ---------------------------------------------------------------------------
+
+@router.post("/api/auth/signup")
+async def signup(request: Request):
+    """Create a new account with email + password. Returns access/refresh tokens."""
+    if not BCRYPT_ENABLED:
+        raise HTTPException(status_code=500, detail="Password auth not available (bcrypt not installed)")
+
+    client_ip = request.client.host if request.client else "unknown"
+    if rate_limiter.is_limited(client_ip, max_requests=RATE_LIMIT_AUTH, window_seconds=600):
+        return JSONResponse(status_code=429, content={"error": "Too many requests"})
+
+    try:
+        body = await request.json()
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid JSON")
+
+    email = body.get("email", "").strip().lower()
+    password = body.get("password", "")
+    display_name = body.get("display_name", "").strip()
+    device_id = body.get("device_id")
+    device_name = body.get("device_name")
+
+    if not email or "@" not in email:
+        raise HTTPException(status_code=400, detail="Valid email is required")
+    if len(password) < MIN_PASSWORD_LENGTH:
+        raise HTTPException(status_code=400, detail=f"Password must be at least {MIN_PASSWORD_LENGTH} characters")
+    if not display_name:
+        display_name = email.split("@")[0]
+
+    with get_db() as conn:
+        existing = conn.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone()
+        if existing:
+            raise HTTPException(status_code=409, detail="An account with this email already exists")
+
+        pw_hash = hash_password(password)
+        now = datetime.now().isoformat()
+        conn.execute(
+            "INSERT INTO users (email, display_name, password_hash, created_at) VALUES (?, ?, ?, ?)",
+            (email, display_name, pw_hash, now),
+        )
+        conn.commit()
+        user = conn.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone()
+
+    # New user — household_id=0 means not yet in a household
+    tokens = create_session_with_tokens(
+        user_id=user["id"],
+        household_id=0,
+        device_id=device_id,
+        device_name=device_name,
+        ip_address=client_ip,
+    )
+    tokens["display_name"] = display_name
+    return JSONResponse(content=tokens)
+
+
+@router.post("/api/auth/token")
+async def login_token(request: Request):
+    """Login with email + password. Returns access/refresh tokens (AnyList-style)."""
+    if not BCRYPT_ENABLED:
+        raise HTTPException(status_code=500, detail="Password auth not available")
+
+    client_ip = request.client.host if request.client else "unknown"
+    if rate_limiter.is_limited(client_ip, max_requests=RATE_LIMIT_AUTH, window_seconds=600):
+        return JSONResponse(status_code=429, content={"error": "Too many requests"})
+
+    try:
+        body = await request.json()
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid JSON")
+
+    email = body.get("email", "").strip().lower()
+    password = body.get("password", "")
+    device_id = body.get("device_id")
+    device_name = body.get("device_name")
+
+    if not email or not password:
+        raise HTTPException(status_code=400, detail="Email and password are required")
+
+    with get_db() as conn:
+        user = conn.execute(
+            "SELECT id, email, display_name, password_hash FROM users WHERE email = ?",
+            (email,),
+        ).fetchone()
+
+    if not user or not user["password_hash"]:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    if not verify_password(password, user["password_hash"]):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    # Find user's household (pick the first one, or 0 if not in any)
+    with get_db() as conn:
+        membership = conn.execute(
+            "SELECT household_id FROM household_members WHERE user_id = ? LIMIT 1",
+            (user["id"],),
+        ).fetchone()
+    household_id = membership["household_id"] if membership else 0
+
+    tokens = create_session_with_tokens(
+        user_id=user["id"],
+        household_id=household_id,
+        device_id=device_id,
+        device_name=device_name,
+        ip_address=client_ip,
+    )
+    tokens["display_name"] = user["display_name"]
+    return JSONResponse(content=tokens)
+
+
+@router.post("/api/auth/token/refresh")
+async def refresh_token(request: Request):
+    """Exchange a refresh token for a new access/refresh token pair (token rotation)."""
+    client_ip = request.client.host if request.client else "unknown"
+
+    try:
+        body = await request.json()
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid JSON")
+
+    refresh = body.get("refresh_token", "")
+    if not refresh:
+        raise HTTPException(status_code=400, detail="refresh_token is required")
+
+    tokens = refresh_session_tokens(refresh, ip_address=client_ip)
+    return JSONResponse(content=tokens)
 
 
 @router.post("/api/auth/magic-link")
@@ -635,8 +981,15 @@ async def verify_magic_link(request: Request, token: str):
 
 
 @router.post("/api/auth/logout")
-async def logout():
-    """Clear the session cookie."""
+async def logout(request: Request):
+    """Logout: revoke token session (if Bearer auth) and clear cookie."""
+    # Revoke token-based session if present
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        data = verify_access_token(auth_header[7:])
+        if data and "session_id" in data:
+            revoke_session(data["session_id"])
+
     response = Response(
         content=json.dumps({"ok": True, "message": "Logged out"}),
         media_type="application/json",
