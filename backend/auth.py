@@ -112,6 +112,7 @@ MAGIC_LINK_MAX_AGE = 1800  # 30 minutes
 COOKIE_NAME = "huddle_session"
 COOKIE_SECURE = ENVIRONMENT == "production"
 MIN_PASSWORD_LENGTH = 8
+_SESSION_TOUCH_INTERVAL = 300  # Only update last_used_at every 5 minutes
 
 
 # ---------------------------------------------------------------------------
@@ -261,6 +262,50 @@ def revoke_all_sessions(user_id: int, except_session_id: str = None):
                 (user_id,),
             )
         conn.commit()
+
+
+def _touch_session(conn, session_id: str):
+    """Update last_used_at on a session, throttled to avoid a write per request."""
+    row = conn.execute(
+        "SELECT last_used_at FROM sessions WHERE id = ? AND revoked = 0",
+        (session_id,),
+    ).fetchone()
+    if row:
+        try:
+            last = datetime.fromisoformat(row["last_used_at"])
+            if (datetime.now() - last).total_seconds() < _SESSION_TOUCH_INTERVAL:
+                return
+        except (ValueError, TypeError):
+            pass
+        conn.execute(
+            "UPDATE sessions SET last_used_at = ? WHERE id = ?",
+            (datetime.now().isoformat(), session_id),
+        )
+        conn.commit()
+
+
+def _parse_user_agent(ua: str) -> str:
+    """Extract a human-readable device name from a User-Agent string."""
+    if not ua:
+        return "Unknown device"
+    ua_lower = ua.lower()
+    # Mobile
+    if "iphone" in ua_lower:
+        return "iPhone"
+    if "ipad" in ua_lower:
+        return "iPad"
+    if "android" in ua_lower:
+        return "Android"
+    # Desktop browsers
+    if "firefox" in ua_lower:
+        return "Firefox"
+    if "edg" in ua_lower:
+        return "Edge"
+    if "chrome" in ua_lower:
+        return "Chrome"
+    if "safari" in ua_lower:
+        return "Safari"
+    return ua[:50]
 
 
 @dataclass
@@ -641,6 +686,11 @@ async def get_current_user(request: Request) -> TenantContext:
         data = verify_access_token(bearer_token)
         if data:
             with get_db() as conn:
+                # Update last_used_at (throttled: only if >5 min stale)
+                session_id = data.get("session_id")
+                if session_id:
+                    _touch_session(conn, session_id)
+
                 if data["household_id"] == 0:
                     user = conn.execute(
                         "SELECT id, display_name FROM users WHERE id = ?",
@@ -753,7 +803,7 @@ async def signup(request: Request):
     password = body.get("password", "")
     display_name = body.get("display_name", "").strip()
     device_id = body.get("device_id")
-    device_name = body.get("device_name")
+    device_name = body.get("device_name") or _parse_user_agent(request.headers.get("User-Agent", ""))
 
     if not email or "@" not in email:
         raise HTTPException(status_code=400, detail="Valid email is required")
@@ -806,7 +856,7 @@ async def login_token(request: Request):
     email = body.get("email", "").strip().lower()
     password = body.get("password", "")
     device_id = body.get("device_id")
-    device_name = body.get("device_name")
+    device_name = body.get("device_name") or _parse_user_agent(request.headers.get("User-Agent", ""))
 
     if not email or not password:
         raise HTTPException(status_code=400, detail="Email and password are required")
@@ -846,6 +896,8 @@ async def login_token(request: Request):
 async def refresh_token(request: Request):
     """Exchange a refresh token for a new access/refresh token pair (token rotation)."""
     client_ip = request.client.host if request.client else "unknown"
+    if rate_limiter.is_limited(client_ip, max_requests=RATE_LIMIT_AUTH * 2, window_seconds=600):
+        return JSONResponse(status_code=429, content={"error": "Too many requests"})
 
     try:
         body = await request.json()
@@ -940,36 +992,40 @@ async def verify_magic_link(request: Request, token: str):
                 (user_id,),
             ).fetchone()
 
+        client_ip = request.client.host if request.client else "unknown"
+        device_name = _parse_user_agent(request.headers.get("User-Agent", ""))
+        household_id = membership["household_id"] if membership else 0
+
+        # Create a sessions table row so magic-link sessions appear in device management
+        tokens = create_session_with_tokens(
+            user_id=user_id,
+            household_id=household_id,
+            device_name=device_name,
+            ip_address=client_ip,
+        )
+
+        # Also set cookie for the legacy cookie auth path
+        session_token = create_session_token(user_id, household_id)
+
         if membership:
-            session_token = create_session_token(user_id, membership["household_id"])
             redirect_url = request.query_params.get("redirect", "/mobile")
             if not redirect_url.startswith("/"):
                 redirect_url = "/mobile"
-            response = RedirectResponse(url=redirect_url, status_code=303)
-            response.set_cookie(
-                key=COOKIE_NAME,
-                value=session_token,
-                max_age=SESSION_MAX_AGE,
-                httponly=True,
-                samesite="lax",
-                secure=COOKIE_SECURE,
-            )
-            return response
         else:
-            session_token = create_session_token(user_id, 0)
             redirect_url = request.query_params.get("redirect", "/onboard")
             if not redirect_url.startswith("/"):
                 redirect_url = "/onboard"
-            response = RedirectResponse(url=redirect_url, status_code=303)
-            response.set_cookie(
-                key=COOKIE_NAME,
-                value=session_token,
-                max_age=SESSION_MAX_AGE,
-                httponly=True,
-                samesite="lax",
-                secure=COOKIE_SECURE,
-            )
-            return response
+
+        response = RedirectResponse(url=redirect_url, status_code=303)
+        response.set_cookie(
+            key=COOKIE_NAME,
+            value=session_token,
+            max_age=SESSION_MAX_AGE,
+            httponly=True,
+            samesite="lax",
+            secure=COOKIE_SECURE,
+        )
+        return response
     except HTTPException:
         raise
     except sqlite3.Error as e:
@@ -1001,6 +1057,57 @@ async def logout(request: Request):
         secure=COOKIE_SECURE,
     )
     return response
+
+
+@router.post("/api/auth/password/change")
+async def change_password(request: Request, tenant: TenantContext = Depends(get_current_user)):
+    """Change the current user's password. Revokes all other sessions for security."""
+    if not BCRYPT_ENABLED:
+        raise HTTPException(status_code=500, detail="Password auth not available")
+
+    try:
+        body = await request.json()
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid JSON")
+
+    current_password = body.get("current_password", "")
+    new_password = body.get("new_password", "")
+
+    if not current_password or not new_password:
+        raise HTTPException(status_code=400, detail="Both current_password and new_password are required")
+    if len(new_password) < MIN_PASSWORD_LENGTH:
+        raise HTTPException(status_code=400, detail=f"New password must be at least {MIN_PASSWORD_LENGTH} characters")
+
+    with get_db() as conn:
+        user = conn.execute(
+            "SELECT id, password_hash FROM users WHERE id = ?", (tenant.user_id,)
+        ).fetchone()
+
+    if not user or not user["password_hash"]:
+        raise HTTPException(status_code=400, detail="Account does not use password authentication")
+
+    if not verify_password(current_password, user["password_hash"]):
+        raise HTTPException(status_code=401, detail="Current password is incorrect")
+
+    new_hash = hash_password(new_password)
+    with get_db() as conn:
+        conn.execute(
+            "UPDATE users SET password_hash = ? WHERE id = ?",
+            (new_hash, tenant.user_id),
+        )
+        conn.commit()
+
+    # Revoke all other sessions (keep current one)
+    auth_header = request.headers.get("Authorization", "")
+    current_session_id = None
+    if auth_header.startswith("Bearer "):
+        data = verify_access_token(auth_header[7:])
+        if data:
+            current_session_id = data.get("session_id")
+    revoke_all_sessions(tenant.user_id, except_session_id=current_session_id)
+
+    logger.info("Password changed for user %s, other sessions revoked", tenant.user_id)
+    return {"ok": True, "message": "Password changed. All other sessions have been logged out."}
 
 
 @router.get("/api/auth/me")

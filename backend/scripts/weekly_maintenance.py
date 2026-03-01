@@ -147,7 +147,43 @@ def cleanup_push_subscriptions():
         logger.error("Push subscription cleanup failed: %s", e, exc_info=True)
 
 
-# ── 3. Log rotation safety check ─────────────────────────────────────────
+# ── 3. Session pruning ───────────────────────────────────────────────────
+
+SESSION_MAX_AGE_DAYS = 30  # Match refresh token lifetime
+
+def prune_sessions():
+    """Delete revoked and expired sessions to prevent unbounded table growth."""
+    try:
+        conn = sqlite3.connect(str(DB_FILE))
+        conn.row_factory = sqlite3.Row
+
+        # Delete revoked sessions (already invalidated)
+        revoked = conn.execute(
+            "DELETE FROM sessions WHERE revoked = 1"
+        ).rowcount
+
+        # Delete sessions older than max age (refresh token expired)
+        expired = conn.execute(
+            "DELETE FROM sessions WHERE created_at < datetime('now', ?)",
+            (f"-{SESSION_MAX_AGE_DAYS} days",)
+        ).rowcount
+
+        conn.commit()
+        conn.close()
+
+        total = revoked + expired
+        if total:
+            logger.info(
+                "Session pruning: removed %d sessions (%d revoked, %d expired)",
+                total, revoked, expired,
+            )
+        else:
+            logger.info("Session pruning: no stale sessions found")
+    except Exception as e:
+        logger.error("Session pruning failed: %s", e, exc_info=True)
+
+
+# ── 4. Log rotation safety check ─────────────────────────────────────────
 
 MAX_LOG_SIZE = 50 * 1024 * 1024  # 50 MB hard limit
 
@@ -199,6 +235,7 @@ def main():
 
     vacuum_database()
     cleanup_push_subscriptions()
+    prune_sessions()
     check_log_rotation()
 
     logger.info("=== Weekly maintenance complete ===")
