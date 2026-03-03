@@ -639,46 +639,94 @@
             <div style="font-size:13px;color:#888;line-height:1.4;">For your security, all sessions have been reset. Please log in again.</div>
         </div>
 
-        <!-- Magic link form (default) -->
-        <div id="magicLinkForm">
-            <div class="form-group">
-                <input type="email" class="form-input" id="loginEmail" placeholder="Enter your email to get started" autocomplete="email" inputmode="email" autofocus>
-            </div>
-
-            <button class="btn-primary" id="loginBtn" onclick="requestMagicLink()">
-                Send Magic Link &#10024;
-            </button>
-
-            <div class="helper-text">We'll email you a link to log in &#8212; no password needed</div>
-
-            <div style="text-align:center;margin-top:16px;">
-                <span style="color:#4ecdc4;font-size:13px;cursor:pointer;font-weight:600;" onclick="togglePasswordLogin(true)">Log in with password instead</span>
-            </div>
+        <div class="form-group">
+            <input type="email" class="form-input" id="loginEmail" placeholder="Email address" autocomplete="email" inputmode="email" autofocus>
         </div>
+        <div class="form-group">
+            <input type="password" class="form-input" id="loginPassword" placeholder="Password" autocomplete="current-password">
+        </div>
+        <div id="loginError" class="msg msg-error" style="display:none;"></div>
 
-        <!-- Password login form (toggled) -->
-        <div id="passwordLoginForm" style="display:none;">
-            <div class="form-group">
-                <input type="email" class="form-input" id="pwLoginEmail" placeholder="Email" autocomplete="email" inputmode="email">
-            </div>
-            <div class="form-group">
-                <input type="password" class="form-input" id="pwLoginPassword" placeholder="Password" autocomplete="current-password">
-            </div>
-            <div id="pwLoginError" class="msg msg-error" style="display:none;"></div>
+        <button class="btn-primary" id="loginBtn" onclick="doLogin()">
+            Log In
+        </button>
 
-            <button class="btn-primary" id="pwLoginBtn" onclick="doPasswordLogin()">
-                Log In
-            </button>
-
-            <div style="text-align:center;margin-top:16px;">
-                <span style="color:#4ecdc4;font-size:13px;cursor:pointer;font-weight:600;" onclick="togglePasswordLogin(false)">Use magic link instead</span>
-            </div>
+        <div style="text-align:center;margin-top:16px;">
+            <span style="color:#4ecdc4;font-size:13px;cursor:pointer;font-weight:600;" onclick="showStep('stepSignup')">Don't have an account? Sign up</span>
         </div>
 
         <div style="text-align:center;margin-top:24px;padding-top:20px;border-top:1px solid #333;">
             <span style="color:#888;font-size:13px;">No email? </span>
             <span style="color:#4ecdc4;font-size:13px;cursor:pointer;font-weight:600;" onclick="showStep('stepRequestAccess')">Request access with household code</span>
         </div>
+    </div>
+
+    <!-- Step: Signup -->
+    <div class="step" id="stepSignup">
+        <div class="logo-block">
+            <div class="logo-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                    <circle cx="8.5" cy="7" r="4"/>
+                    <line x1="20" y1="8" x2="20" y2="14"/>
+                    <line x1="23" y1="11" x2="17" y2="11"/>
+                </svg>
+            </div>
+            <div class="welcome-heading">Create Account</div>
+            <div class="welcome-sub">Sign up to join or create a household.</div>
+        </div>
+
+        <div class="form-group">
+            <input type="email" class="form-input" id="signupEmail" placeholder="Email address" autocomplete="email" inputmode="email">
+        </div>
+        <div class="form-group">
+            <input type="text" class="form-input" id="signupName" placeholder="Display name" autocomplete="name">
+        </div>
+        <div class="form-group">
+            <input type="password" class="form-input" id="signupPassword" placeholder="Password (8+ characters)" autocomplete="new-password">
+        </div>
+        <div class="form-group">
+            <input type="password" class="form-input" id="signupPasswordConfirm" placeholder="Confirm password" autocomplete="new-password">
+        </div>
+        <div class="form-group">
+            <input type="text" class="form-input" id="signupHouseholdCode" placeholder="Household code (e.g. ABC123)" autocomplete="off" style="text-transform:uppercase;letter-spacing:2px;text-align:center;font-size:18px;">
+            <div class="hint-text" style="text-align:center;">Ask your household manager for this code</div>
+        </div>
+        <div id="signupError" class="msg msg-error" style="display:none;"></div>
+
+        <button class="btn-primary" id="signupBtn" onclick="doSignup()">
+            Create Account
+        </button>
+
+        <div style="text-align:center;margin-top:16px;">
+            <span style="color:#4ecdc4;font-size:13px;cursor:pointer;font-weight:600;" onclick="showStep('stepLogin')">Already have an account? Log in</span>
+        </div>
+    </div>
+
+    <!-- Step: Set Password (forced for migrated users) -->
+    <div class="step" id="stepSetPassword">
+        <div class="logo-block">
+            <div class="logo-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                    <path d="M7 11V7a5 5 0 0110 0v4"/>
+                </svg>
+            </div>
+            <div class="welcome-heading">Set Your Password</div>
+            <div class="welcome-sub">Huddle now uses passwords instead of magic links. Set one to continue.</div>
+        </div>
+
+        <div class="form-group">
+            <input type="password" class="form-input" id="setNewPassword" placeholder="New password (8+ characters)" autocomplete="new-password">
+        </div>
+        <div class="form-group">
+            <input type="password" class="form-input" id="setNewPasswordConfirm" placeholder="Confirm password" autocomplete="new-password">
+        </div>
+        <div id="setPasswordError" class="msg msg-error" style="display:none;"></div>
+
+        <button class="btn-primary" id="setPasswordBtn" onclick="doSetPassword()">
+            Set Password &amp; Continue
+        </button>
     </div>
 
     <!-- Request Access Step (replaces PIN login) -->
@@ -735,32 +783,6 @@
         </div>
 
         <button class="back-link" onclick="resetAccessRequest(); showStep('stepLogin')">Back to email login</button>
-    </div>
-
-    <!-- Step 0b: Check email -->
-    <div class="step" id="stepCheckEmail">
-        <div class="logo-block">
-            <div class="logo-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                    <polyline points="22,6 12,13 2,6"/>
-                </svg>
-            </div>
-            <div class="welcome-heading">Check your inbox</div>
-            <div class="welcome-sub">We've sent a login link to<br><strong id="sentEmailDisplay" style="color: #4ecdc4;"></strong></div>
-        </div>
-
-        <div class="msg msg-success" style="text-align: center;">
-            Click the link in your email to continue.
-            <div style="font-size:12px;color:#888;margin-top:6px;">The link is valid for 10 minutes.</div>
-        </div>
-
-        <div class="helper-text" style="text-align:center;">
-            Didn't get it? Check your spam folder, or<br>
-            <span id="resendLink" style="color: #4ecdc4; cursor: pointer; font-weight:600;" onclick="resendMagicLink()">Resend email</span>
-            &nbsp;·&nbsp;
-            <span style="color: #4ecdc4; cursor: pointer;" onclick="showStep('stepLogin')">Try a different email</span>
-        </div>
     </div>
 
     <!-- Choose: Create or Join -->
@@ -1311,73 +1333,11 @@
         if (el) el.textContent = '';
     }
 
-    // Step 0: Request magic link
-    async function requestMagicLink() {
+    // Login with email + password
+    async function doLogin() {
         var email = document.getElementById('loginEmail').value.trim().toLowerCase();
-        if (!email || !email.includes('@')) {
-            showMsg('loginMsg', 'Please enter a valid email address.', 'error');
-            return;
-        }
-
-        var btn = document.getElementById('loginBtn');
-        btn.disabled = true;
-        btn.textContent = '';
-        var spinner = document.createElement('span');
-        spinner.className = 'spinner';
-        btn.appendChild(spinner);
-        btn.appendChild(document.createTextNode(' Sending...'));
-
-        try {
-            var resp = await fetch('/api/auth/magic-link', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest'},
-                body: JSON.stringify({email: email})
-            });
-            var data = await resp.json();
-
-            if (resp.ok) {
-                window._lastLoginEmail = email;
-                document.getElementById('sentEmailDisplay').textContent = email;
-                showStep('stepCheckEmail');
-            } else if (resp.status === 429) {
-                showMsg('loginMsg', 'Too many requests. Please wait a few minutes and try again.', 'error');
-            } else if (resp.status === 400) {
-                showMsg('loginMsg', data.detail || 'Please check your email address and try again.', 'error');
-            } else if (resp.status === 403) {
-                showMsg('loginMsg', 'Request blocked. Please refresh the page and try again.', 'error');
-            } else if (resp.status === 500) {
-                showMsg('loginMsg', 'Server error. Please try again in a moment.', 'error');
-            } else {
-                showMsg('loginMsg', 'Something went wrong. Please try again.', 'error');
-            }
-        } catch (e) {
-            showMsg('loginMsg', 'Network error. Please try again.', 'error');
-        } finally {
-            btn.disabled = false;
-            btn.textContent = 'Send Magic Link \u2728';
-        }
-    }
-
-    // Toggle between magic link and password login forms
-    function togglePasswordLogin(showPassword) {
-        document.getElementById('magicLinkForm').style.display = showPassword ? 'none' : 'block';
-        document.getElementById('passwordLoginForm').style.display = showPassword ? 'block' : 'none';
-        document.getElementById('pwLoginError').style.display = 'none';
-        if (showPassword) {
-            // Copy email if already entered
-            var mlEmail = document.getElementById('loginEmail').value.trim();
-            if (mlEmail) document.getElementById('pwLoginEmail').value = mlEmail;
-            document.getElementById('pwLoginPassword').focus();
-        } else {
-            document.getElementById('loginEmail').focus();
-        }
-    }
-
-    // Password login
-    async function doPasswordLogin() {
-        var email = document.getElementById('pwLoginEmail').value.trim().toLowerCase();
-        var password = document.getElementById('pwLoginPassword').value;
-        var errorEl = document.getElementById('pwLoginError');
+        var password = document.getElementById('loginPassword').value;
+        var errorEl = document.getElementById('loginError');
         errorEl.style.display = 'none';
 
         if (!email || !email.includes('@')) {
@@ -1391,12 +1351,12 @@
             return;
         }
 
-        var btn = document.getElementById('pwLoginBtn');
+        var btn = document.getElementById('loginBtn');
         btn.disabled = true;
         btn.textContent = 'Logging in...';
 
         try {
-            var resp = await fetch('/api/auth/password-login', {
+            var resp = await fetch('/api/auth/login', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest'},
                 body: JSON.stringify({email: email, password: password})
@@ -1412,7 +1372,7 @@
                 errorEl.textContent = 'Too many attempts. Please wait and try again.';
                 errorEl.style.display = 'block';
             } else {
-                errorEl.textContent = data.detail || 'Something went wrong. Please try again.';
+                errorEl.textContent = data.detail || 'Something went wrong.';
                 errorEl.style.display = 'block';
             }
         } catch (e) {
@@ -1424,55 +1384,90 @@
         }
     }
 
-    // Resend magic link from the "check your email" step
-    async function resendMagicLink() {
-        var email = window._lastLoginEmail;
-        if (!email) { showStep('stepLogin'); return; }
+    // Signup with email + password + household code
+    async function doSignup() {
+        var email = document.getElementById('signupEmail').value.trim().toLowerCase();
+        var name = document.getElementById('signupName').value.trim();
+        var password = document.getElementById('signupPassword').value;
+        var confirm = document.getElementById('signupPasswordConfirm').value;
+        var code = document.getElementById('signupHouseholdCode').value.trim().toUpperCase();
+        var errorEl = document.getElementById('signupError');
+        errorEl.style.display = 'none';
 
-        var link = document.getElementById('resendLink');
-        var origText = link.textContent;
-        link.textContent = 'Sending...';
-        link.style.pointerEvents = 'none';
+        if (!email || !email.includes('@')) { errorEl.textContent = 'Please enter a valid email.'; errorEl.style.display = 'block'; return; }
+        if (!name) { errorEl.textContent = 'Please enter your name.'; errorEl.style.display = 'block'; return; }
+        if (password.length < 8) { errorEl.textContent = 'Password must be at least 8 characters.'; errorEl.style.display = 'block'; return; }
+        if (password !== confirm) { errorEl.textContent = 'Passwords do not match.'; errorEl.style.display = 'block'; return; }
+        if (!code) { errorEl.textContent = 'Please enter your household code.'; errorEl.style.display = 'block'; return; }
+
+        var btn = document.getElementById('signupBtn');
+        btn.disabled = true;
+        btn.textContent = 'Creating account...';
 
         try {
-            var resp = await fetch('/api/auth/magic-link', {
+            var resp = await fetch('/api/auth/signup', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest'},
-                body: JSON.stringify({email: email})
+                body: JSON.stringify({email: email, password: password, display_name: name, household_code: code})
             });
-            if (resp.ok) {
-                link.textContent = 'Sent!';
-                link.style.color = '#66bb6a';
-                setTimeout(function() {
-                    link.textContent = origText;
-                    link.style.color = '#4ecdc4';
-                    link.style.pointerEvents = '';
-                }, 3000);
-            } else if (resp.status === 429) {
-                link.textContent = 'Too many requests';
-                link.style.color = '#ff6b6b';
-                setTimeout(function() {
-                    link.textContent = origText;
-                    link.style.color = '#4ecdc4';
-                    link.style.pointerEvents = '';
-                }, 5000);
+            var data = await resp.json();
+
+            if (resp.ok && data.redirect) {
+                window.location = data.redirect;
+            } else if (resp.status === 404) {
+                errorEl.textContent = 'No household found with that code. Check with your household manager.';
+                errorEl.style.display = 'block';
+            } else if (resp.status === 409) {
+                errorEl.textContent = data.detail || 'An account with this email already exists.';
+                errorEl.style.display = 'block';
             } else {
-                link.textContent = 'Failed — try again';
-                link.style.color = '#ff6b6b';
-                setTimeout(function() {
-                    link.textContent = origText;
-                    link.style.color = '#4ecdc4';
-                    link.style.pointerEvents = '';
-                }, 3000);
+                errorEl.textContent = data.detail || 'Something went wrong.';
+                errorEl.style.display = 'block';
             }
         } catch (e) {
-            link.textContent = 'Network error';
-            link.style.color = '#ff6b6b';
-            setTimeout(function() {
-                link.textContent = origText;
-                link.style.color = '#4ecdc4';
-                link.style.pointerEvents = '';
-            }, 3000);
+            errorEl.textContent = 'Network error. Please try again.';
+            errorEl.style.display = 'block';
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Create Account';
+        }
+    }
+
+    // Set password (forced for migrated users)
+    async function doSetPassword() {
+        var password = document.getElementById('setNewPassword').value;
+        var confirm = document.getElementById('setNewPasswordConfirm').value;
+        var errorEl = document.getElementById('setPasswordError');
+        errorEl.style.display = 'none';
+
+        if (password.length < 8) { errorEl.textContent = 'Password must be at least 8 characters.'; errorEl.style.display = 'block'; return; }
+        if (password !== confirm) { errorEl.textContent = 'Passwords do not match.'; errorEl.style.display = 'block'; return; }
+
+        var btn = document.getElementById('setPasswordBtn');
+        btn.disabled = true;
+        btn.textContent = 'Setting password...';
+
+        try {
+            var resp = await fetch('/api/auth/password/set', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest'},
+                credentials: 'include',
+                body: JSON.stringify({password: password})
+            });
+            var data = await resp.json();
+
+            if (resp.ok) {
+                window.location = data.redirect || '/mobile';
+            } else {
+                errorEl.textContent = data.detail || 'Something went wrong.';
+                errorEl.style.display = 'block';
+            }
+        } catch (e) {
+            errorEl.textContent = 'Network error. Please try again.';
+            errorEl.style.display = 'block';
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Set Password & Continue';
         }
     }
 
@@ -2100,13 +2095,18 @@
         }, 300);
     }
 
+    // Force password setup for migrated users
+    if (reasonParam === 'password_required') {
+        showStep('stepSetPassword');
+    }
+
     // Show expired link message and auto-focus email input
     if (errorParam === 'expired') {
         var loginStep = document.getElementById('stepLogin');
         if (loginStep) {
             var msg = document.createElement('div');
             msg.style.cssText = 'background:#ff6b6b22;border:1px solid #ff6b6b44;border-radius:8px;padding:12px 16px;margin-bottom:16px;color:#ff6b6b;font-size:0.9rem;text-align:center;';
-            msg.textContent = 'Your login link has expired. Enter your email below to get a new one.';
+            msg.textContent = 'Your session has expired. Please log in again.';
             var form = loginStep.querySelector('form') || loginStep.querySelector('input');
             if (form) loginStep.insertBefore(msg, form);
             else loginStep.prepend(msg);
@@ -2152,13 +2152,31 @@
 
     // Enter key support
     document.getElementById('loginEmail').addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') requestMagicLink();
+        if (e.key === 'Enter') document.getElementById('loginPassword').focus();
     });
-    document.getElementById('pwLoginEmail').addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') document.getElementById('pwLoginPassword').focus();
+    document.getElementById('loginPassword').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') doLogin();
     });
-    document.getElementById('pwLoginPassword').addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') doPasswordLogin();
+    document.getElementById('signupEmail').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') document.getElementById('signupName').focus();
+    });
+    document.getElementById('signupName').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') document.getElementById('signupPassword').focus();
+    });
+    document.getElementById('signupPassword').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') document.getElementById('signupPasswordConfirm').focus();
+    });
+    document.getElementById('signupPasswordConfirm').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') document.getElementById('signupHouseholdCode').focus();
+    });
+    document.getElementById('signupHouseholdCode').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') doSignup();
+    });
+    document.getElementById('setNewPassword').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') document.getElementById('setNewPasswordConfirm').focus();
+    });
+    document.getElementById('setNewPasswordConfirm').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') doSetPassword();
     });
     document.getElementById('householdName').addEventListener('keydown', function(e) {
         if (e.key === 'Enter') goToStep2();
