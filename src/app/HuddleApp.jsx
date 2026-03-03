@@ -9,7 +9,6 @@ import CalendarScreen from '../screens/CalendarScreen';
 import ShoppingScreen from '../screens/ShoppingScreen';
 import MealsScreen from '../screens/MealsScreen';
 import PlaceholderScreen from '../screens/PlaceholderScreen';
-import LoginScreen from '../screens/LoginScreen';
 
 function AppShell() {
   const t = useTheme();
@@ -95,7 +94,8 @@ function AuthGate() {
   }
 
   if (!user) {
-    return <LoginScreen />;
+    window.location.href = '/onboard';
+    return null;
   }
 
   return (
