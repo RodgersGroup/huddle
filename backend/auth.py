@@ -1252,7 +1252,7 @@ async def change_password(request: Request, tenant: TenantContext = Depends(get_
 
 
 @router.get("/api/auth/me")
-async def get_me(user: TenantContext = Depends(get_current_user)):
+async def get_me(request: Request, user: TenantContext = Depends(get_current_user)):
     """Return the current user's info, their household, and the household's members."""
     try:
         with get_db() as conn:
@@ -1286,6 +1286,13 @@ async def get_me(user: TenantContext = Depends(get_current_user)):
             ).fetchone()
             current_user_email = current_user_row["email"] if current_user_row else None
             has_password = bool(current_user_row["password_hash"]) if current_user_row else False
+
+        # Require password for non-kiosk users without one
+        if not has_password and user.role != "kiosk":
+            return JSONResponse(
+                status_code=403,
+                content={"reason": "password_required", "message": "Please set a password to continue."},
+            )
 
         # Check if current user is superadmin
         from config import SUPERADMIN_EMAILS
@@ -1331,7 +1338,27 @@ async def get_me(user: TenantContext = Depends(get_current_user)):
         }
         if user.original_household_id is not None:
             result["original_household_id"] = user.original_household_id
-        return result
+
+        # Wrap in JSONResponse so we can set cookies
+        response = JSONResponse(content=result)
+
+        # Renew session cookie on every /me call to prevent random sign-outs
+        existing_cookie = request.cookies.get(COOKIE_NAME)
+        if existing_cookie:
+            fresh_token = create_session_token(
+                user.user_id, user.household_id,
+                original_household_id=user.original_household_id,
+            )
+            response.set_cookie(
+                key=COOKIE_NAME,
+                value=fresh_token,
+                max_age=SESSION_MAX_AGE,
+                httponly=True,
+                samesite="lax",
+                secure=COOKIE_SECURE,
+            )
+
+        return response
     except HTTPException:
         raise
     except sqlite3.Error as e:
