@@ -935,13 +935,9 @@ async def login_token(request: Request):
     return JSONResponse(content=tokens)
 
 
-@router.post("/api/auth/password-login")
-async def password_login_cookie(request: Request):
-    """Login with email + password and set a session cookie (for the onboard page).
-
-    Unlike /api/auth/token which returns bearer tokens, this sets the same
-    cookie that magic-link auth uses, so /mobile page checks work seamlessly.
-    """
+@router.post("/api/auth/login")
+async def login(request: Request):
+    """Login with email + password. Sets a session cookie."""
     if not BCRYPT_ENABLED:
         raise HTTPException(status_code=500, detail="Password auth not available")
 
@@ -977,6 +973,12 @@ async def password_login_cookie(request: Request):
             "SELECT household_id FROM household_members WHERE user_id = ? LIMIT 1",
             (user["id"],),
         ).fetchone()
+        # Update last_login_at
+        conn.execute(
+            "UPDATE users SET last_login_at = ? WHERE id = ?",
+            (datetime.now().isoformat(), user["id"]),
+        )
+        conn.commit()
     household_id = membership["household_id"] if membership else 0
 
     session_token = create_session_token(user["id"], household_id)
@@ -992,6 +994,12 @@ async def password_login_cookie(request: Request):
         secure=COOKIE_SECURE,
     )
     return response
+
+
+# Backwards-compatible alias
+@router.post("/api/auth/password-login")
+async def password_login_compat(request: Request):
+    return await login(request)
 
 
 @router.post("/api/auth/token/refresh")
