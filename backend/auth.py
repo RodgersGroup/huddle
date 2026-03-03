@@ -1254,7 +1254,23 @@ async def set_password(request: Request, tenant: TenantContext = Depends(get_cur
         conn.commit()
 
     logger.info("Password set for magic-link user %s", tenant.user_id)
-    return {"ok": True, "message": "Password set successfully. You can now log in with email and password."}
+
+    # Return a fresh session cookie
+    session_token = create_session_token(tenant.user_id, tenant.household_id)
+    response = JSONResponse(content={
+        "ok": True,
+        "message": "Password set successfully.",
+        "redirect": "/mobile",
+    })
+    response.set_cookie(
+        key=COOKIE_NAME,
+        value=session_token,
+        max_age=SESSION_MAX_AGE,
+        httponly=True,
+        samesite="lax",
+        secure=COOKIE_SECURE,
+    )
+    return response
 
 
 @router.post("/api/auth/password/change")
