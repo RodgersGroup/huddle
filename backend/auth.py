@@ -1,18 +1,16 @@
 """
 Authentication module for Huddle.
 
-Supports two auth methods:
-1. Email + password (AnyList-style) → access/refresh token pair
-2. Magic link (passwordless) → session cookie (legacy, still supported)
+Auth flow:
+  POST /api/auth/signup    -> create account with email+password+household_code -> session cookie
+  POST /api/auth/login     -> login with email+password -> session cookie
+  POST /api/auth/logout    -> clear session cookie
+  GET  /api/auth/me        -> return user info, renew session cookie
+  POST /api/auth/password/set    -> set password (for passwordless users)
+  POST /api/auth/password/change -> change password
 
-Token auth flow:
-  POST /api/auth/signup   → create account with email+password → tokens
-  POST /api/auth/token    → login with email+password → tokens
-  POST /api/auth/token/refresh → refresh access token with refresh token
-  POST /api/auth/logout   → revoke session
-
-Also provides household creation/joining, kiosk token management, and FastAPI
-dependencies for extracting tenant context from requests.
+Session: signed cookie (itsdangerous), 30-day max age, renewed on every /me call.
+Kiosk: separate Bearer token auth for display-only devices.
 """
 
 import hashlib
@@ -20,8 +18,8 @@ import logging
 import sqlite3
 import time
 import uuid
-from fastapi import APIRouter, HTTPException, Request, Response, Depends, UploadFile, File
-from fastapi.responses import RedirectResponse, JSONResponse, HTMLResponse
+from fastapi import APIRouter, HTTPException, Request, Response, Depends
+from fastapi.responses import JSONResponse, HTMLResponse
 import json
 import secrets
 import string
@@ -30,7 +28,6 @@ from pathlib import Path
 from datetime import datetime, timedelta
 from dataclasses import dataclass
 from db import get_db
-from settings import get_setting
 
 # Password hashing
 try:
@@ -97,16 +94,8 @@ except ImportError:
     AUTH_ENABLED = False
     logger.warning("itsdangerous not installed - auth disabled")
 
-try:
-    import resend
-    EMAIL_ENABLED = True
-except ImportError:
-    EMAIL_ENABLED = False
-    logger.warning("resend not installed - magic link emails disabled (will print to console)")
-
-
 # Configuration
-from config import SECRET_KEY, SESSION_MAX_AGE, RATE_LIMIT_AUTH, ENVIRONMENT, ACCESS_TOKEN_MAX_AGE, REFRESH_TOKEN_MAX_AGE, AUTH_VERSION
+from config import SECRET_KEY, SESSION_MAX_AGE, RATE_LIMIT_AUTH, ENVIRONMENT, AUTH_VERSION
 
 # ---------------------------------------------------------------------------
 # Auth version — cached read from file, fallback to config constant
@@ -146,11 +135,9 @@ def force_reauth_all() -> int:
         conn.commit()
         return cursor.rowcount
 SERIALIZER = URLSafeTimedSerializer(SECRET_KEY) if AUTH_ENABLED else None
-MAGIC_LINK_MAX_AGE = 1800  # 30 minutes
 COOKIE_NAME = "huddle_session"
 COOKIE_SECURE = ENVIRONMENT == "production"
 MIN_PASSWORD_LENGTH = 8
-_SESSION_TOUCH_INTERVAL = 300  # Only update last_used_at every 5 minutes
 
 
 # ---------------------------------------------------------------------------
@@ -169,117 +156,6 @@ def verify_password(password: str, password_hash: str) -> bool:
     if not BCRYPT_ENABLED:
         return False
     return bcrypt.checkpw(password.encode("utf-8"), password_hash.encode("utf-8"))
-
-
-# ---------------------------------------------------------------------------
-# Access / Refresh token management (AnyList-style)
-# ---------------------------------------------------------------------------
-
-def create_access_token(user_id: int, household_id: int, session_id: str) -> str:
-    """Create a short-lived signed access token (15 min default)."""
-    if not SERIALIZER:
-        raise RuntimeError("Auth is not enabled (itsdangerous not installed)")
-    return SERIALIZER.dumps({
-        "user_id": user_id,
-        "household_id": household_id,
-        "session_id": session_id,
-        "type": "access",
-        "v": get_auth_version(),
-    })
-
-
-def verify_access_token(token: str):
-    """Verify an access token. Returns payload dict or None."""
-    if not SERIALIZER:
-        return None
-    try:
-        data = SERIALIZER.loads(token, max_age=ACCESS_TOKEN_MAX_AGE)
-        if data.get("type") == "access" and "user_id" in data:
-            if data.get("v", 0) < get_auth_version():
-                return None  # Token predates auth version bump
-            return data
-        return None
-    except (BadSignature, SignatureExpired):
-        return None
-
-
-def create_session_with_tokens(
-    user_id: int,
-    household_id: int,
-    device_id: str = None,
-    device_name: str = None,
-    ip_address: str = None,
-) -> dict:
-    """Create a new session and return access_token + refresh_token + session info.
-
-    This is the AnyList-style auth response: the client stores both tokens,
-    uses access_token for API calls, and calls /auth/token/refresh when it expires.
-    """
-    session_id = uuid.uuid4().hex
-    refresh_token = secrets.token_urlsafe(64)
-    now = datetime.now()
-    expires_at = (now + timedelta(seconds=REFRESH_TOKEN_MAX_AGE)).isoformat()
-
-    with get_db() as conn:
-        conn.execute(
-            """INSERT INTO sessions (id, user_id, household_id, refresh_token,
-                   device_id, device_name, ip_address, created_at, last_used_at, expires_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (session_id, user_id, household_id, refresh_token,
-             device_id, device_name, ip_address, now.isoformat(), now.isoformat(), expires_at),
-        )
-        conn.commit()
-
-    access_token = create_access_token(user_id, household_id, session_id)
-
-    return {
-        "access_token": access_token,
-        "refresh_token": refresh_token,
-        "token_type": "bearer",
-        "expires_in": ACCESS_TOKEN_MAX_AGE,
-        "user_id": user_id,
-        "household_id": household_id,
-        "session_id": session_id,
-    }
-
-
-def refresh_session_tokens(refresh_token: str, ip_address: str = None) -> dict:
-    """Validate a refresh token and issue a new token pair.
-
-    Implements token rotation: the old refresh token is revoked and a new one
-    is issued. This means a stolen refresh token can only be used once.
-    """
-    now = datetime.now()
-
-    with get_db() as conn:
-        session = conn.execute(
-            """SELECT id, user_id, household_id, device_id, device_name, expires_at
-               FROM sessions
-               WHERE refresh_token = ? AND revoked = 0""",
-            (refresh_token,),
-        ).fetchone()
-
-        if not session:
-            raise HTTPException(status_code=401, detail="Invalid or revoked refresh token")
-
-        if session["expires_at"] < now.isoformat():
-            # Expired — revoke and reject
-            conn.execute("UPDATE sessions SET revoked = 1 WHERE id = ?", (session["id"],))
-            conn.commit()
-            raise HTTPException(status_code=401, detail="Refresh token expired")
-
-        # Token rotation: revoke old, create new
-        conn.execute("UPDATE sessions SET revoked = 1 WHERE id = ?", (session["id"],))
-        conn.commit()
-
-    # Create a fresh session (new session ID + new refresh token)
-    return create_session_with_tokens(
-        user_id=session["user_id"],
-        household_id=session["household_id"],
-        device_id=session["device_id"],
-        device_name=session["device_name"],
-        ip_address=ip_address,
-    )
 
 
 def revoke_session(session_id: str):
@@ -302,26 +178,6 @@ def revoke_all_sessions(user_id: int, except_session_id: str = None):
                 "UPDATE sessions SET revoked = 1 WHERE user_id = ? AND revoked = 0",
                 (user_id,),
             )
-        conn.commit()
-
-
-def _touch_session(conn, session_id: str):
-    """Update last_used_at on a session, throttled to avoid a write per request."""
-    row = conn.execute(
-        "SELECT last_used_at FROM sessions WHERE id = ? AND revoked = 0",
-        (session_id,),
-    ).fetchone()
-    if row:
-        try:
-            last = datetime.fromisoformat(row["last_used_at"])
-            if (datetime.now() - last).total_seconds() < _SESSION_TOUCH_INTERVAL:
-                return
-        except (ValueError, TypeError):
-            pass
-        conn.execute(
-            "UPDATE sessions SET last_used_at = ? WHERE id = ?",
-            (datetime.now().isoformat(), session_id),
-        )
         conn.commit()
 
 
@@ -399,54 +255,6 @@ def verify_session_token(token: str):
         return None
 
 
-def _build_magic_link_email(verify_url: str) -> str:
-    """Build a branded HTML email for the magic link login."""
-    return f"""<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:40px 20px;">
-<tr><td align="center">
-<table width="100%" cellpadding="0" cellspacing="0" style="max-width:440px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
-  <tr><td style="background:#1a1d27;padding:32px 24px;text-align:center;">
-    <div style="font-size:32px;font-weight:800;color:#ffffff;letter-spacing:-0.5px;">
-      <span style="color:#4ecdc4;">H</span>uddle
-    </div>
-    <div style="color:#888;font-size:14px;margin-top:4px;">Your household, sorted.</div>
-  </td></tr>
-  <tr><td style="padding:32px 28px;">
-    <h1 style="margin:0 0 8px;font-size:20px;font-weight:700;color:#1a1d27;">Log in to Huddle</h1>
-    <p style="margin:0 0 24px;color:#555;font-size:15px;line-height:1.5;">
-      Tap the button below to log in. No password needed!
-    </p>
-    <table width="100%" cellpadding="0" cellspacing="0">
-      <tr><td align="center">
-        <a href="{verify_url}"
-           style="display:inline-block;background:#4ecdc4;color:#1a1d27;padding:14px 40px;border-radius:12px;font-size:16px;font-weight:700;text-decoration:none;letter-spacing:0.3px;">
-          Log in to Huddle
-        </a>
-      </td></tr>
-    </table>
-    <p style="margin:24px 0 0;color:#999;font-size:13px;line-height:1.5;">
-      This link expires in <strong>30 minutes</strong>. If you didn't request this, you can safely ignore it.
-    </p>
-  </td></tr>
-  <tr><td style="border-top:1px solid #eee;padding:20px 28px;text-align:center;">
-    <p style="margin:0;color:#bbb;font-size:12px;">
-      Can't click the button? Copy this link:<br>
-      <a href="{verify_url}" style="color:#4ecdc4;word-break:break-all;font-size:11px;">{verify_url}</a>
-    </p>
-  </td></tr>
-</table>
-<p style="margin:20px 0 0;color:#bbb;font-size:11px;text-align:center;">
-  Huddle &mdash; huddle.rodgersgroup.au
-</p>
-</td></tr>
-</table>
-</body>
-</html>"""
-
-
 def _send_member_invite_email(email: str, name: str, household_name: str, base_url: str):
     """Send a branded invite email to a new household member with a magic login link."""
     try:
@@ -459,9 +267,8 @@ def _send_member_invite_email(email: str, name: str, household_name: str, base_u
 
         resend.api_key = RESEND_API_KEY
 
-        # Create a magic link for them
-        token = create_magic_link_token(email)
-        verify_url = f"{base_url}/auth/verify?token={token}"
+        # Link to the onboard/signup page
+        verify_url = f"{base_url}/onboard"
 
         html = f"""<!DOCTYPE html>
 <html>
@@ -480,7 +287,7 @@ def _send_member_invite_email(email: str, name: str, household_name: str, base_u
     <h1 style="margin:0 0 8px;font-size:20px;font-weight:700;color:#1a1d27;">You've been invited!</h1>
     <p style="margin:0 0 24px;color:#555;font-size:15px;line-height:1.5;">
       Hey {name}! You've been added to <strong>{household_name}</strong> on Huddle.
-      Tap the button below to set up your account and start using the app.
+      Tap the button below to create your account and start using the app.
     </p>
     <table width="100%" cellpadding="0" cellspacing="0">
       <tr><td align="center">
@@ -491,8 +298,8 @@ def _send_member_invite_email(email: str, name: str, household_name: str, base_u
       </td></tr>
     </table>
     <p style="margin:24px 0 0;color:#999;font-size:13px;line-height:1.5;">
-      This link expires in <strong>30 minutes</strong>. You can always request a new one at
-      <a href="{base_url}/onboard" style="color:#4ecdc4;">huddle.rodgersgroup.au</a>.
+      Sign up at <a href="{base_url}/onboard" style="color:#4ecdc4;">huddle.rodgersgroup.au</a>
+      with this email address to get started.
     </p>
   </td></tr>
   <tr><td style="border-top:1px solid #eee;padding:20px 28px;text-align:center;">
@@ -566,55 +373,6 @@ def _notify_superadmin_household_event(event_type: str, household_name: str, use
         logger.info("Superadmin notified: %s %s by %s", event_type, household_name, user_name)
     except Exception as e:
         logger.warning("Failed to send household event email: %s", e)
-
-
-def create_magic_link_token(email: str) -> str:
-    """Create a magic link token for the given email address."""
-    token = secrets.token_urlsafe(32)
-    now = datetime.now().isoformat()
-    expires_at = (datetime.now() + timedelta(seconds=MAGIC_LINK_MAX_AGE)).isoformat()
-
-    with get_db() as conn:
-        conn.execute(
-            "UPDATE magic_links SET used = 1 WHERE email = ? AND used = 0",
-            (email,),
-        )
-        conn.execute(
-            """INSERT INTO magic_links (token, email, created_at, expires_at, used)
-               VALUES (?, ?, ?, ?, 0)""",
-            (token, email, now, expires_at),
-        )
-        conn.commit()
-
-    return token
-
-
-def verify_magic_link_token(token: str):
-    """Verify a magic link token. Returns email or None."""
-    now = datetime.now().isoformat()
-
-    with get_db() as conn:
-        row = conn.execute(
-            """SELECT id, email, expires_at, used
-               FROM magic_links
-               WHERE token = ?""",
-            (token,),
-        ).fetchone()
-
-        if not row:
-            return None
-        if row["used"]:
-            return None
-        if row["expires_at"] < now:
-            return None
-
-        conn.execute(
-            "UPDATE magic_links SET used = 1 WHERE id = ?",
-            (row["id"],),
-        )
-        conn.commit()
-
-        return row["email"]
 
 
 def get_or_create_user(email: str, display_name: str = None) -> int:
@@ -895,60 +653,6 @@ async def signup(request: Request):
     return response
 
 
-@router.post("/api/auth/token")
-async def login_token(request: Request):
-    """Login with email + password. Returns access/refresh tokens (AnyList-style)."""
-    if not BCRYPT_ENABLED:
-        raise HTTPException(status_code=500, detail="Password auth not available")
-
-    client_ip = request.client.host if request.client else "unknown"
-    if rate_limiter.is_limited(client_ip, max_requests=RATE_LIMIT_AUTH, window_seconds=600):
-        return JSONResponse(status_code=429, content={"error": "Too many requests"})
-
-    try:
-        body = await request.json()
-    except json.JSONDecodeError:
-        raise HTTPException(status_code=400, detail="Invalid JSON")
-
-    email = body.get("email", "").strip().lower()
-    password = body.get("password", "")
-    device_id = body.get("device_id")
-    device_name = body.get("device_name") or _parse_user_agent(request.headers.get("User-Agent", ""))
-
-    if not email or not password:
-        raise HTTPException(status_code=400, detail="Email and password are required")
-
-    with get_db() as conn:
-        user = conn.execute(
-            "SELECT id, email, display_name, password_hash FROM users WHERE email = ?",
-            (email,),
-        ).fetchone()
-
-    if not user or not user["password_hash"]:
-        raise HTTPException(status_code=401, detail="Invalid email or password")
-
-    if not verify_password(password, user["password_hash"]):
-        raise HTTPException(status_code=401, detail="Invalid email or password")
-
-    # Find user's household (pick the first one, or 0 if not in any)
-    with get_db() as conn:
-        membership = conn.execute(
-            "SELECT household_id FROM household_members WHERE user_id = ? LIMIT 1",
-            (user["id"],),
-        ).fetchone()
-    household_id = membership["household_id"] if membership else 0
-
-    tokens = create_session_with_tokens(
-        user_id=user["id"],
-        household_id=household_id,
-        device_id=device_id,
-        device_name=device_name,
-        ip_address=client_ip,
-    )
-    tokens["display_name"] = user["display_name"]
-    return JSONResponse(content=tokens)
-
-
 @router.post("/api/auth/login")
 async def login(request: Request):
     """Login with email + password. Sets a session cookie."""
@@ -1016,160 +720,9 @@ async def password_login_compat(request: Request):
     return await login(request)
 
 
-@router.post("/api/auth/token/refresh")
-async def refresh_token(request: Request):
-    """Exchange a refresh token for a new access/refresh token pair (token rotation)."""
-    client_ip = request.client.host if request.client else "unknown"
-    if rate_limiter.is_limited(client_ip, max_requests=RATE_LIMIT_AUTH * 2, window_seconds=600):
-        return JSONResponse(status_code=429, content={"error": "Too many requests"})
-
-    try:
-        body = await request.json()
-    except json.JSONDecodeError:
-        raise HTTPException(status_code=400, detail="Invalid JSON")
-
-    refresh = body.get("refresh_token", "")
-    if not refresh:
-        raise HTTPException(status_code=400, detail="refresh_token is required")
-
-    tokens = refresh_session_tokens(refresh, ip_address=client_ip)
-    return JSONResponse(content=tokens)
-
-
-@router.post("/api/auth/magic-link")
-async def request_magic_link(request: Request):
-    """Send a magic link email to the given address."""
-    try:
-        client_ip = request.client.host if request.client else "unknown"
-        if rate_limiter.is_limited(client_ip, max_requests=RATE_LIMIT_AUTH, window_seconds=600):
-            return JSONResponse(
-                status_code=429,
-                content={"error": "Too many requests. Please wait a few minutes and try again."},
-            )
-
-        try:
-            body = await request.json()
-        except json.JSONDecodeError:
-            raise HTTPException(status_code=400, detail="Invalid JSON in request body")
-        email = body.get("email", "").strip().lower()
-
-        if not email or "@" not in email:
-            raise HTTPException(status_code=400, detail="A valid email address is required")
-
-        token = create_magic_link_token(email)
-
-        base_url = str(request.base_url).rstrip("/")
-        verify_url = f"{base_url}/auth/verify?token={token}"
-
-        from config import RESEND_API_KEY
-        resend_api_key = RESEND_API_KEY or get_setting("resend_api_key", default="")
-        if EMAIL_ENABLED and resend_api_key:
-            resend.api_key = resend_api_key
-            resend.Emails.send({
-                "from": "Huddle <noreply@huddle.rodgersgroup.au>",
-                "to": [email],
-                "subject": "Your Huddle login link",
-                "html": _build_magic_link_email(verify_url),
-            })
-        else:
-            logger.info("MAGIC LINK for %s: %s", email, verify_url)
-
-        return {"ok": True, "message": "If that email is valid, a login link has been sent."}
-    except HTTPException:
-        raise
-    except sqlite3.Error as e:
-        logger.error("Database error in request_magic_link: %s", e, exc_info=True)
-        raise HTTPException(status_code=500, detail="Database error")
-    except Exception as e:
-        logger.critical("Unexpected error in request_magic_link: %s", e, exc_info=True)
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-@router.get("/auth/verify")
-async def verify_magic_link(request: Request, token: str):
-    """Verify a magic link token from the user's email."""
-    try:
-        client_ip = request.client.host if request.client else "unknown"
-        if rate_limiter.is_limited(client_ip, max_requests=RATE_LIMIT_AUTH * 2, window_seconds=600):
-            return JSONResponse(
-                status_code=429,
-                content={"error": "Too many requests. Please wait a few minutes and try again."},
-            )
-
-        email = verify_magic_link_token(token)
-        if not email:
-            redirect_url = request.query_params.get("redirect", "/onboard")
-            if not redirect_url.startswith("/"):
-                redirect_url = "/onboard"
-            return RedirectResponse(url=f"{redirect_url}?error=expired", status_code=302)
-
-        user_id = get_or_create_user(email)
-
-        with get_db() as conn:
-            # Prefer the most recently joined household (latest joined_at)
-            membership = conn.execute(
-                """SELECT hm.household_id, hm.display_name, hm.role
-                   FROM household_members hm
-                   WHERE hm.user_id = ?
-                   ORDER BY hm.joined_at DESC
-                   LIMIT 1""",
-                (user_id,),
-            ).fetchone()
-
-        client_ip = request.client.host if request.client else "unknown"
-        device_name = _parse_user_agent(request.headers.get("User-Agent", ""))
-        household_id = membership["household_id"] if membership else 0
-
-        # Create a sessions table row so magic-link sessions appear in device management
-        tokens = create_session_with_tokens(
-            user_id=user_id,
-            household_id=household_id,
-            device_name=device_name,
-            ip_address=client_ip,
-        )
-
-        # Also set cookie for the legacy cookie auth path
-        session_token = create_session_token(user_id, household_id)
-
-        if membership:
-            redirect_url = request.query_params.get("redirect", "/mobile")
-            if not redirect_url.startswith("/"):
-                redirect_url = "/mobile"
-        else:
-            redirect_url = request.query_params.get("redirect", "/onboard")
-            if not redirect_url.startswith("/"):
-                redirect_url = "/onboard"
-
-        response = RedirectResponse(url=redirect_url, status_code=303)
-        response.set_cookie(
-            key=COOKIE_NAME,
-            value=session_token,
-            max_age=SESSION_MAX_AGE,
-            httponly=True,
-            samesite="lax",
-            secure=COOKIE_SECURE,
-        )
-        return response
-    except HTTPException:
-        raise
-    except sqlite3.Error as e:
-        logger.error("Database error in verify_magic_link: %s", e, exc_info=True)
-        raise HTTPException(status_code=500, detail="Database error")
-    except Exception as e:
-        logger.critical("Unexpected error in verify_magic_link: %s", e, exc_info=True)
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
 @router.post("/api/auth/logout")
 async def logout(request: Request):
-    """Logout: revoke token session (if Bearer auth) and clear cookie."""
-    # Revoke token-based session if present
-    auth_header = request.headers.get("Authorization", "")
-    if auth_header.startswith("Bearer "):
-        data = verify_access_token(auth_header[7:])
-        if data and "session_id" in data:
-            revoke_session(data["session_id"])
-
+    """Logout: clear session cookie."""
     response = Response(
         content=json.dumps({"ok": True, "message": "Logged out"}),
         media_type="application/json",
@@ -1276,14 +829,8 @@ async def change_password(request: Request, tenant: TenantContext = Depends(get_
         )
         conn.commit()
 
-    # Revoke all other sessions (keep current one)
-    auth_header = request.headers.get("Authorization", "")
-    current_session_id = None
-    if auth_header.startswith("Bearer "):
-        data = verify_access_token(auth_header[7:])
-        if data:
-            current_session_id = data.get("session_id")
-    revoke_all_sessions(tenant.user_id, except_session_id=current_session_id)
+    # Revoke all other sessions
+    revoke_all_sessions(tenant.user_id)
 
     logger.info("Password changed for user %s, other sessions revoked", tenant.user_id)
     return {"ok": True, "message": "Password changed. All other sessions have been logged out."}

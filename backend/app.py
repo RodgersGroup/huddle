@@ -362,15 +362,10 @@ def kiosk_display_page(request: Request, token: str = None):
 @app.get("/mobile", response_class=HTMLResponse)
 def mobile_page(request: Request):
     """Mobile PWA page. Redirects to /onboard if not authenticated."""
-    from auth import COOKIE_NAME, verify_session_token, verify_access_token
-    # Check session cookie first (magic-link auth)
+    from auth import COOKIE_NAME, verify_session_token
+    # Check session cookie
     token = request.cookies.get(COOKIE_NAME)
     authenticated = bool(token and verify_session_token(token))
-    # Fall back to Bearer token (password/token auth)
-    if not authenticated:
-        auth_header = request.headers.get("Authorization", "")
-        if auth_header.startswith("Bearer "):
-            authenticated = bool(verify_access_token(auth_header[7:]))
     if not authenticated:
         url = "/onboard?reason=session_expired" if token else "/onboard"
         return RedirectResponse(url=url, status_code=302)

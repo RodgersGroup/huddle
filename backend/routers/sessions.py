@@ -9,7 +9,7 @@ import logging
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
-from auth import get_current_user, TenantContext, revoke_session, revoke_all_sessions, verify_access_token
+from auth import get_current_user, TenantContext, revoke_session, revoke_all_sessions
 from db import get_db
 
 logger = logging.getLogger("huddle")
@@ -17,12 +17,7 @@ router = APIRouter()
 
 
 def _get_current_session_id(request: Request) -> str | None:
-    """Extract the session_id from the current Bearer access token."""
-    auth_header = request.headers.get("Authorization", "")
-    if auth_header.startswith("Bearer "):
-        data = verify_access_token(auth_header[7:])
-        if data:
-            return data.get("session_id")
+    """Extract the session_id from the current request. Returns None (cookie auth has no session_id)."""
     return None
 
 
