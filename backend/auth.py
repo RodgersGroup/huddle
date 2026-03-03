@@ -659,7 +659,13 @@ def _set_sentry_context(tenant: "TenantContext"):
 
 
 async def get_current_user(request: Request) -> TenantContext:
-    """FastAPI dependency that extracts and validates the session."""
+    """FastAPI dependency that extracts and validates the session.
+
+    Auth methods (checked in order):
+      1. Session cookie (huddle_session) — primary auth for all users
+      2. Bearer token — kiosk tokens only
+      3. Query param ?token= — legacy kiosk token path
+    """
     # Check session cookie
     token = request.cookies.get(COOKIE_NAME)
     if token:
@@ -718,54 +724,13 @@ async def get_current_user(request: Request) -> TenantContext:
                             _set_sentry_context(tenant)
                             return tenant
 
-    # Check Bearer token — could be an access token (AnyList-style) or a kiosk token
+    # Check Bearer token — kiosk tokens only
     auth_header = request.headers.get("Authorization", "")
     bearer_token = None
     if auth_header.startswith("Bearer "):
         bearer_token = auth_header[7:]
 
     if bearer_token:
-        # Try as access token first
-        data = verify_access_token(bearer_token)
-        if data:
-            with get_db() as conn:
-                # Update last_used_at (throttled: only if >5 min stale)
-                session_id = data.get("session_id")
-                if session_id:
-                    _touch_session(conn, session_id)
-
-                if data["household_id"] == 0:
-                    user = conn.execute(
-                        "SELECT id, display_name FROM users WHERE id = ?",
-                        (data["user_id"],),
-                    ).fetchone()
-                    if user:
-                        tenant = TenantContext(
-                            user_id=user["id"],
-                            household_id=0,
-                            display_name=user["display_name"] or "New User",
-                            role="pending",
-                        )
-                        _set_sentry_context(tenant)
-                        return tenant
-                else:
-                    member = conn.execute(
-                        """SELECT hm.display_name, hm.role, hm.household_id, hm.user_id
-                           FROM household_members hm
-                           WHERE hm.user_id = ? AND hm.household_id = ?""",
-                        (data["user_id"], data["household_id"]),
-                    ).fetchone()
-                    if member:
-                        tenant = TenantContext(
-                            user_id=member["user_id"],
-                            household_id=member["household_id"],
-                            display_name=member["display_name"],
-                            role=member["role"],
-                        )
-                        _set_sentry_context(tenant)
-                        return tenant
-
-        # Try as kiosk token
         with get_db() as conn:
             kt = conn.execute(
                 "SELECT * FROM kiosk_tokens WHERE token = ?", (bearer_token,)
