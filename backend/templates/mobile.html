@@ -15032,19 +15032,24 @@
 
         // Register service worker for PWA
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js?v=15').then(reg => {
-                console.log('Service worker v13 registered');
-                setInterval(() => reg.update(), 60 * 60 * 1000);
-                if (currentUser) {
-                    reg.addEventListener('updatefound', () => {
-                        const newWorker = reg.installing;
-                        newWorker.addEventListener('statechange', () => {
-                            if (newWorker.state === 'activated') {
-                                setupPushNotifications(currentUser);
-                            }
-                        });
+            navigator.serviceWorker.register('/sw.js?v=16').then(reg => {
+                console.log('Service worker v16 registered');
+                // Check for SW updates every 15 minutes
+                setInterval(() => reg.update(), 15 * 60 * 1000);
+                // Also check when app comes back to foreground
+                document.addEventListener('visibilitychange', () => {
+                    if (document.visibilityState === 'visible') reg.update();
+                });
+                reg.addEventListener('updatefound', () => {
+                    const newWorker = reg.installing;
+                    newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'activated') {
+                            if (currentUser) setupPushNotifications(currentUser);
+                            // Auto-reload to pick up new code
+                            window.location.reload();
+                        }
                     });
-                }
+                });
             }).catch(err => console.error('SW registration failed:', err));
 
             // Listen for messages from service worker

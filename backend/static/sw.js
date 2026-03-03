@@ -1,6 +1,6 @@
-// Service Worker for Huddle PWA - v15
-const STATIC_CACHE = 'huddle-static-v15';
-const API_CACHE = 'huddle-api-v15';
+// Service Worker for Huddle PWA - v16
+const STATIC_CACHE = 'huddle-static-v16';
+const API_CACHE = 'huddle-api-v16';
 
 // Assets to precache on install
 const PRECACHE_URLS = [
@@ -12,14 +12,18 @@ const PRECACHE_URLS = [
     '/manifest.json'
 ];
 
-// API paths to cache with stale-while-revalidate
+// API paths to cache with stale-while-revalidate (rarely mutated data only)
 const CACHEABLE_API_PATHS = [
-    '/api/chores',
-    '/api/adhoc',
-    '/api/meals',
     '/api/fuel',
     '/api/weather',
     '/api/quote'
+];
+
+// API paths to cache with network-first (frequently mutated data)
+const NETWORK_FIRST_API_PATHS = [
+    '/api/chores',
+    '/api/adhoc',
+    '/api/meals'
 ];
 
 // Install: precache static assets
@@ -50,9 +54,15 @@ self.addEventListener('fetch', (event) => {
 
     const url = new URL(event.request.url);
 
-    // Cacheable API requests: stale-while-revalidate
+    // Cacheable API requests: stale-while-revalidate (stable data)
     if (url.pathname.startsWith('/api/') && CACHEABLE_API_PATHS.some(p => url.pathname.startsWith(p))) {
         event.respondWith(staleWhileRevalidate(event.request, API_CACHE));
+        return;
+    }
+
+    // Frequently mutated API requests: network-first with offline fallback
+    if (url.pathname.startsWith('/api/') && NETWORK_FIRST_API_PATHS.some(p => url.pathname.startsWith(p))) {
+        event.respondWith(networkFirst(event.request, API_CACHE));
         return;
     }
 
