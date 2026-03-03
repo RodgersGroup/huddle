@@ -829,7 +829,11 @@ router = APIRouter()
 
 @router.post("/api/auth/signup")
 async def signup(request: Request):
-    """Create a new account with email + password. Returns access/refresh tokens."""
+    """Create account with email + password + household_code. Sets a session cookie.
+
+    If the email already exists but has no password (invited user), sets the
+    password on the existing account instead of creating a new one.
+    """
     if not BCRYPT_ENABLED:
         raise HTTPException(status_code=500, detail="Password auth not available (bcrypt not installed)")
 
@@ -845,8 +849,8 @@ async def signup(request: Request):
     email = body.get("email", "").strip().lower()
     password = body.get("password", "")
     display_name = body.get("display_name", "").strip()
-    device_id = body.get("device_id")
-    device_name = body.get("device_name") or _parse_user_agent(request.headers.get("User-Agent", ""))
+    household_code = body.get("household_code", "").strip().upper()
+    color = body.get("color", "#4ecdc4").strip()
 
     if not email or "@" not in email:
         raise HTTPException(status_code=400, detail="Valid email is required")
@@ -854,31 +858,76 @@ async def signup(request: Request):
         raise HTTPException(status_code=400, detail=f"Password must be at least {MIN_PASSWORD_LENGTH} characters")
     if not display_name:
         display_name = email.split("@")[0]
+    if not household_code:
+        raise HTTPException(status_code=400, detail="Household code is required")
 
     with get_db() as conn:
-        existing = conn.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone()
-        if existing:
-            raise HTTPException(status_code=409, detail="An account with this email already exists")
+        # Validate household code
+        household = conn.execute(
+            "SELECT id, name FROM households WHERE invite_code = ?",
+            (household_code,),
+        ).fetchone()
+        if not household:
+            raise HTTPException(status_code=404, detail="Invalid household code")
 
-        pw_hash = hash_password(password)
+        household_id = household["id"]
         now = datetime.now().isoformat()
-        conn.execute(
-            "INSERT INTO users (email, display_name, password_hash, created_at) VALUES (?, ?, ?, ?)",
-            (email, display_name, pw_hash, now),
-        )
-        conn.commit()
-        user = conn.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone()
+        pw_hash = hash_password(password)
 
-    # New user — household_id=0 means not yet in a household
-    tokens = create_session_with_tokens(
-        user_id=user["id"],
-        household_id=0,
-        device_id=device_id,
-        device_name=device_name,
-        ip_address=client_ip,
+        existing = conn.execute(
+            "SELECT id, password_hash FROM users WHERE email = ?", (email,)
+        ).fetchone()
+
+        if existing and existing["password_hash"]:
+            raise HTTPException(status_code=409, detail="An account with this email already exists. Please log in instead.")
+
+        if existing and not existing["password_hash"]:
+            # Invited user (email exists but no password) — set their password
+            user_id = existing["id"]
+            conn.execute(
+                "UPDATE users SET password_hash = ?, display_name = ?, last_login_at = ? WHERE id = ?",
+                (pw_hash, display_name, now, user_id),
+            )
+        else:
+            # Brand new user
+            cursor = conn.execute(
+                "INSERT INTO users (email, display_name, password_hash, created_at, last_login_at) VALUES (?, ?, ?, ?, ?)",
+                (email, display_name, pw_hash, now, now),
+            )
+            user_id = cursor.lastrowid
+
+        # Check if already a member of this household
+        already_member = conn.execute(
+            "SELECT id FROM household_members WHERE user_id = ? AND household_id = ?",
+            (user_id, household_id),
+        ).fetchone()
+
+        if not already_member:
+            # Add as pending member
+            conn.execute(
+                """INSERT INTO household_members
+                   (household_id, user_id, display_name, role, color, joined_at)
+                   VALUES (?, ?, ?, 'pending', ?, ?)""",
+                (household_id, user_id, display_name, color, now),
+            )
+
+        conn.commit()
+
+    session_token = create_session_token(user_id, household_id)
+    response = JSONResponse(content={
+        "ok": True,
+        "redirect": "/mobile",
+        "household": {"id": household_id, "name": household["name"]},
+    })
+    response.set_cookie(
+        key=COOKIE_NAME,
+        value=session_token,
+        max_age=SESSION_MAX_AGE,
+        httponly=True,
+        samesite="lax",
+        secure=COOKIE_SECURE,
     )
-    tokens["display_name"] = display_name
-    return JSONResponse(content=tokens)
+    return response
 
 
 @router.post("/api/auth/token")
