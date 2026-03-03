@@ -680,8 +680,15 @@ async def login(request: Request):
             (email,),
         ).fetchone()
 
-    if not user or not user["password_hash"]:
+    if not user:
         raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    if not user["password_hash"]:
+        # User exists but never set a password (legacy magic-link account)
+        return JSONResponse(status_code=422, content={
+            "detail": "no_password",
+            "message": "This account doesn't have a password yet. Use 'Reset password' to set one.",
+        })
 
     if not verify_password(password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Invalid email or password")
@@ -834,6 +841,144 @@ async def change_password(request: Request, tenant: TenantContext = Depends(get_
 
     logger.info("Password changed for user %s, other sessions revoked", tenant.user_id)
     return {"ok": True, "message": "Password changed. All other sessions have been logged out."}
+
+
+@router.post("/api/auth/password/reset-request")
+async def request_password_reset(request: Request):
+    """Send a password reset email with a time-limited token."""
+    client_ip = request.client.host if request.client else "unknown"
+    if rate_limiter.is_limited(client_ip, max_requests=3, window_seconds=600):
+        return JSONResponse(status_code=429, content={"error": "Too many requests. Please wait a few minutes."})
+
+    try:
+        body = await request.json()
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid JSON")
+
+    email = body.get("email", "").strip().lower()
+    if not email or "@" not in email:
+        raise HTTPException(status_code=400, detail="Valid email is required")
+
+    # Always return success to avoid email enumeration
+    success_msg = {"ok": True, "message": "If that email is registered, you'll receive a reset link shortly."}
+
+    with get_db() as conn:
+        user = conn.execute("SELECT id, display_name FROM users WHERE email = ?", (email,)).fetchone()
+
+    if not user:
+        logger.info("Password reset requested for unknown email: %s", email)
+        return JSONResponse(content=success_msg)
+
+    # Generate a signed token valid for 30 minutes
+    if not SERIALIZER:
+        raise HTTPException(status_code=500, detail="Auth not available")
+    token = SERIALIZER.dumps({"user_id": user["id"], "purpose": "password_reset"})
+
+    reset_url = f"https://huddle.rodgersgroup.au/onboard?reset_token={token}"
+
+    try:
+        import resend
+        from config import RESEND_API_KEY
+
+        if not RESEND_API_KEY:
+            logger.warning("Password reset requested but no RESEND_API_KEY configured")
+            return JSONResponse(content=success_msg)
+
+        resend.api_key = RESEND_API_KEY
+        resend.Emails.send({
+            "from": "Huddle <noreply@huddle.rodgersgroup.au>",
+            "to": [email],
+            "subject": "Reset your Huddle password",
+            "html": (
+                '<div style="font-family:-apple-system,sans-serif;max-width:440px;margin:0 auto;padding:20px;">'
+                '<div style="background:#1a1d27;padding:20px;border-radius:12px 12px 0 0;text-align:center;">'
+                '<span style="font-size:24px;font-weight:800;color:#fff;"><span style="color:#4ecdc4;">H</span>uddle</span></div>'
+                '<div style="background:#fff;padding:24px;border:1px solid #eee;border-radius:0 0 12px 12px;">'
+                f'<h2 style="margin:0 0 12px;font-size:18px;color:#1a1d27;">Reset your password</h2>'
+                f'<p style="color:#555;line-height:1.5;">Hi {user["display_name"] or "there"},</p>'
+                f'<p style="color:#555;line-height:1.5;">Tap the button below to set a new password. This link expires in 30 minutes.</p>'
+                f'<p style="margin:24px 0;text-align:center;"><a href="{reset_url}" '
+                f'style="background:#4ecdc4;color:#1a1d27;padding:12px 32px;border-radius:8px;'
+                f'text-decoration:none;font-weight:700;font-size:15px;display:inline-block;">Set New Password</a></p>'
+                f'<p style="color:#999;font-size:12px;">If you didn\'t request this, you can safely ignore this email.</p>'
+                '</div></div>'
+            ),
+        })
+        logger.info("Password reset email sent to user %s", user["id"])
+    except Exception as e:
+        logger.error("Failed to send password reset email: %s", e)
+
+    return JSONResponse(content=success_msg)
+
+
+@router.post("/api/auth/password/reset")
+async def reset_password(request: Request):
+    """Set a new password using a reset token from email."""
+    if not BCRYPT_ENABLED:
+        raise HTTPException(status_code=500, detail="Password auth not available")
+
+    try:
+        body = await request.json()
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid JSON")
+
+    token = body.get("token", "")
+    password = body.get("password", "")
+
+    if not token:
+        raise HTTPException(status_code=400, detail="Reset token is required")
+    if not password or len(password) < MIN_PASSWORD_LENGTH:
+        raise HTTPException(status_code=400, detail=f"Password must be at least {MIN_PASSWORD_LENGTH} characters")
+
+    # Verify token (30 minute expiry)
+    if not SERIALIZER:
+        raise HTTPException(status_code=500, detail="Auth not available")
+    try:
+        from itsdangerous import BadSignature, SignatureExpired
+        data = SERIALIZER.loads(token, max_age=1800)
+    except SignatureExpired:
+        raise HTTPException(status_code=410, detail="Reset link has expired. Please request a new one.")
+    except BadSignature:
+        raise HTTPException(status_code=400, detail="Invalid reset link.")
+
+    if data.get("purpose") != "password_reset" or "user_id" not in data:
+        raise HTTPException(status_code=400, detail="Invalid reset link.")
+
+    user_id = data["user_id"]
+    new_hash = hash_password(password)
+
+    with get_db() as conn:
+        user = conn.execute("SELECT id FROM users WHERE id = ?", (user_id,)).fetchone()
+        if not user:
+            raise HTTPException(status_code=404, detail="Account not found")
+
+        conn.execute("UPDATE users SET password_hash = ? WHERE id = ?", (new_hash, user_id))
+        conn.commit()
+
+    # Revoke all existing sessions so user starts fresh
+    revoke_all_sessions(user_id)
+
+    # Log them in with a new session
+    with get_db() as conn:
+        membership = conn.execute(
+            "SELECT household_id FROM household_members WHERE user_id = ? LIMIT 1",
+            (user_id,),
+        ).fetchone()
+    household_id = membership["household_id"] if membership else 0
+    session_token = create_session_token(user_id, household_id)
+    redirect_url = "/mobile" if membership else "/onboard"
+
+    response = JSONResponse(content={"ok": True, "redirect": redirect_url})
+    response.set_cookie(
+        key=COOKIE_NAME,
+        value=session_token,
+        max_age=SESSION_MAX_AGE,
+        httponly=True,
+        samesite="lax",
+        secure=COOKIE_SECURE,
+    )
+    logger.info("Password reset completed for user %s", user_id)
+    return response
 
 
 @router.get("/api/auth/me")

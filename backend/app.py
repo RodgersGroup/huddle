@@ -77,7 +77,7 @@ async def request_id_middleware(request: Request, call_next):
 from page_views import record_page_view, flush_page_views
 
 # CSRF protection: paths exempt from X-Requested-With header check
-_CSRF_EXEMPT_PATHS = {"/ws", "/api/billing/webhook", "/api/auth/signup", "/api/auth/login", "/api/auth/password-login", "/api/sync/push"}
+_CSRF_EXEMPT_PATHS = {"/ws", "/api/billing/webhook", "/api/auth/signup", "/api/auth/login", "/api/auth/password-login", "/api/auth/password/reset-request", "/api/auth/password/reset", "/api/sync/push"}
 _CSRF_METHODS = {"POST", "PUT", "DELETE", "PATCH"}
 
 

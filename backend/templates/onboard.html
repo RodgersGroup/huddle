@@ -101,6 +101,26 @@
         .form-group {
             margin-bottom: 16px;
         }
+        .password-wrapper {
+            position: relative;
+        }
+        .password-wrapper .form-input {
+            padding-right: 48px;
+        }
+        .password-toggle {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #888;
+            cursor: pointer;
+            padding: 4px;
+            font-size: 18px;
+            line-height: 1;
+        }
+        .password-toggle:hover { color: #ccc; }
 
         /* Primary button */
         .btn-primary {
@@ -643,7 +663,10 @@
             <input type="email" class="form-input" id="loginEmail" placeholder="Email address" autocomplete="email" inputmode="email" autofocus>
         </div>
         <div class="form-group">
-            <input type="password" class="form-input" id="loginPassword" placeholder="Password" autocomplete="current-password">
+            <div class="password-wrapper">
+                <input type="password" class="form-input" id="loginPassword" placeholder="Password" autocomplete="current-password">
+                <button type="button" class="password-toggle" onclick="togglePasswordVisibility('loginPassword', this)" aria-label="Show password">&#x1F441;</button>
+            </div>
         </div>
         <div id="loginError" class="msg msg-error" style="display:none;"></div>
 
@@ -651,7 +674,11 @@
             Log In
         </button>
 
-        <div style="text-align:center;margin-top:16px;">
+        <div style="text-align:center;margin-top:12px;">
+            <span style="color:#4ecdc4;font-size:13px;cursor:pointer;font-weight:600;" onclick="showResetRequest()">Forgot password?</span>
+        </div>
+
+        <div style="text-align:center;margin-top:12px;">
             <span style="color:#4ecdc4;font-size:13px;cursor:pointer;font-weight:600;" onclick="showStep('stepSignup')">Don't have an account? Sign up</span>
         </div>
 
@@ -683,10 +710,16 @@
             <input type="text" class="form-input" id="signupName" placeholder="Display name" autocomplete="name">
         </div>
         <div class="form-group">
-            <input type="password" class="form-input" id="signupPassword" placeholder="Password (8+ characters)" autocomplete="new-password">
+            <div class="password-wrapper">
+                <input type="password" class="form-input" id="signupPassword" placeholder="Password (8+ characters)" autocomplete="new-password">
+                <button type="button" class="password-toggle" onclick="togglePasswordVisibility('signupPassword', this)" aria-label="Show password">&#x1F441;</button>
+            </div>
         </div>
         <div class="form-group">
-            <input type="password" class="form-input" id="signupPasswordConfirm" placeholder="Confirm password" autocomplete="new-password">
+            <div class="password-wrapper">
+                <input type="password" class="form-input" id="signupPasswordConfirm" placeholder="Confirm password" autocomplete="new-password">
+                <button type="button" class="password-toggle" onclick="togglePasswordVisibility('signupPasswordConfirm', this)" aria-label="Show password">&#x1F441;</button>
+            </div>
         </div>
         <div class="form-group">
             <input type="text" class="form-input" id="signupHouseholdCode" placeholder="Household code (e.g. ABC123)" autocomplete="off" style="text-transform:uppercase;letter-spacing:2px;text-align:center;font-size:18px;">
@@ -717,15 +750,79 @@
         </div>
 
         <div class="form-group">
-            <input type="password" class="form-input" id="setNewPassword" placeholder="New password (8+ characters)" autocomplete="new-password">
+            <div class="password-wrapper">
+                <input type="password" class="form-input" id="setNewPassword" placeholder="New password (8+ characters)" autocomplete="new-password">
+                <button type="button" class="password-toggle" onclick="togglePasswordVisibility('setNewPassword', this)" aria-label="Show password">&#x1F441;</button>
+            </div>
         </div>
         <div class="form-group">
-            <input type="password" class="form-input" id="setNewPasswordConfirm" placeholder="Confirm password" autocomplete="new-password">
+            <div class="password-wrapper">
+                <input type="password" class="form-input" id="setNewPasswordConfirm" placeholder="Confirm password" autocomplete="new-password">
+                <button type="button" class="password-toggle" onclick="togglePasswordVisibility('setNewPasswordConfirm', this)" aria-label="Show password">&#x1F441;</button>
+            </div>
         </div>
         <div id="setPasswordError" class="msg msg-error" style="display:none;"></div>
 
         <button class="btn-primary" id="setPasswordBtn" onclick="doSetPassword()">
             Set Password &amp; Continue
+        </button>
+    </div>
+
+    <!-- Step: Request Password Reset (enter email) -->
+    <div class="step" id="stepResetRequest">
+        <div class="logo-block">
+            <div class="logo-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                    <path d="M7 11V7a5 5 0 0110 0v4"/>
+                </svg>
+            </div>
+            <div class="welcome-heading">Reset Password</div>
+            <div class="welcome-sub">Enter your email and we'll send you a link to set a new password.</div>
+        </div>
+
+        <div class="form-group">
+            <input type="email" class="form-input" id="resetEmail" placeholder="Email address" autocomplete="email" inputmode="email">
+        </div>
+        <div id="resetRequestError" class="msg msg-error" style="display:none;"></div>
+        <div id="resetRequestSuccess" class="msg msg-success" style="display:none;"></div>
+
+        <button class="btn-primary" id="resetRequestBtn" onclick="doResetRequest()">
+            Send Reset Link
+        </button>
+
+        <button class="back-link" onclick="showStep('stepLogin')" style="margin-top:16px;">Back to log in</button>
+    </div>
+
+    <!-- Step: Set New Password (from email reset link) -->
+    <div class="step" id="stepResetPassword">
+        <div class="logo-block">
+            <div class="logo-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                    <path d="M7 11V7a5 5 0 0110 0v4"/>
+                </svg>
+            </div>
+            <div class="welcome-heading">Set New Password</div>
+            <div class="welcome-sub">Choose a password for your account.</div>
+        </div>
+
+        <div class="form-group">
+            <div class="password-wrapper">
+                <input type="password" class="form-input" id="resetNewPassword" placeholder="New password (8+ characters)" autocomplete="new-password">
+                <button type="button" class="password-toggle" onclick="togglePasswordVisibility('resetNewPassword', this)" aria-label="Show password">&#x1F441;</button>
+            </div>
+        </div>
+        <div class="form-group">
+            <div class="password-wrapper">
+                <input type="password" class="form-input" id="resetNewPasswordConfirm" placeholder="Confirm password" autocomplete="new-password">
+                <button type="button" class="password-toggle" onclick="togglePasswordVisibility('resetNewPasswordConfirm', this)" aria-label="Show password">&#x1F441;</button>
+            </div>
+        </div>
+        <div id="resetPasswordError" class="msg msg-error" style="display:none;"></div>
+
+        <button class="btn-primary" id="resetPasswordBtn" onclick="doResetPassword()">
+            Set Password &amp; Log In
         </button>
     </div>
 
@@ -1365,6 +1462,10 @@
 
             if (resp.ok && data.redirect) {
                 window.location = data.redirect;
+            } else if (resp.status === 422 && data.detail === 'no_password') {
+                // User exists but has no password (legacy magic-link account)
+                errorEl.innerHTML = 'This account doesn\'t have a password yet. <span style="color:#4ecdc4;cursor:pointer;font-weight:600;" onclick="showResetRequest(\'' + email.replace(/'/g, "\\'") + '\')">Set one now</span>';
+                errorEl.style.display = 'block';
             } else if (resp.status === 401) {
                 errorEl.textContent = 'Invalid email or password.';
                 errorEl.style.display = 'block';
@@ -1381,6 +1482,124 @@
         } finally {
             btn.disabled = false;
             btn.textContent = 'Log In';
+        }
+    }
+
+    // Toggle password field visibility
+    function togglePasswordVisibility(inputId, btn) {
+        var input = document.getElementById(inputId);
+        if (input.type === 'password') {
+            input.type = 'text';
+            btn.textContent = '\u25C9'; // filled circle = "hiding"
+        } else {
+            input.type = 'password';
+            btn.textContent = '\uD83D\uDC41'; // eye = "show"
+        }
+    }
+
+    // Show reset request step, optionally pre-fill email
+    function showResetRequest(email) {
+        showStep('stepResetRequest');
+        if (email) {
+            document.getElementById('resetEmail').value = email;
+        } else {
+            // Copy email from login form if available
+            var loginEmail = document.getElementById('loginEmail').value.trim();
+            if (loginEmail) document.getElementById('resetEmail').value = loginEmail;
+        }
+    }
+
+    // Request password reset email
+    async function doResetRequest() {
+        var email = document.getElementById('resetEmail').value.trim().toLowerCase();
+        var errorEl = document.getElementById('resetRequestError');
+        var successEl = document.getElementById('resetRequestSuccess');
+        errorEl.style.display = 'none';
+        successEl.style.display = 'none';
+
+        if (!email || !email.includes('@')) {
+            errorEl.textContent = 'Please enter a valid email address.';
+            errorEl.style.display = 'block';
+            return;
+        }
+
+        var btn = document.getElementById('resetRequestBtn');
+        btn.disabled = true;
+        btn.textContent = 'Sending...';
+
+        try {
+            var resp = await fetch('/api/auth/password/reset-request', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({email: email})
+            });
+            var data = await resp.json();
+
+            if (resp.ok) {
+                successEl.textContent = 'Check your email for a reset link. It may take a minute to arrive.';
+                successEl.style.display = 'block';
+            } else if (resp.status === 429) {
+                errorEl.textContent = 'Too many requests. Please wait a few minutes.';
+                errorEl.style.display = 'block';
+            } else {
+                errorEl.textContent = data.detail || 'Something went wrong.';
+                errorEl.style.display = 'block';
+            }
+        } catch (e) {
+            errorEl.textContent = 'Network error. Please try again.';
+            errorEl.style.display = 'block';
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Send Reset Link';
+        }
+    }
+
+    // Set new password using reset token
+    var resetToken = null;
+    async function doResetPassword() {
+        var password = document.getElementById('resetNewPassword').value;
+        var confirm = document.getElementById('resetNewPasswordConfirm').value;
+        var errorEl = document.getElementById('resetPasswordError');
+        errorEl.style.display = 'none';
+
+        if (!password || password.length < 8) {
+            errorEl.textContent = 'Password must be at least 8 characters.';
+            errorEl.style.display = 'block';
+            return;
+        }
+        if (password !== confirm) {
+            errorEl.textContent = 'Passwords don\'t match.';
+            errorEl.style.display = 'block';
+            return;
+        }
+
+        var btn = document.getElementById('resetPasswordBtn');
+        btn.disabled = true;
+        btn.textContent = 'Setting password...';
+
+        try {
+            var resp = await fetch('/api/auth/password/reset', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({token: resetToken, password: password})
+            });
+            var data = await resp.json();
+
+            if (resp.ok && data.redirect) {
+                window.location = data.redirect;
+            } else if (resp.status === 410) {
+                errorEl.textContent = 'This reset link has expired. Please request a new one.';
+                errorEl.style.display = 'block';
+            } else {
+                errorEl.textContent = data.detail || 'Something went wrong.';
+                errorEl.style.display = 'block';
+            }
+        } catch (e) {
+            errorEl.textContent = 'Network error. Please try again.';
+            errorEl.style.display = 'block';
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Set Password & Log In';
         }
     }
 
@@ -2098,6 +2317,13 @@
     // Force password setup for migrated users
     if (reasonParam === 'password_required') {
         showStep('stepSetPassword');
+    }
+
+    // Handle password reset token from email link
+    var resetTokenParam = params.get('reset_token');
+    if (resetTokenParam) {
+        resetToken = resetTokenParam;
+        showStep('stepResetPassword');
     }
 
     // Show expired link message and auto-focus email input
