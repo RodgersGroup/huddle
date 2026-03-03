@@ -549,11 +549,11 @@ def get_module_summaries(tenant: TenantContext = Depends(get_current_user)):
             # --- Ad-hoc Tasks ---
             try:
                 pending = conn.execute(
-                    "SELECT COUNT(*) as c FROM adhoc_tasks WHERE household_id = ? AND completed = 0",
+                    "SELECT COUNT(*) as c FROM adhoc_tasks WHERE household_id = ? AND completed = 0 AND deleted_at IS NULL",
                     (household_id,)
                 ).fetchone()['c']
                 my_tasks = conn.execute(
-                    "SELECT COUNT(*) as c FROM adhoc_tasks WHERE household_id = ? AND completed = 0 AND assigned_to = ?",
+                    "SELECT COUNT(*) as c FROM adhoc_tasks WHERE household_id = ? AND completed = 0 AND deleted_at IS NULL AND assigned_to = ?",
                     (household_id, my_name)
                 ).fetchone()['c']
                 summary = f"{pending} pending" if pending else "No tasks"
@@ -1124,11 +1124,11 @@ def home_summary(tenant: TenantContext = Depends(get_current_user)):
             # --- Ad-hoc Tasks ---
             try:
                 pending = conn.execute(
-                    "SELECT COUNT(*) as c FROM adhoc_tasks WHERE household_id = ? AND completed = 0",
+                    "SELECT COUNT(*) as c FROM adhoc_tasks WHERE household_id = ? AND completed = 0 AND deleted_at IS NULL",
                     (household_id,)
                 ).fetchone()['c']
                 my_tasks = conn.execute(
-                    "SELECT COUNT(*) as c FROM adhoc_tasks WHERE household_id = ? AND completed = 0 AND assigned_to = ?",
+                    "SELECT COUNT(*) as c FROM adhoc_tasks WHERE household_id = ? AND completed = 0 AND deleted_at IS NULL AND assigned_to = ?",
                     (household_id, my_name)
                 ).fetchone()['c']
                 text = f"{pending} pending" if pending else "All clear"
