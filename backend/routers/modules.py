@@ -566,7 +566,7 @@ def get_module_summaries(tenant: TenantContext = Depends(get_current_user)):
             # --- Calendar ---
             try:
                 cal_count = conn.execute(
-                    "SELECT COUNT(*) as c FROM calendar_events WHERE household_id = ? AND start_date = ?",
+                    "SELECT COUNT(*) as c FROM calendar_events WHERE household_id = ? AND deleted_at IS NULL AND start_date = ?",
                     (household_id, today_iso)
                 ).fetchone()['c']
                 summary = f"{cal_count} event{'s' if cal_count != 1 else ''} today" if cal_count else "No events today"
@@ -578,7 +578,7 @@ def get_module_summaries(tenant: TenantContext = Depends(get_current_user)):
             # --- Meals ---
             try:
                 dinners = conn.execute(
-                    "SELECT meal_name FROM meals WHERE household_id = ? AND day_of_week = ? AND meal_type = 'dinner'",
+                    "SELECT meal_name FROM meals WHERE household_id = ? AND deleted_at IS NULL AND day_of_week = ? AND meal_type = 'dinner'",
                     (household_id, today_dow)
                 ).fetchall()
                 if dinners:
@@ -610,11 +610,11 @@ def get_module_summaries(tenant: TenantContext = Depends(get_current_user)):
             try:
                 week_end = (today + timedelta(days=7)).isoformat()
                 overdue_bills = conn.execute(
-                    "SELECT COUNT(*) as c FROM bills WHERE household_id = ? AND paid = 0 AND due_date < ?",
+                    "SELECT COUNT(*) as c FROM bills WHERE household_id = ? AND deleted_at IS NULL AND paid = 0 AND due_date < ?",
                     (household_id, today_iso)
                 ).fetchone()['c']
                 due_soon = conn.execute(
-                    "SELECT SUM(COALESCE(amount, 0)) as total FROM bills WHERE household_id = ? AND paid = 0 AND due_date <= ?",
+                    "SELECT SUM(COALESCE(amount, 0)) as total FROM bills WHERE household_id = ? AND deleted_at IS NULL AND paid = 0 AND due_date <= ?",
                     (household_id, week_end)
                 ).fetchone()['total'] or 0
                 if overdue_bills:
@@ -634,7 +634,7 @@ def get_module_summaries(tenant: TenantContext = Depends(get_current_user)):
             # --- Shopping ---
             try:
                 to_buy = conn.execute(
-                    "SELECT COUNT(*) as c FROM shopping_items WHERE household_id = ? AND purchased = 0",
+                    "SELECT COUNT(*) as c FROM shopping_items WHERE household_id = ? AND deleted_at IS NULL AND purchased = 0",
                     (household_id,)
                 ).fetchone()['c']
                 summary = f"{to_buy} item{'s' if to_buy != 1 else ''} to buy" if to_buy else "List empty"
@@ -646,7 +646,7 @@ def get_module_summaries(tenant: TenantContext = Depends(get_current_user)):
             # --- Inventory ---
             try:
                 low = conn.execute(
-                    "SELECT COUNT(*) as c FROM inventory_items WHERE household_id = ? AND quantity <= low_threshold",
+                    "SELECT COUNT(*) as c FROM inventory_items WHERE household_id = ? AND deleted_at IS NULL AND quantity <= low_threshold",
                     (household_id,)
                 ).fetchone()['c']
                 summary = f"{low} item{'s' if low != 1 else ''} low" if low else "Stock OK"
@@ -659,7 +659,7 @@ def get_module_summaries(tenant: TenantContext = Depends(get_current_user)):
             # --- Polls ---
             try:
                 active = conn.execute(
-                    "SELECT COUNT(*) as c FROM polls WHERE household_id = ? AND status = 'active'",
+                    "SELECT COUNT(*) as c FROM polls WHERE household_id = ? AND deleted_at IS NULL AND status = 'active'",
                     (household_id,)
                 ).fetchone()['c']
                 summary = f"{active} active poll{'s' if active != 1 else ''}" if active else "No active polls"
@@ -745,7 +745,7 @@ def get_module_summaries(tenant: TenantContext = Depends(get_current_user)):
                     (household_id,)
                 ).fetchone()["c"]
                 active_goals = conn.execute(
-                    "SELECT COUNT(*) as c FROM savings_goals WHERE household_id = ? AND completed = 0",
+                    "SELECT COUNT(*) as c FROM savings_goals WHERE household_id = ? AND deleted_at IS NULL AND completed = 0",
                     (household_id,)
                 ).fetchone()["c"]
                 if active_goals:
@@ -762,7 +762,7 @@ def get_module_summaries(tenant: TenantContext = Depends(get_current_user)):
             # --- Pets ---
             try:
                 pet_count = conn.execute(
-                    "SELECT COUNT(*) as c FROM pets WHERE household_id = ?",
+                    "SELECT COUNT(*) as c FROM pets WHERE household_id = ? AND deleted_at IS NULL",
                     (household_id,)
                 ).fetchone()["c"]
                 if pet_count:
@@ -787,7 +787,7 @@ def get_module_summaries(tenant: TenantContext = Depends(get_current_user)):
             try:
                 now_iso = datetime.now().isoformat()
                 active_posts = conn.execute(
-                    "SELECT COUNT(*) as c FROM noticeboard_posts WHERE household_id = ? AND (expires_at IS NULL OR expires_at > ?)",
+                    "SELECT COUNT(*) as c FROM noticeboard_posts WHERE household_id = ? AND deleted_at IS NULL AND (expires_at IS NULL OR expires_at > ?)",
                     (household_id, now_iso)
                 ).fetchone()["c"]
                 pinned = conn.execute(
@@ -808,11 +808,11 @@ def get_module_summaries(tenant: TenantContext = Depends(get_current_user)):
             # --- Assignments ---
             try:
                 pending_assignments = conn.execute(
-                    "SELECT COUNT(*) as c FROM assignments WHERE household_id = ? AND status != 'done'",
+                    "SELECT COUNT(*) as c FROM assignments WHERE household_id = ? AND deleted_at IS NULL AND status != 'done'",
                     (household_id,)
                 ).fetchone()["c"]
                 overdue_assignments = conn.execute(
-                    "SELECT COUNT(*) as c FROM assignments WHERE household_id = ? AND status != 'done' AND due_date < ?",
+                    "SELECT COUNT(*) as c FROM assignments WHERE household_id = ? AND deleted_at IS NULL AND status != 'done' AND due_date < ?",
                     (household_id, today_iso)
                 ).fetchone()["c"]
                 if overdue_assignments:
@@ -866,13 +866,13 @@ def get_module_summaries(tenant: TenantContext = Depends(get_current_user)):
             # --- House Rules ---
             try:
                 rule_count = conn.execute(
-                    "SELECT COUNT(*) as c FROM house_rules WHERE household_id = ?",
+                    "SELECT COUNT(*) as c FROM house_rules WHERE household_id = ? AND deleted_at IS NULL",
                     (household_id,)
                 ).fetchone()["c"]
                 if rule_count:
                     unacked = conn.execute("""
                         SELECT COUNT(DISTINCT hr.id) as c FROM house_rules hr
-                        WHERE hr.household_id = ? AND hr.id NOT IN (
+                        WHERE hr.household_id = ? AND hr.deleted_at IS NULL AND hr.id NOT IN (
                             SELECT DISTINCT rule_id FROM house_rule_acknowledgements
                             WHERE household_id = ? AND person = ?
                         )
@@ -1141,7 +1141,7 @@ def home_summary(tenant: TenantContext = Depends(get_current_user)):
             # --- Calendar ---
             try:
                 cal_count = conn.execute(
-                    "SELECT COUNT(*) as c FROM calendar_events WHERE household_id = ? AND start_date = ?",
+                    "SELECT COUNT(*) as c FROM calendar_events WHERE household_id = ? AND deleted_at IS NULL AND start_date = ?",
                     (household_id, today_iso)
                 ).fetchone()['c']
                 text = f"{cal_count} event{'s' if cal_count != 1 else ''} today" if cal_count else "Nothing today"
@@ -1153,7 +1153,7 @@ def home_summary(tenant: TenantContext = Depends(get_current_user)):
             # --- Meals ---
             try:
                 dinners = conn.execute(
-                    "SELECT meal_name FROM meals WHERE household_id = ? AND day_of_week = ? AND meal_type = 'dinner'",
+                    "SELECT meal_name FROM meals WHERE household_id = ? AND deleted_at IS NULL AND day_of_week = ? AND meal_type = 'dinner'",
                     (household_id, today_dow)
                 ).fetchall()
                 if dinners:
@@ -1170,11 +1170,11 @@ def home_summary(tenant: TenantContext = Depends(get_current_user)):
             try:
                 week_end = (today + timedelta(days=7)).isoformat()
                 overdue_bills = conn.execute(
-                    "SELECT COUNT(*) as c FROM bills WHERE household_id = ? AND paid = 0 AND due_date < ?",
+                    "SELECT COUNT(*) as c FROM bills WHERE household_id = ? AND deleted_at IS NULL AND paid = 0 AND due_date < ?",
                     (household_id, today_iso)
                 ).fetchone()['c']
                 due_soon = conn.execute(
-                    "SELECT SUM(COALESCE(amount, 0)) as total FROM bills WHERE household_id = ? AND paid = 0 AND due_date <= ?",
+                    "SELECT SUM(COALESCE(amount, 0)) as total FROM bills WHERE household_id = ? AND deleted_at IS NULL AND paid = 0 AND due_date <= ?",
                     (household_id, week_end)
                 ).fetchone()['total'] or 0
                 if overdue_bills:
@@ -1194,7 +1194,7 @@ def home_summary(tenant: TenantContext = Depends(get_current_user)):
             # --- Shopping ---
             try:
                 to_buy = conn.execute(
-                    "SELECT COUNT(*) as c FROM shopping_items WHERE household_id = ? AND purchased = 0",
+                    "SELECT COUNT(*) as c FROM shopping_items WHERE household_id = ? AND deleted_at IS NULL AND purchased = 0",
                     (household_id,)
                 ).fetchone()['c']
                 text = f"{to_buy} item{'s' if to_buy != 1 else ''} to buy" if to_buy else "List empty"
@@ -1206,7 +1206,7 @@ def home_summary(tenant: TenantContext = Depends(get_current_user)):
             # --- Inventory ---
             try:
                 low = conn.execute(
-                    "SELECT COUNT(*) as c FROM inventory_items WHERE household_id = ? AND quantity <= low_threshold",
+                    "SELECT COUNT(*) as c FROM inventory_items WHERE household_id = ? AND deleted_at IS NULL AND quantity <= low_threshold",
                     (household_id,)
                 ).fetchone()['c']
                 text = f"{low} item{'s' if low != 1 else ''} low" if low else "Stock OK"
@@ -1219,7 +1219,7 @@ def home_summary(tenant: TenantContext = Depends(get_current_user)):
             # --- Polls ---
             try:
                 active = conn.execute(
-                    "SELECT COUNT(*) as c FROM polls WHERE household_id = ? AND status = 'active'",
+                    "SELECT COUNT(*) as c FROM polls WHERE household_id = ? AND deleted_at IS NULL AND status = 'active'",
                     (household_id,)
                 ).fetchone()['c']
                 text = f"{active} active poll{'s' if active != 1 else ''}" if active else "No active polls"
@@ -1232,7 +1232,7 @@ def home_summary(tenant: TenantContext = Depends(get_current_user)):
             # --- Recipes ---
             try:
                 count = conn.execute(
-                    "SELECT COUNT(*) as c FROM recipes WHERE household_id = ?",
+                    "SELECT COUNT(*) as c FROM recipes WHERE household_id = ? AND deleted_at IS NULL",
                     (household_id,)
                 ).fetchone()['c']
                 text = f"{count} recipe{'s' if count != 1 else ''}" if count else "No recipes yet"
@@ -1244,7 +1244,7 @@ def home_summary(tenant: TenantContext = Depends(get_current_user)):
             # --- Routines ---
             try:
                 routines_list = conn.execute(
-                    "SELECT id FROM routines WHERE household_id = ?",
+                    "SELECT id FROM routines WHERE household_id = ? AND deleted_at IS NULL",
                     (household_id,)
                 ).fetchall()
                 if routines_list:
@@ -1305,7 +1305,7 @@ def home_summary(tenant: TenantContext = Depends(get_current_user)):
                     (household_id,)
                 ).fetchone()["c"]
                 active_goals = conn.execute(
-                    "SELECT COUNT(*) as c FROM savings_goals WHERE household_id = ? AND completed = 0",
+                    "SELECT COUNT(*) as c FROM savings_goals WHERE household_id = ? AND deleted_at IS NULL AND completed = 0",
                     (household_id,)
                 ).fetchone()["c"]
                 if active_goals:
@@ -1322,7 +1322,7 @@ def home_summary(tenant: TenantContext = Depends(get_current_user)):
             # --- Pets ---
             try:
                 pet_count = conn.execute(
-                    "SELECT COUNT(*) as c FROM pets WHERE household_id = ?",
+                    "SELECT COUNT(*) as c FROM pets WHERE household_id = ? AND deleted_at IS NULL",
                     (household_id,)
                 ).fetchone()["c"]
                 if pet_count:
@@ -1345,7 +1345,7 @@ def home_summary(tenant: TenantContext = Depends(get_current_user)):
             try:
                 now_iso = datetime.now().isoformat()
                 active_posts = conn.execute(
-                    "SELECT COUNT(*) as c FROM noticeboard_posts WHERE household_id = ? AND (expires_at IS NULL OR expires_at > ?)",
+                    "SELECT COUNT(*) as c FROM noticeboard_posts WHERE household_id = ? AND deleted_at IS NULL AND (expires_at IS NULL OR expires_at > ?)",
                     (household_id, now_iso)
                 ).fetchone()["c"]
                 if active_posts:
@@ -1360,11 +1360,11 @@ def home_summary(tenant: TenantContext = Depends(get_current_user)):
             # --- Assignments ---
             try:
                 pending_assignments = conn.execute(
-                    "SELECT COUNT(*) as c FROM assignments WHERE household_id = ? AND status != 'done'",
+                    "SELECT COUNT(*) as c FROM assignments WHERE household_id = ? AND deleted_at IS NULL AND status != 'done'",
                     (household_id,)
                 ).fetchone()["c"]
                 overdue_assignments = conn.execute(
-                    "SELECT COUNT(*) as c FROM assignments WHERE household_id = ? AND status != 'done' AND due_date < ?",
+                    "SELECT COUNT(*) as c FROM assignments WHERE household_id = ? AND deleted_at IS NULL AND status != 'done' AND due_date < ?",
                     (household_id, today_iso)
                 ).fetchone()["c"]
                 if overdue_assignments:
@@ -1418,13 +1418,13 @@ def home_summary(tenant: TenantContext = Depends(get_current_user)):
             # --- House Rules ---
             try:
                 rule_count = conn.execute(
-                    "SELECT COUNT(*) as c FROM house_rules WHERE household_id = ?",
+                    "SELECT COUNT(*) as c FROM house_rules WHERE household_id = ? AND deleted_at IS NULL",
                     (household_id,)
                 ).fetchone()["c"]
                 if rule_count:
                     unacked = conn.execute("""
                         SELECT COUNT(DISTINCT hr.id) as c FROM house_rules hr
-                        WHERE hr.household_id = ? AND hr.id NOT IN (
+                        WHERE hr.household_id = ? AND hr.deleted_at IS NULL AND hr.id NOT IN (
                             SELECT DISTINCT rule_id FROM house_rule_acknowledgements
                             WHERE household_id = ? AND person = ?
                         )
@@ -1501,7 +1501,7 @@ def home_summary(tenant: TenantContext = Depends(get_current_user)):
             # --- Self Care (per-category summaries) ---
             try:
                 sc_items = conn.execute(
-                    "SELECT id, frequency_days, category FROM selfcare_items WHERE household_id = ?",
+                    "SELECT id, frequency_days, category FROM selfcare_items WHERE household_id = ? AND deleted_at IS NULL",
                     (household_id,)
                 ).fetchall()
                 cat_stats = {}

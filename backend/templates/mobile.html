@@ -8312,7 +8312,8 @@
                 nameRow.appendChild(pill);
                 content.appendChild(nameRow);
 
-                var personName = isDone ? (chore.last_completed_by || chore.current_person)
+                var personName = isDone
+                    ? (chore.was_skipped ? chore.last_actual_by : chore.last_completed_by) || chore.current_person
                     : (statusKey === 'tomorrow' && chore.tomorrow_person) ? chore.tomorrow_person
                     : chore.current_person;
                 if (personName) {

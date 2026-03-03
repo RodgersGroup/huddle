@@ -1,5 +1,4 @@
 import logging
-import math  # noqa: F401 — kept for potential future use
 import sqlite3
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from auth import get_current_user, require_role, TenantContext
