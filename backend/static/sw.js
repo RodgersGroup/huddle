@@ -1,6 +1,6 @@
-// Service Worker for Huddle PWA - v14
-const STATIC_CACHE = 'huddle-static-v14';
-const API_CACHE = 'huddle-api-v14';
+// Service Worker for Huddle PWA - v15
+const STATIC_CACHE = 'huddle-static-v15';
+const API_CACHE = 'huddle-api-v15';
 
 // Assets to precache on install
 const PRECACHE_URLS = [

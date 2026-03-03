@@ -8526,7 +8526,7 @@
                 }
                 const response = await fetch(`/api/chores/${choreId}/complete`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
                     body: JSON.stringify(body)
                 });
 
@@ -8575,7 +8575,7 @@
             try {
                 const response = await fetch(`/api/chores/${choreId}/skip`, {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
+                    headers: {'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest'},
                     body: JSON.stringify({ skipped_by: currentUser })
                 });
 
@@ -15032,7 +15032,7 @@
 
         // Register service worker for PWA
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js?v=13').then(reg => {
+            navigator.serviceWorker.register('/sw.js?v=15').then(reg => {
                 console.log('Service worker v13 registered');
                 setInterval(() => reg.update(), 60 * 60 * 1000);
                 if (currentUser) {
