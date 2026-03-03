@@ -1024,10 +1024,7 @@
             position: relative;
         }
 
-        .chore-card.status-overdue { border-left-color: #ef4444; }
-        .chore-card.status-due { border-left-color: #3b82f6; }
-        .chore-card.status-completed { border-left-color: #22c55e; }
-        .chore-card.status-tomorrow { border-left-color: #a1a1aa; }
+        /* Border-left colour is now set per-card via inline style (person colour) */
 
         .chore-card.completed {
             opacity: 0.6;
@@ -5053,7 +5050,7 @@
         <div class="modal" style="align-self:center; max-width:360px;">
             <div class="modal-title" style="text-align:center">Set a Password</div>
             <div style="color:var(--text-secondary);font-size:14px;text-align:center;margin-bottom:16px;">
-                Add a password so you can log in faster next time — no more waiting for a magic link email.
+                Set a password for your account.
             </div>
             <div id="setPasswordMsg" style="display:none;padding:8px 12px;border-radius:8px;margin-bottom:12px;font-size:13px;text-align:center"></div>
             <input type="password" id="setPasswordInput" placeholder="Password (8+ characters)" autocomplete="new-password"
@@ -7472,7 +7469,7 @@
         }
 
         async function logOut() {
-            if (!confirm('Log out? You\u2019ll need a magic link to log back in.')) return;
+            if (!confirm('Log out? You\u2019ll need your email and password to log back in.')) return;
             await fetch('/api/auth/logout', { method: 'POST' });
             localStorage.removeItem('currentUser');
             currentUser = null;
@@ -8315,11 +8312,15 @@
                 nameRow.appendChild(pill);
                 content.appendChild(nameRow);
 
-                var meta = document.createElement('div');
-                meta.className = 'chore-meta';
                 var personName = isDone ? (chore.last_completed_by || chore.current_person)
                     : (statusKey === 'tomorrow' && chore.tomorrow_person) ? chore.tomorrow_person
                     : chore.current_person;
+                if (personName) {
+                    card.style.borderLeftColor = getPersonColor(personName);
+                }
+
+                var meta = document.createElement('div');
+                meta.className = 'chore-meta';
                 if (personName) {
                     meta.appendChild(personBadge(personName, 22));
                     var pn = document.createElement('span');

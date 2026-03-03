@@ -1,5 +1,5 @@
 import logging
-import math
+import math  # noqa: F401 — kept for potential future use
 import sqlite3
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from auth import get_current_user, require_role, TenantContext
@@ -289,7 +289,8 @@ def get_chores_with_status(conn, household_id: int) -> list:
             chore_dict['last_actual_by'] = None
             chore_dict['days_since_actual'] = None
 
-        # Avoid back-to-back: if current person was the last actual completer, advance
+        # Avoid back-to-back: if current person was the last actual completer, advance.
+        # Display-only adjustment — deterministic from DB state, not persisted.
         if (people_list and len(people_list) > 1
                 and chore_dict.get('last_actual_by')
                 and chore_dict['current_person'] == chore_dict['last_actual_by']):
@@ -305,57 +306,6 @@ def get_chores_with_status(conn, household_id: int) -> list:
             chore_dict['tomorrow_person'] = chore_dict.get('current_person')
 
         result.append(chore_dict)
-
-    all_people = get_people(household_id=household_id)
-    person_counts = {person: 0 for person in all_people}
-
-    # Sort by urgency so the most important chores get kept when load balancing
-    # Priority: overdue first (most days overdue wins), then daily due_today, then other due_today
-    def chore_urgency(c):
-        if c['status'] == 'overdue':
-            return (0, -c.get('days_overdue', 0))
-        if c['status'] == 'due_today' and c.get('schedule_type') == 'daily':
-            return (1, 0)
-        if c['status'] == 'due_today':
-            return (2, 0)
-        return (3, 0)
-
-    due_chores = [c for c in result if c['status'] in ['due_today', 'overdue'] and c['current_person']]
-    due_chores.sort(key=chore_urgency)
-
-    for chore in due_chores:
-        person_counts[chore['current_person']] = person_counts.get(chore['current_person'], 0) + 1
-
-    # Dynamic max: scale with actual chore load instead of hardcoded limit
-    # e.g. 8 chores / 7 people = max 2 per person; 15 chores / 3 people = max 5
-    num_people = len(all_people) or 1
-    max_per_person = max(2, math.ceil(len(due_chores) / num_people))
-
-    # Process in reverse urgency order so least important chores get pushed first
-    for chore in reversed(due_chores):
-        current = chore['current_person']
-        people_list = chore['people']
-
-        if person_counts.get(current, 0) > max_per_person:
-            reassigned = False
-
-            if len(people_list) > 1:
-                # Pick the person with the fewest current assignments (not just anyone under max)
-                candidates = [(person_counts.get(p, 0), p) for p in people_list if p != current]
-                candidates.sort()
-                for _, person in candidates:
-                    if person_counts.get(person, 0) < max_per_person:
-                        person_counts[current] -= 1
-                        person_counts[person] = person_counts.get(person, 0) + 1
-                        chore['current_person'] = person
-                        chore['rebalanced'] = True
-                        reassigned = True
-                        break
-
-            if not reassigned:
-                person_counts[current] -= 1
-                chore['status'] = 'tomorrow'
-                chore['pushed'] = True
 
     return result
 
@@ -821,8 +771,10 @@ async def complete_chore(chore_id: int, request: Request, background_tasks: Back
         completed_by = data.get('completed_by')
         completed_with = data.get('completed_with')
 
+        if not completed_by:
+            raise HTTPException(status_code=400, detail="completed_by is required")
         if completed_by not in get_people(household_id=household_id):
-            raise HTTPException(status_code=400, detail="Invalid person")
+            raise HTTPException(status_code=400, detail=f"Invalid person: {completed_by}")
 
         if completed_with:
             people = get_people(household_id=household_id)
@@ -892,10 +844,11 @@ async def complete_chore(chore_id: int, request: Request, background_tasks: Back
             "chore_name": chore['name']
         }, household_id=household_id)
 
-        # Determine assigned person for notification context
+        # Determine assigned person for notification context (use updated index)
         assigned_person = None
         if people:
-            idx = chore['current_person_index'] % len(people)
+            idx = new_idx if (not completed_with) else chore['current_person_index']
+            idx = idx % len(people)
             assigned_person = people[idx]
 
         # Send push notifications in the background (non-blocking)
