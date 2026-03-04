@@ -7038,6 +7038,10 @@
         async function loadHouseholdPeople() {
             try {
                 const resp = await fetch('/api/people');
+                if (!resp.ok) {
+                    console.error('[huddle-diag] /api/people returned', resp.status);
+                    throw new Error('API returned ' + resp.status);
+                }
                 const data = await resp.json();
                 window.householdPeople = data.people;
                 window.householdCombos = data.combos;
@@ -7046,7 +7050,7 @@
                 // Re-render scorecard if chores already loaded (race condition fix)
                 if (choresData.length > 0) renderScorecard();
             } catch(e) {
-                console.error('Failed to load people:', e);
+                console.error('[huddle-diag] Failed to load people:', e);
                 // Fallback
                 window.householdPeople = [{name:'Member 1', color:'#4ecdc4', key:'member_1'}];
                 window.householdCombos = [];
@@ -7548,9 +7552,12 @@
                     // and redirect to onboarding so the user can re-authenticate.
                     if (resp.status === 401 || resp.status === 403) {
                         localStorage.removeItem('currentUser');
-                        window.location = '/onboard';
+                        window.location = '/onboard?reason=session_expired';
+                        return false;
                     }
-                    return;
+                    // Other server errors (500 etc.) — don't redirect, may be transient
+                    console.error('[huddle-auth] /api/auth/me returned', resp.status);
+                    return false;
                 }
                 const data = await resp.json();
                 authUser = data;
@@ -7695,8 +7702,15 @@
                     && !sessionStorage.getItem('passwordPromptDismissed')) {
                     document.getElementById('setPasswordModal').classList.add('show');
                 }
+                return true;
             } catch (e) {
                 console.error('Auth check failed:', e);
+                // Network error — if offline, let cached content show; if online, redirect
+                if (navigator.onLine) {
+                    localStorage.removeItem('currentUser');
+                    window.location = '/onboard?reason=session_expired';
+                }
+                return false;
             }
         }
 
@@ -9580,6 +9594,9 @@
             };
 
             ws.onopen = () => {
+                // Refresh auth + people data on reconnect (may have been lost)
+                loadAuthUser();
+                loadHouseholdPeople();
                 // Refresh current view on reconnect
                 if (activeScreen === 'home') {
                     fetchHomeSummaries();
@@ -15003,22 +15020,84 @@
             }
         }
 
-        // Initial load — only fetch what the home screen needs (tile summaries)
-        // Module data is fetched lazily when user taps a tile
-        Promise.all([
-            fetchEnabledModules(),
-            fetchTileSummaries(),
-            loadHouseholdPeople(),
-        ]).then(() => {
-            renderHomeScreen();
-        }).finally(() => {
-            const splash = document.getElementById('splashScreen');
-            if (splash) {
-                splash.classList.add('fade-out');
-                setTimeout(() => splash.remove(), 300);
+        // Initial load — verify auth first, then fetch home screen data.
+        // This prevents the broken partial-render state where cached SW data
+        // shows (weather, chores) but non-cached data (tiles, members) is empty.
+        (async function init() {
+            const authed = await loadAuthUser();
+            if (!authed) {
+                // Auth failed — loadAuthUser handles redirect (unless offline).
+                // Remove splash so offline cached content is visible.
+                const splash = document.getElementById('splashScreen');
+                if (splash) {
+                    splash.classList.add('fade-out');
+                    setTimeout(() => splash.remove(), 300);
+                }
+                // If offline, still render what we can from cache
+                if (!navigator.onLine) {
+                    renderHomeScreen();
+                }
+                return;
+            }
+            // Auth succeeded — load home screen data in parallel
+            Promise.all([
+                fetchEnabledModules(),
+                fetchTileSummaries(),
+                loadHouseholdPeople(),
+            ]).then(() => {
+                renderHomeScreen();
+            }).finally(() => {
+                const splash = document.getElementById('splashScreen');
+                if (splash) {
+                    splash.classList.add('fade-out');
+                    setTimeout(() => splash.remove(), 300);
+                }
+            });
+            connectWebSocket();
+        })();
+
+        // Session health monitor — detect and recover from data loss
+        // Also logs diagnostics to help identify the root cause.
+        document.addEventListener('visibilitychange', async () => {
+            if (document.visibilityState !== 'visible') return;
+            try {
+                const resp = await fetch('/api/auth/me');
+                if (resp.ok) {
+                    const data = await resp.json();
+                    // Recover auth data if it was lost
+                    if (!authUser && data) {
+                        console.warn('[huddle-diag] authUser was null, recovered from /api/auth/me');
+                        authUser = data;
+                        userRole = data.user.role;
+                    }
+                } else {
+                    console.error('[huddle-diag] /api/auth/me returned', resp.status, 'on visibility change');
+                    // Session expired while app was backgrounded — redirect to login
+                    if (resp.status === 401 || resp.status === 403) {
+                        localStorage.removeItem('currentUser');
+                        window.location = '/onboard?reason=session_expired';
+                        return;
+                    }
+                }
+                // Recover household people if lost
+                if (!window.householdPeople || window.householdPeople.length === 0) {
+                    console.warn('[huddle-diag] householdPeople was empty, refetching');
+                    await loadHouseholdPeople();
+                }
+                // Recover enabled modules if lost
+                if (!enabledModules || enabledModules.length === 0) {
+                    console.warn('[huddle-diag] enabledModules was empty, refetching');
+                    await fetchEnabledModules();
+                }
+                // Re-render home if we recovered anything
+                if (activeScreen === 'home') {
+                    await fetchTileSummaries();
+                    renderHomeScreen();
+                }
+            } catch (e) {
+                console.error('[huddle-diag] health check failed:', e);
             }
         });
-        connectWebSocket();
 
         // Close modals on ESC key
         document.addEventListener('keydown', e => {
@@ -15033,7 +15112,7 @@
 
         // Register service worker for PWA
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js?v=16').then(reg => {
+            navigator.serviceWorker.register('/sw.js?v=17').then(reg => {
                 console.log('Service worker v16 registered');
                 // Check for SW updates every 15 minutes
                 setInterval(() => reg.update(), 15 * 60 * 1000);

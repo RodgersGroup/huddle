@@ -360,13 +360,20 @@ def kiosk_display_page(request: Request, token: str = None):
 
 
 @app.get("/mobile", response_class=HTMLResponse)
-def mobile_page(request: Request):
-    """Mobile PWA page. Redirects to /onboard if not authenticated."""
-    from auth import COOKIE_NAME, verify_session_token
-    # Check session cookie
-    token = request.cookies.get(COOKIE_NAME)
-    authenticated = bool(token and verify_session_token(token))
-    if not authenticated:
+async def mobile_page(request: Request):
+    """Mobile PWA page. Redirects to /onboard if not authenticated.
+
+    Uses the same full auth check as API endpoints (get_current_user) to ensure
+    the page is only served when the user can actually use the API. Previously
+    used verify_session_token which only checks cookie signature, not DB membership,
+    causing a broken partial-render when cookie was valid but user was removed from
+    their household.
+    """
+    from auth import get_current_user, COOKIE_NAME
+    try:
+        await get_current_user(request)
+    except HTTPException:
+        token = request.cookies.get(COOKIE_NAME)
         url = "/onboard?reason=session_expired" if token else "/onboard"
         return RedirectResponse(url=url, status_code=302)
     try:

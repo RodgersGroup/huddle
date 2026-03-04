@@ -20,7 +20,6 @@ def run_system_checks():
     _heal_orphaned_routine_completions()
     _heal_stuck_pairing_codes()
     _check_log_file_growth()
-    _heal_orphaned_bill_splits()
 
 
 def _heal_expired_push_subscriptions():
@@ -139,24 +138,3 @@ def _check_log_file_growth():
         logger.warning("Error healer log growth check failed: %s", e)
 
 
-def _heal_orphaned_bill_splits():
-    """Remove bill splits referencing deleted bills."""
-    if not should_run(AGENT, "orphan_bill_splits", 21600):
-        return
-    try:
-        with get_db() as conn:
-            orphans = conn.execute("""
-                SELECT bs.id FROM bill_splits bs
-                LEFT JOIN bills b ON bs.bill_id = b.id
-                WHERE b.id IS NULL
-            """).fetchall()
-            if orphans:
-                ids = [r["id"] for r in orphans]
-                placeholders = ",".join("?" for _ in ids)
-                conn.execute(f"DELETE FROM bill_splits WHERE id IN ({placeholders})", ids)
-                conn.commit()
-                log_action(AGENT, "orphan_bill_splits",
-                           f"Removed {len(orphans)} orphaned bill split records",
-                           auto_fixed=True)
-    except Exception as e:
-        logger.warning("Error healer orphan bill splits cleanup failed: %s", e)

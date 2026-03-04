@@ -10,13 +10,6 @@ export function AuthProvider({ children }) {
     fetch('/api/auth/me', { credentials: 'include' })
       .then(async (res) => {
         if (res.ok) return res.json();
-        if (res.status === 403) {
-          const data = await res.json().catch(() => ({}));
-          if (data.reason === 'password_required' && window.location.pathname !== '/onboard') {
-            window.location.href = '/onboard?reason=password_required';
-            return null;
-          }
-        }
         if ((res.status === 401 || res.status === 403) && window.location.pathname !== '/onboard') {
           window.location.href = '/onboard?reason=session_expired';
         }

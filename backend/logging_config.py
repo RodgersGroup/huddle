@@ -37,8 +37,9 @@ def setup_logging():
         datefmt="%Y-%m-%d %H:%M:%S",
     )
 
-    # Attach the request-id filter to the logger itself so all handlers get it
-    logger.addFilter(RequestIdFilter())
+    # Attach the request-id filter to each handler (not the logger) so it
+    # applies to records from child loggers like "huddle.agents" too.
+    rid_filter = RequestIdFilter()
 
     # Rotating file handler: 10MB per file, keep 5 backups
     file_handler = logging.handlers.RotatingFileHandler(
@@ -49,11 +50,13 @@ def setup_logging():
     )
     file_handler.setLevel(logging.DEBUG)
     file_handler.setFormatter(formatter)
+    file_handler.addFilter(rid_filter)
 
     # Console handler (captured by systemd journal)
     console_handler = logging.StreamHandler()
     console_handler.setLevel(getattr(logging, LOG_LEVEL, logging.INFO))
     console_handler.setFormatter(formatter)
+    console_handler.addFilter(rid_filter)
 
     logger.addHandler(file_handler)
     logger.addHandler(console_handler)

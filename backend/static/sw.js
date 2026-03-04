@@ -1,6 +1,6 @@
-// Service Worker for Huddle PWA - v16
-const STATIC_CACHE = 'huddle-static-v16';
-const API_CACHE = 'huddle-api-v16';
+// Service Worker for Huddle PWA - v17
+const STATIC_CACHE = 'huddle-static-v17';
+const API_CACHE = 'huddle-api-v17';
 
 // Assets to precache on install
 const PRECACHE_URLS = [
@@ -23,7 +23,10 @@ const CACHEABLE_API_PATHS = [
 const NETWORK_FIRST_API_PATHS = [
     '/api/chores',
     '/api/adhoc',
-    '/api/meals'
+    '/api/meals',
+    '/api/modules/enabled',
+    '/api/home/summary',
+    '/api/people'
 ];
 
 // Install: precache static assets
@@ -108,7 +111,7 @@ async function cacheFirst(request, cacheName) {
 async function networkFirst(request, cacheName) {
     try {
         const response = await fetch(request);
-        if (response.ok) {
+        if (response.ok && !response.redirected) {
             const cache = await caches.open(cacheName);
             cache.put(request, response.clone());
         }

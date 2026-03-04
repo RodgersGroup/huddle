@@ -240,18 +240,33 @@ def create_session_token(user_id: int, household_id: int, original_household_id:
     return SERIALIZER.dumps(payload)
 
 
-def verify_session_token(token: str):
+def verify_session_token(token: str, log_reason: bool = False):
     """Validate a session token and return {user_id, household_id} or None."""
     if not SERIALIZER:
+        if log_reason:
+            logger.warning("Token verify failed: SERIALIZER is None (auth disabled)")
         return None
     try:
         data = SERIALIZER.loads(token, max_age=SESSION_MAX_AGE)
         if "user_id" in data and "household_id" in data:
             if data.get("v", 0) < get_auth_version():
+                if log_reason:
+                    logger.warning(
+                        "Token verify failed: auth version mismatch (token v=%s, current v=%s) user_id=%s",
+                        data.get("v", 0), get_auth_version(), data.get("user_id"),
+                    )
                 return None  # Cookie predates auth version bump
             return data
+        if log_reason:
+            logger.warning("Token verify failed: missing user_id or household_id in payload")
         return None
-    except (BadSignature, SignatureExpired):
+    except SignatureExpired:
+        if log_reason:
+            logger.warning("Token verify failed: signature expired (max_age=%s)", SESSION_MAX_AGE)
+        return None
+    except BadSignature:
+        if log_reason:
+            logger.warning("Token verify failed: bad signature (SECRET_KEY mismatch or corrupted cookie)")
         return None
 
 
@@ -427,7 +442,7 @@ async def get_current_user(request: Request) -> TenantContext:
     # Check session cookie
     token = request.cookies.get(COOKIE_NAME)
     if token:
-        data = verify_session_token(token)
+        data = verify_session_token(token, log_reason=True)
         if data:
             # User authenticated but not yet in a household
             if data["household_id"] == 0:
@@ -445,6 +460,11 @@ async def get_current_user(request: Request) -> TenantContext:
                         )
                         _set_sentry_context(tenant)
                         return tenant
+                    else:
+                        logger.warning(
+                            "Auth failed: cookie valid but user_id=%s not found in users table",
+                            data["user_id"],
+                        )
             else:
                 with get_db() as conn:
                     member = conn.execute(
@@ -465,6 +485,12 @@ async def get_current_user(request: Request) -> TenantContext:
                         )
                         _set_sentry_context(tenant)
                         return tenant
+                    if not member:
+                        logger.warning(
+                            "Auth failed: cookie valid but user_id=%s not in household_id=%s "
+                            "(removed from household?)",
+                            data["user_id"], data["household_id"],
+                        )
                     # Superadmin impersonating a household they're not a member of
                     if data.get("original_household_id") is not None:
                         user = conn.execute(
@@ -530,6 +556,13 @@ async def get_current_user(request: Request) -> TenantContext:
                 _set_sentry_context(tenant)
                 return tenant
 
+    client = request.client.host if request.client else "unknown"
+    has_cookie = bool(request.cookies.get(COOKIE_NAME))
+    has_bearer = bool(request.headers.get("Authorization", "").startswith("Bearer "))
+    logger.warning(
+        "Auth failed: %s %s | client=%s cookie=%s bearer=%s",
+        request.method, request.url.path, client, has_cookie, has_bearer,
+    )
     raise HTTPException(status_code=401, detail="Not authenticated")
 
 
@@ -1016,13 +1049,6 @@ async def get_me(request: Request, user: TenantContext = Depends(get_current_use
             ).fetchone()
             current_user_email = current_user_row["email"] if current_user_row else None
             has_password = bool(current_user_row["password_hash"]) if current_user_row else False
-
-        # Require password for non-kiosk users without one
-        if not has_password and user.role != "kiosk":
-            return JSONResponse(
-                status_code=403,
-                content={"reason": "password_required", "message": "Please set a password to continue."},
-            )
 
         # Check if current user is superadmin
         from config import SUPERADMIN_EMAILS
