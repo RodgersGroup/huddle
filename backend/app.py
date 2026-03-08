@@ -111,6 +111,27 @@ async def csrf_header_check(request: Request, call_next):
 
 
 @app.middleware("http")
+async def clear_bad_cookie_on_401(request: Request, call_next):
+    """Delete the session cookie when the server returns 401.
+
+    Without this, users with stale/invalid cookies (e.g. signed with an old
+    SECRET_KEY) get stuck in a redirect loop — the browser keeps sending the
+    bad cookie, the server keeps rejecting it, and the user can never log in
+    fresh because the cookie is never cleared.
+    """
+    from auth import COOKIE_NAME, COOKIE_SECURE
+    response = await call_next(request)
+    if response.status_code == 401 and request.cookies.get(COOKIE_NAME):
+        response.delete_cookie(
+            key=COOKIE_NAME,
+            httponly=True,
+            samesite="lax",
+            secure=COOKIE_SECURE,
+        )
+    return response
+
+
+@app.middleware("http")
 async def security_headers(request: Request, call_next):
     """Set security headers on all responses."""
     response = await call_next(request)
@@ -369,13 +390,22 @@ async def mobile_page(request: Request):
     causing a broken partial-render when cookie was valid but user was removed from
     their household.
     """
-    from auth import get_current_user, COOKIE_NAME
+    from auth import get_current_user, COOKIE_NAME, COOKIE_SECURE
     try:
         await get_current_user(request)
     except HTTPException:
         token = request.cookies.get(COOKIE_NAME)
         url = "/onboard?reason=session_expired" if token else "/onboard"
-        return RedirectResponse(url=url, status_code=302)
+        response = RedirectResponse(url=url, status_code=302)
+        # Delete the invalid cookie so the user isn't stuck in a redirect loop
+        if token:
+            response.delete_cookie(
+                key=COOKIE_NAME,
+                httponly=True,
+                samesite="lax",
+                secure=COOKIE_SECURE,
+            )
+        return response
     try:
         response = templates.TemplateResponse("mobile.html", {"request": request})
         response.headers["Cache-Control"] = "no-store"
