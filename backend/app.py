@@ -377,7 +377,9 @@ async def mobile_page(request: Request):
         url = "/onboard?reason=session_expired" if token else "/onboard"
         return RedirectResponse(url=url, status_code=302)
     try:
-        return templates.TemplateResponse("mobile.html", {"request": request})
+        response = templates.TemplateResponse("mobile.html", {"request": request})
+        response.headers["Cache-Control"] = "no-store"
+        return response
     except HTTPException:
         raise
     except Exception as e:
@@ -1523,7 +1525,7 @@ async def websocket_endpoint(websocket: WebSocket):
     from auth import COOKIE_NAME, verify_session_token
     session_cookie = websocket.cookies.get(COOKIE_NAME)
     if session_cookie:
-        data = verify_session_token(session_cookie)
+        data = verify_session_token(session_cookie, log_reason=True)
         if data and data.get("household_id", 0) > 0:
             household_id = data["household_id"]
 

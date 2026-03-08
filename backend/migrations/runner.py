@@ -5,7 +5,7 @@ ROLLBACK STRATEGY
 This migration system is forward-only: migrations have an up() function but
 no down(). Rollback is manual and should follow this approach:
 
-  1. Stop the service:  sudo systemctl stop chores-kiosk
+  1. Stop the service:  sudo systemctl stop huddle
   2. Restore the database from the most recent backup:
        gunzip -k backups/huddle_backup_YYYYMMDD_HHMMSS.db.gz
        cp backups/huddle_backup_YYYYMMDD_HHMMSS.db chores.db
@@ -15,7 +15,7 @@ no down(). Rollback is manual and should follow this approach:
   4. Remove the migration's row from the _migrations table so it will
      be retried on next startup:
        DELETE FROM _migrations WHERE name = '<migration_name>';
-  5. Restart the service:  sudo systemctl start chores-kiosk
+  5. Restart the service:  sudo systemctl start huddle
 
 Backups run every 6 hours via cron (scripts/backup.sh). Always verify
 the backup timestamp before restoring.

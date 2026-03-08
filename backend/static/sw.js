@@ -1,10 +1,12 @@
-// Service Worker for Huddle PWA - v17
-const STATIC_CACHE = 'huddle-static-v17';
-const API_CACHE = 'huddle-api-v17';
+// Service Worker for Huddle PWA - v18
+const STATIC_CACHE = 'huddle-static-v18';
+const API_CACHE = 'huddle-api-v18';
 
-// Assets to precache on install
+// Assets to precache on install (icons + manifest only).
+// /mobile is NOT precached — it requires auth and caching it causes
+// stale pages during server downtime. It's still cached via networkFirst
+// on successful loads for offline fallback.
 const PRECACHE_URLS = [
-    '/mobile',
     '/static/icon.svg',
     '/static/icon-192.png',
     '/static/icon-512.png',
@@ -154,7 +156,7 @@ async function refreshPushSubscription() {
         if (!subscription) return;
         await fetch('/api/push/subscribe', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
             body: JSON.stringify({ person: person, subscription: subscription.toJSON() })
         });
     } catch (e) {

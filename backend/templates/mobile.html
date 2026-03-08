@@ -7545,21 +7545,22 @@
         }
 
         async function loadAuthUser() {
-            try {
-                const resp = await fetch('/api/auth/me');
-                if (!resp.ok) {
-                    // Session expired or invalid — clear client-side login state
-                    // and redirect to onboarding so the user can re-authenticate.
-                    if (resp.status === 401 || resp.status === 403) {
-                        localStorage.removeItem('currentUser');
-                        window.location = '/onboard?reason=session_expired';
-                        return false;
-                    }
-                    // Other server errors (500 etc.) — don't redirect, may be transient
-                    console.error('[huddle-auth] /api/auth/me returned', resp.status);
+            // Retry once on transient errors (server restart, network blip).
+            // 401/403 = genuine auth failure → redirect immediately, no retry.
+            for (var _attempt = 0; _attempt < 2; _attempt++) {
+              try {
+                var resp = await fetch('/api/auth/me');
+                if (resp.status === 401 || resp.status === 403) {
+                    localStorage.removeItem('currentUser');
+                    window.location = '/onboard?reason=session_expired';
                     return false;
                 }
-                const data = await resp.json();
+                if (!resp.ok) {
+                    console.warn('[huddle-auth] /api/auth/me returned', resp.status, _attempt === 0 ? '- retrying...' : '- giving up');
+                    if (_attempt === 0) { await new Promise(function(r) { setTimeout(r, 2000); }); continue; }
+                    return false;
+                }
+                var data = await resp.json();
                 authUser = data;
                 userRole = data.user.role;
 
@@ -7703,15 +7704,15 @@
                     document.getElementById('setPasswordModal').classList.add('show');
                 }
                 return true;
-            } catch (e) {
-                console.error('Auth check failed:', e);
-                // Network error — if offline, let cached content show; if online, redirect
-                if (navigator.onLine) {
-                    localStorage.removeItem('currentUser');
-                    window.location = '/onboard?reason=session_expired';
-                }
+              } catch (e) {
+                console.warn('[huddle-auth] fetch failed:', e.message, _attempt === 0 ? '- retrying...' : '- giving up');
+                if (_attempt === 0) { await new Promise(function(r) { setTimeout(r, 2000); }); continue; }
                 return false;
+              }
             }
+            // Both attempts failed with transient errors — don't redirect
+            console.error('[huddle-auth] auth check failed after retries');
+            return false;
         }
 
         async function submitSetPassword() {
@@ -7906,9 +7907,6 @@
                 setupPushNotifications(saved);
             }
         })();
-
-        // Load auth user info (role, household)
-        loadAuthUser();
 
         let choresData = [];
         let mealsData = {};
@@ -9594,10 +9592,8 @@
             };
 
             ws.onopen = () => {
-                // Refresh auth + people data on reconnect (may have been lost)
-                loadAuthUser();
+                // Refresh data on reconnect (WS connecting = auth is valid)
                 loadHouseholdPeople();
-                // Refresh current view on reconnect
                 if (activeScreen === 'home') {
                     fetchHomeSummaries();
                 } else if (activeScreen !== 'settings') {
@@ -15056,28 +15052,30 @@
             connectWebSocket();
         })();
 
-        // Session health monitor — detect and recover from data loss
-        // Also logs diagnostics to help identify the root cause.
+        // Session health monitor — detect and recover from data loss.
+        // Only redirects on definitive 401/403. Network errors and 500s
+        // are ignored (transient — server restart, tunnel hiccup, etc.).
         document.addEventListener('visibilitychange', async () => {
             if (document.visibilityState !== 'visible') return;
             try {
-                const resp = await fetch('/api/auth/me');
-                if (resp.ok) {
-                    const data = await resp.json();
-                    // Recover auth data if it was lost
-                    if (!authUser && data) {
-                        console.warn('[huddle-diag] authUser was null, recovered from /api/auth/me');
-                        authUser = data;
-                        userRole = data.user.role;
-                    }
-                } else {
-                    console.error('[huddle-diag] /api/auth/me returned', resp.status, 'on visibility change');
-                    // Session expired while app was backgrounded — redirect to login
-                    if (resp.status === 401 || resp.status === 403) {
-                        localStorage.removeItem('currentUser');
-                        window.location = '/onboard?reason=session_expired';
-                        return;
-                    }
+                var resp = await fetch('/api/auth/me');
+                if (resp.status === 401 || resp.status === 403) {
+                    console.error('[huddle-diag] session expired on visibility change');
+                    localStorage.removeItem('currentUser');
+                    window.location = '/onboard?reason=session_expired';
+                    return;
+                }
+                if (!resp.ok) {
+                    // Server error (500 etc.) — transient, don't redirect
+                    console.warn('[huddle-diag] /api/auth/me returned', resp.status, 'on visibility change (ignored)');
+                    return;
+                }
+                var data = await resp.json();
+                // Recover auth data if it was lost
+                if (!authUser && data) {
+                    console.warn('[huddle-diag] authUser was null, recovered from /api/auth/me');
+                    authUser = data;
+                    userRole = data.user.role;
                 }
                 // Recover household people if lost
                 if (!window.householdPeople || window.householdPeople.length === 0) {
@@ -15095,7 +15093,8 @@
                     renderHomeScreen();
                 }
             } catch (e) {
-                console.error('[huddle-diag] health check failed:', e);
+                // Network error — transient, don't redirect
+                console.warn('[huddle-diag] health check network error (ignored):', e.message);
             }
         });
 
@@ -15112,8 +15111,8 @@
 
         // Register service worker for PWA
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js?v=17').then(reg => {
-                console.log('Service worker v16 registered');
+            navigator.serviceWorker.register('/sw.js?v=18').then(reg => {
+                console.log('Service worker v18 registered');
                 // Check for SW updates every 15 minutes
                 setInterval(() => reg.update(), 15 * 60 * 1000);
                 // Also check when app comes back to foreground
