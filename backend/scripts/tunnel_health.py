@@ -59,7 +59,7 @@ def _load_state():
                 return json.load(f)
     except Exception:
         pass
-    return {"status": "unknown", "last_check": None, "down_since": None, "notified": False}
+    return {"status": "unknown", "last_check": None, "down_since": None, "notified": False, "alert_attempts": 0}
 
 
 def _save_state(state):
@@ -108,7 +108,7 @@ def _send_alert(title, body):
 
 
 def _send_push_alert(title, body):
-    """Send push notification to all managers about tunnel issue."""
+    """Send push notification to superadmins only about tunnel issue."""
     try:
         # Use the app's own push infrastructure via local API
         import sqlite3
@@ -116,14 +116,29 @@ def _send_push_alert(title, body):
         conn = sqlite3.connect(str(db_file))
         conn.row_factory = sqlite3.Row
 
-        # Get all managers
-        managers = conn.execute("""
-            SELECT hm.display_name, hm.household_id
-            FROM household_members hm
-            WHERE hm.role = 'manager'
-        """).fetchall()
+        # Get superadmin emails from config
+        sys.path.insert(0, str(PROJECT_DIR))
+        from config import SUPERADMIN_EMAILS
 
-        if not managers:
+        if not SUPERADMIN_EMAILS:
+            # Fallback: use household_id=1 manager (original admin)
+            admins = conn.execute("""
+                SELECT hm.display_name, hm.household_id
+                FROM household_members hm
+                WHERE hm.household_id = 1 AND hm.role = 'manager'
+                LIMIT 1
+            """).fetchall()
+        else:
+            # Find household members matching superadmin emails
+            placeholders = ",".join("?" * len(SUPERADMIN_EMAILS))
+            admins = conn.execute(f"""
+                SELECT hm.display_name, hm.household_id
+                FROM household_members hm
+                JOIN users u ON u.id = hm.user_id
+                WHERE u.email IN ({placeholders})
+            """, SUPERADMIN_EMAILS).fetchall()
+
+        if not admins:
             conn.close()
             return
 
@@ -146,7 +161,7 @@ def _send_push_alert(title, body):
         from urllib.parse import urlparse
 
         sent = 0
-        for mgr in managers:
+        for mgr in admins:
             subs = conn.execute(
                 "SELECT subscription FROM push_subscriptions WHERE person = ? AND household_id = ?",
                 (mgr["display_name"], mgr["household_id"]),
@@ -265,18 +280,22 @@ def main():
         state["status"] = "up"
         state["down_since"] = None
         state["notified"] = False
+        state["alert_attempts"] = 0
     else:
         if state.get("status") != "down":
             state["down_since"] = now
         state["status"] = "down"
 
-        # Alert on first detection of downtime (only mark notified if push actually sent)
-        if not state.get("notified"):
-            logger.warning("Tunnel is DOWN — sending alert")
+        # Alert on first detection of downtime, with max 3 retry attempts
+        # (prevents infinite retry spam when network is fully down)
+        attempts = state.get("alert_attempts", 0)
+        if not state.get("notified") and attempts < 3:
+            logger.warning("Tunnel is DOWN — sending alert (attempt %d/3)", attempts + 1)
             alert_sent = _send_alert(
                 "Tunnel Down",
                 f"huddle.rodgersgroup.au is unreachable. Check Cloudflare Tunnel status.",
             )
+            state["alert_attempts"] = attempts + 1
             if alert_sent:
                 state["notified"] = True
             else:
