@@ -654,6 +654,12 @@
         </div>
 
         <div id="loginMsg"></div>
+        <!-- Announcement banner (dismissible, one-time) -->
+        <div id="announcementBanner" style="display:none;background:rgba(78,205,196,0.1);border:1px solid rgba(78,205,196,0.25);border-radius:12px;padding:14px 16px;margin-bottom:16px;text-align:center;position:relative;">
+            <button onclick="dismissAnnouncement()" style="position:absolute;top:8px;right:10px;background:none;border:none;color:#888;font-size:18px;cursor:pointer;line-height:1;padding:0;">&times;</button>
+            <div style="font-size:15px;font-weight:600;color:#4ecdc4;margin-bottom:4px;">Login issues resolved</div>
+            <div style="font-size:13px;color:#888;line-height:1.4;">We've fixed the recent login problems. Please log in once — your session will stay active going forward.</div>
+        </div>
         <div id="sessionExpiredBanner" style="display:none;background:rgba(78,205,196,0.1);border:1px solid rgba(78,205,196,0.25);border-radius:12px;padding:14px 16px;margin-bottom:16px;text-align:center;">
             <div style="font-size:15px;font-weight:600;color:#4ecdc4;margin-bottom:4px;">Session expired</div>
             <div style="font-size:13px;color:#888;line-height:1.4;">For your security, all sessions have been reset. Please log in again.</div>
@@ -2304,6 +2310,12 @@
     var errorParam = params.get('error');
     var reasonParam = params.get('reason');
 
+    // Show announcement banner (one-time, dismissible)
+    if (!localStorage.getItem('huddle_dismiss_announce_2026_03')) {
+        var ab = document.getElementById('announcementBanner');
+        if (ab) ab.style.display = 'block';
+    }
+
     // Show session expired banner (from force re-auth)
     if (reasonParam === 'session_expired') {
         var banner = document.getElementById('sessionExpiredBanner');
@@ -2563,6 +2575,12 @@
                 // Silently retry on network error
             }
         }, 3000);
+    }
+
+    function dismissAnnouncement() {
+        localStorage.setItem('huddle_dismiss_announce_2026_03', '1');
+        var ab = document.getElementById('announcementBanner');
+        if (ab) ab.style.display = 'none';
     }
 </script>
 </body>
